@@ -1,0 +1,90 @@
+FROM rocker/geospatial:4.2
+
+# Tidyverse system requirements
+RUN apt-get update -qq && apt-get -y --no-install-recommends install \
+    libxml2-dev \
+    libcairo2-dev \
+    libgit2-dev \
+    default-libmysqlclient-dev \
+    libpq-dev \
+    libsasl2-dev \
+    libsqlite3-dev \
+    libssh2-1-dev \
+    unixodbc-dev && \
+  rm -rf /var/lib/apt/lists/*
+
+# Install imports
+RUN install2.r --error --skipinstalled \
+    config \
+    dplyr \
+    git2r \
+    googleAuthR \
+    googleCloudStorageR \
+    googledrive \
+    httr \
+    jsonlite \
+    logger \
+    lubridate \
+    magrittr \
+    purrr \
+    RCurl \
+    readr \
+    stringr \
+    tibble \
+    tidyr \
+    rlang \
+    googlesheets4
+
+# Install suggests
+RUN install2.r --error --skipinstalled \
+    covr \
+    pkgdown \
+    sessioninfo \
+    testthat \
+    roxygen2 \
+    tidyselect \
+    textclean \
+    dataverse \
+    rmarkdown \
+    geosphere \
+    broom \
+    zoo \
+    kableExtra \
+    ggplot2 \
+    bookdown \
+    cowplot \
+    broom \
+    ggpubr \
+    furrr \
+    future \
+    univOutl \
+    taxize \
+    tinytest \
+    remotes \
+    tidytext \
+    zip \
+    leaflet \
+    htmltools \
+    Amelia \
+    mice \
+    blastula \
+    glue \
+    mime \
+    janitor \
+    reactable \
+    kableExtra \
+    reticulate
+
+
+
+# Install GitHub packages
+RUN installGithub.r wilkelab/ungeviz
+RUN installGithub.r glmmTMB/glmmTMB/glmmTMB
+RUN installGithub.r ropensci/rfishbase
+
+# Install local package
+COPY . /home
+WORKDIR /home
+RUN Rscript -e 'remotes::install_local(dependencies = TRUE)'
+
+ENTRYPOINT ["Rscript"]

@@ -1,0 +1,84 @@
+Package: peskas.timor.data.pipeline
+Title: Functions to Implement the Timor Small Scale Fisheries
+    Data Pipeline
+Version: 3.0.0
+Authors@R: 
+    c(person(given = "Fernando",
+             family = "Cagua",
+             role = c("aut", "cre"),
+             email = "f.cagua@cgiar.org",
+             comment = c(ORCID = "0000-0001-5867-3687")),
+      person(given = "Lorenzo",
+             family = "Longobardi",
+             role = c("aut"),
+             email = "l.longobardi@cgiar.org",
+             comment = c(ORCID = "0000-0003-3126-7341")),
+      person(given = "WorldFish",
+             role = "cph"))
+Description: This package implements the data and modelling
+    pipelines underpining the Peskas system.
+License: GPL-3
+Imports:
+    config,
+    dplyr,
+    digest,
+    git2r,
+    glmmTMB,
+    googleAuthR,
+    googleCloudStorageR,
+    googledrive,
+    httr,
+    jsonlite,
+    logger,
+    magrittr,
+    purrr,
+    readr,
+    tidyr,
+    rlang (>= 0.1.2),
+    googlesheets4,
+    reticulate
+Suggests: 
+    covr,
+    pkgdown,
+    remotes,
+    sessioninfo,
+    testthat,
+    RCurl,
+    roxygen2,
+    geosphere,
+    tidyselect,
+    textclean,
+    tinytest,
+    dataverse,
+    rmarkdown,
+    cowplot,
+    broom,
+    zoo,
+    sf,
+    ggplot2,
+    ggpubr,
+    lubridate,
+    readxl,
+    stringr,
+    tibble,
+    furrr, 
+    future,
+    rfishbase,
+    taxize,
+    univOutl,
+    zip,
+    leaflet,
+    htmltools,
+    imputeTS,
+    Amelia,
+    mice,
+    blastula,
+    glue,
+    mime,
+    janitor,
+    reactable,
+    kableExtra
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
