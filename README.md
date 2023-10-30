@@ -1,27 +1,27 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# peskas.timor.data.pipeline
+# peskas.zanzibar.data.pipeline
 
 <!-- badges: start -->
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
 [![CRAN
-status](https://www.r-pkg.org/badges/version/peskas.timor.data.pipeline)](https://CRAN.R-project.org/package=peskas.timor.data.pipeline)
+status](https://www.r-pkg.org/badges/version/peskas.zanzibar.data.pipeline)](https://CRAN.R-project.org/package=peskas.zanzibar.data.pipeline)
 [![Codecov test
-coverage](https://codecov.io/gh/WorldFishCenter/peskas.timor.data.pipeline/branch/master/graph/badge.svg)](https://codecov.io/gh/WorldFishCenter/peskas.timor.data.pipeline?branch=master)
+coverage](https://codecov.io/gh/WorldFishCenter/peskas.zanzibar.data.pipeline/branch/master/graph/badge.svg)](https://codecov.io/gh/WorldFishCenter/peskas.zanzibar.data.pipeline?branch=master)
 [![R build
-status](https://github.com/WorldFishCenter/peskas.timor.data.pipeline/workflows/R-CMD-check/badge.svg)](https://github.com/WorldFishCenter/peskas.timor.data.pipeline/actions)
+status](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/workflows/R-CMD-check/badge.svg)](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions)
 <!-- badges: end -->
 
-The goal of peskas.timor.data.pipeline is to implement, deploy, and
-execute the data and modelling pipelines that underpin Peskas-East
-Timor, the small-scale fisheries analytics in East Timor.
+The goal of peskas.zanzibar.data.pipeline is to implement, deploy, and
+execute the data and modelling pipelines that underpin Zanzibar, the
+small-scale fisheries analytics in Zanzibar.
 
 ## The pipeline is an R package
 
-peskas.timor.data.pipeline is structured as an R package because it
+peskas.zanzibar.data.pipeline is structured as an R package because it
 makes it easier to write production-grade software. Specifically,
 structuring the code as an R package allows us to:
 
@@ -56,12 +56,12 @@ However, these workflow functions work almost as scripts because they
 don’t take parameters and are used for their side effects.
 
 Each job in the pipeline is defined in the workflow file:
-[`.github/workflows/data-pipeline.yaml`](https://github.com/WorldFishCenter/peskas.timor.data.pipeline/blob/main/.github/workflows/data-pipeline.yaml)
+[`.github/workflows/data-pipeline.yaml`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/.github/workflows/data-pipeline.yaml)
 and can be seen in the figure below. Note that additional workflows
 exist to test the package in multiple environments and build the
 documentation website.
 
-![](man/figures/pipeline.png)
+\#![](man/figures/pipeline.png)
 
 The figure above illustrate the jobs that are part of the pipeline
 workflow. Note that not all of them are implemented yet.
@@ -77,9 +77,9 @@ to obtain the latest or an specific version of an artifact.
 ## Environment parameters are specified in the config file
 
 The parameters that determine how the pipeline is run are specified in
-[`inst/conf.yml`](https://github.com/WorldFishCenter/peskas.timor.data.pipeline/blob/main/inst/conf.yml).
+[`inst/conf.yml`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/inst/conf.yml).
 This file can be accessed using
-`system.file("conf.yml",package="peskas.timor.data.pipeline")`. Using
+`system.file("conf.yml",package="peskas.zanzibar.data.pipeline")`. Using
 this file, as opposed to, for example, including them in the code,
 allows us to easily switch parameters depending on the environment. We
 use the [config](https://github.com/rstudio/config) package to read the
@@ -127,7 +127,7 @@ environment variable `R_CONFIG_ACTIVE`.
 We use docker containers to make it easier to run and develop code.
 
 - Development: We use the main
-  [`Dockerfile`](https://github.com/WorldFishCenter/peskas.timor.data.pipeline/blob/main/Dockerfile)
+  [`Dockerfile`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/Dockerfile)
   for development. It’s based on the rocker/geospatial image and spins
   up an RStudio server instance with quite a large number of packages.
   To start an instance of this container you can simply go to the
@@ -135,7 +135,7 @@ We use docker containers to make it easier to run and develop code.
   terminal console.
 
 - Production: We use
-  [`Dockerfile.prod`](https://github.com/WorldFishCenter/peskas.timor.data.pipeline/blob/main/Dockerfile.prod)
+  [`Dockerfile.prod`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/Dockerfile.prod)
   to run the code in production. This image is based in a more
   lightweight version of R and only installs the required packages. The
   first job in the pipeline builds this container and other steps use it
