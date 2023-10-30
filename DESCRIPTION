@@ -1,7 +1,7 @@
-Package: peskas.kenya.data.pipeline
-Title: Functions to Implement the kenya Small Scale Fisheries
+Package: peskas.zanzibar.data.pipeline
+Title: Functions to Implement the Zanzibar Small Scale Fisheries
     Data Pipeline
-Version: 3.0.0
+Version: 5.0.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",
@@ -16,64 +16,37 @@ License: GPL-3
 Imports:
     config,
     dplyr,
-    digest,
     git2r,
-    glmmTMB,
     googleAuthR,
     googleCloudStorageR,
     googledrive,
     httr,
     jsonlite,
     logger,
+    lubridate,
     magrittr,
     purrr,
     readr,
-    tidyr,
-    rlang (>= 0.1.2),
-    googlesheets4,
-    reticulate,
-    tools,
-    readxl
-Suggests: 
-    covr,
-    pkgdown,
-    remotes,
-    sessioninfo,
-    testthat,
-    RCurl,
-    roxygen2,
-    geosphere,
-    tidyselect,
-    textclean,
-    tinytest,
-    dataverse,
-    rmarkdown,
-    cowplot,
-    broom,
-    zoo,
-    sf,
-    ggplot2,
-    ggpubr,
-    lubridate,
     stringr,
     tibble,
-    furrr,
-    future,
-    rfishbase,
-    taxize,
-    univOutl,
-    zip,
-    leaflet,
-    htmltools,
-    imputeTS,
-    Amelia,
-    mice,
-    blastula,
-    glue,
-    mime,
-    janitor,
-    reactable,
-    kableExtra
+    tidyr,
+    rlang,
+    KoboconnectR
+Suggests: 
+    covr,
+    pkgdown, 
+    sessioninfo, 
+    testthat, 
+    roxygen2, 
+    tidyselect, 
+    textclean, 
+    rmarkdown, 
+    taxize, 
+    tinytest, 
+    remotes, 
+    tidytext, 
+    htmltools, 
+    reticulate
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

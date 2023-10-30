@@ -14,13 +14,11 @@ RUN install2.r --error --skipinstalled \
     lubridate \
     magrittr \
     purrr \
-    RCurl \
     readr \
     stringr \
     tibble \
     tidyr \
-    rlang \
-    googlesheets4
+    rlang
 
 # Install suggests
 RUN install2.r --error --skipinstalled \
@@ -31,35 +29,12 @@ RUN install2.r --error --skipinstalled \
     roxygen2 \
     tidyselect \
     textclean \
-    dataverse \
     rmarkdown \
-    geosphere \
-    rmarkdown \
-    ggplot2 \
-    bookdown \
-    broom \
-    zoo \
-    ggpubr \
-    cowplot \
-    kableExtra \
-    furrr \
-    future \
-    univOutl \
     taxize \
     tinytest \
     remotes \
     tidytext \
-    zip \
-    leaflet \
     htmltools \
-    Amelia \
-    mice \
-    blastula \
-    glue \
-    mime \
-    janitor \
-    reactable \
-    kableExtra \
     reticulate
 
 # Install GitHub packages
