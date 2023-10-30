@@ -7,7 +7,7 @@ pt_nest_length <- function(x) {
       name = stringr::str_remove(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, pattern = "Length_Frequency_Survey/catch_length..Length_Frequency_Survey/catch_length/")
     ) %>%
-    tidyr::pivot_wider(names_from = name, values_from = value) %>%
+    tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
     dplyr::select(-.data$content) %>%
@@ -16,14 +16,14 @@ pt_nest_length <- function(x) {
 
 pt_nest_market <- function(x) {
   x %>%
-  dplyr::select(.data$`_id`, dplyr::starts_with("Market_Catch_Survey")) %>%
+    dplyr::select(.data$`_id`, dplyr::starts_with("Market_Catch_Survey")) %>%
     tidyr::pivot_longer(-c(.data$`_id`)) %>%
     dplyr::mutate(
       n = stringr::str_extract(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, pattern = "Market_Catch_Survey/catch_market..Market_Catch_Survey/catch_market/")
     ) %>%
-    tidyr::pivot_wider(names_from = name, values_from = value) %>%
+    tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
     dplyr::select(-.data$content) %>%
@@ -39,7 +39,7 @@ pt_nest_catch <- function(x) {
       name = stringr::str_remove(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, pattern = "Total_Catch_Survey/catch_catch..Total_Catch_Survey/catch_catch/")
     ) %>%
-    tidyr::pivot_wider(names_from = name, values_from = value) %>%
+    tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
     dplyr::select(-.data$content) %>%
@@ -55,7 +55,7 @@ pt_nest_trip <- function(x) {
       name = stringr::str_remove(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, pattern = "Fishing_Trip/")
     ) %>%
-    tidyr::pivot_wider(names_from = name, values_from = value) %>%
+    tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
     dplyr::select(-.data$content, -.data$n)

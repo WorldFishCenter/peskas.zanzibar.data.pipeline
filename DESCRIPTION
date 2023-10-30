@@ -19,34 +19,23 @@ Imports:
     git2r,
     googleAuthR,
     googleCloudStorageR,
-    googledrive,
-    httr,
-    jsonlite,
     logger,
-    lubridate,
     magrittr,
     purrr,
     readr,
     stringr,
-    tibble,
     tidyr,
-    rlang,
-    KoboconnectR
+    rlang
 Suggests: 
     covr,
     pkgdown, 
     sessioninfo, 
-    testthat, 
+    tibble,
     roxygen2, 
     tidyselect, 
-    textclean, 
-    rmarkdown, 
-    taxize, 
-    tinytest, 
     remotes, 
     tidytext, 
-    htmltools, 
-    reticulate
+    KoboconnectR
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
