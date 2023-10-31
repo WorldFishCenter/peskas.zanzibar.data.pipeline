@@ -1,9 +1,17 @@
 #' Pre-process Zanzibar WCS surveys
 #'
-#' Downloads raw structured data from cloud storage services and pre-process
-#' into a binary format that is easier to deal with in R.
+#' Downloads raw structured data from cloud storage services and pre-processes
+#' into a binary format that is easier to deal with in R. During the pre-processing
+#' phase, multiple columns in the survey data, which can become very wide due to
+#' multiple recordings of similar information (e.g., species information), are nested
+#' using a set of utility functions (`pt_nest_trip`, `pt_nest_catch`,
+#' `pt_nest_length`, `pt_nest_market`, `pt_nest_attachments`).
 #'
-#' This function downloads the survey data from a given version (specified in
+#' Nesting these columns helps in reducing the width of the dataframe and organizes
+#' related columns into a single nested tibble column, thus simplifying subsequent
+#' analysis and visualization tasks.#'
+#'
+#' This function downloads the landings data from a given version (specified in
 #' the config file `conf.yml`.The parameters needed are:
 #'
 #' ```
