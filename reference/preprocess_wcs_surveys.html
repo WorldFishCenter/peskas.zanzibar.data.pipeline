@@ -84,21 +84,21 @@ related columns into a single nested tibble column, thus simplifying subsequent
 analysis and visualization tasks.#'</p>
 <p>This function downloads the landings data from a given version (specified in
 the config file <code>conf.yml</code>.The parameters needed are:</p>
-<p></p><div class="sourceCode"><pre><code><span id="cb1-1"><a href="#cb1-1"></a>surveys<span class="op">:</span></span>
-<span id="cb1-2"><a href="#cb1-2"></a><span class="st">  </span>wcs_surveys<span class="op">:</span></span>
-<span id="cb1-3"><a href="#cb1-3"></a><span class="st">    </span>asset_id<span class="op">:</span></span>
-<span id="cb1-4"><a href="#cb1-4"></a><span class="st">    </span>username<span class="op">:</span></span>
-<span id="cb1-5"><a href="#cb1-5"></a><span class="st">    </span>password<span class="op">:</span></span>
-<span id="cb1-6"><a href="#cb1-6"></a><span class="st">    </span>file_prefix<span class="op">:</span></span>
-<span id="cb1-7"><a href="#cb1-7"></a><span class="st">  </span>version<span class="op">:</span></span>
-<span id="cb1-8"><a href="#cb1-8"></a><span class="st">    </span>preprocess<span class="op">:</span></span>
-<span id="cb1-9"><a href="#cb1-9"></a>storage<span class="op">:</span></span>
-<span id="cb1-10"><a href="#cb1-10"></a><span class="st">  </span>storage_name<span class="op">:</span></span>
-<span id="cb1-11"><a href="#cb1-11"></a><span class="st">    </span>key<span class="op">:</span></span>
-<span id="cb1-12"><a href="#cb1-12"></a><span class="st">    </span>options<span class="op">:</span></span>
-<span id="cb1-13"><a href="#cb1-13"></a><span class="st">      </span>project<span class="op">:</span></span>
-<span id="cb1-14"><a href="#cb1-14"></a><span class="st">      </span>bucket<span class="op">:</span></span>
-<span id="cb1-15"><a href="#cb1-15"></a><span class="st">      </span>service_account_key<span class="op">:</span></span></code></pre><p></p></div>
+<p></p><div class="sourceCode"><pre><code><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>surveys<span class="sc">:</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  wcs_surveys<span class="sc">:</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    asset_id<span class="sc">:</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    username<span class="sc">:</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    password<span class="sc">:</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    file_prefix<span class="sc">:</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  version<span class="sc">:</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    preprocess<span class="sc">:</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>storage<span class="sc">:</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  storage_name<span class="sc">:</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    key<span class="sc">:</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    options<span class="sc">:</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>      project<span class="sc">:</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>      bucket<span class="sc">:</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>      service_account_key<span class="sc">:</span></span></code></pre><p></p></div>
 <p>Progress through the function is tracked using the package <em>logger</em>.</p>
     </div>
     <div class="section level2">
