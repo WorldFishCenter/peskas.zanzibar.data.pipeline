@@ -1,3 +1,16 @@
+#' Nest length group columns
+#'
+#' Nests length group columns obtained when reading structured data from the kobo
+#' landings survey.
+#'
+#' @param x Kobo survey in tabular format.
+#'
+#' @return Nested Landings data in which the information about multiple length information has
+#'   been nested into a single column (`length`) this column contains a
+#'   tibble for every row. This, attachment tibble has as many rows as there are
+#'   length information
+#' @export
+#'
 pt_nest_length <- function(x) {
   x %>%
     dplyr::select(.data$`_id`, dplyr::starts_with("Length_Frequency_Survey")) %>%
@@ -14,6 +27,19 @@ pt_nest_length <- function(x) {
     tidyr::nest("length" = c(.data$family, .data$species, .data$sex, .data$total_length), .by = .data$`_id`)
 }
 
+#' Nest market group columns
+#'
+#' Nests market group columns obtained when reading structured data from the kobo
+#' landings survey.
+#'
+#' @param x Kobo survey in tabular format.
+#'
+#' @return Nested Landings data in which the information about multiple market information has
+#'   been nested into a single column (`market`) this column contains a
+#'   tibble for every row. This, attachment tibble has as many rows as there are
+#'   market information.
+#' @export
+#'
 pt_nest_market <- function(x) {
   x %>%
     dplyr::select(.data$`_id`, dplyr::starts_with("Market_Catch_Survey")) %>%
@@ -30,6 +56,19 @@ pt_nest_market <- function(x) {
     tidyr::nest("market" = c(.data$group_market, .data$species_market, .data$weight_market, .data$price_sold_for), .by = .data$`_id`)
 }
 
+#' Nest catch catch columns
+#'
+#' Nests catch group columns obtained when reading structured data from the kobo
+#' landings survey.
+#'
+#' @param x Kobo survey in tabular format.
+#'
+#' @return Nested Landings data in which the information about multiple catch information has
+#'   been nested into a single column (`catch`) this column contains a
+#'   tibble for every row. This, attachment tibble has as many rows as there are
+#'   catch information.
+#' @export
+#'
 pt_nest_catch <- function(x) {
   x %>%
     dplyr::select(.data$`_id`, dplyr::starts_with("Total_Catch_Survey")) %>%
@@ -46,6 +85,18 @@ pt_nest_catch <- function(x) {
     tidyr::nest("catch" = c(.data$group_catch, .data$species_catch, .data$weight_catch, .data$wgt_ind_catch, .data$type_measure), .by = .data$`_id`)
 }
 
+#' Nest trip catch columns
+#'
+#' Nests trip group columns obtained when reading structured data from the kobo
+#' landings survey.
+#'
+#' @param x Kobo survey in tabular format.
+#'
+#' @return Nested Landings data in which the information about multiple trip information has
+#'   been nested into a single column (`trip`) this column contains a
+#'   tibble for every row. This, attachment tibble has as many rows as there are
+#'   trip information.
+#' @export
 pt_nest_trip <- function(x) {
   x %>%
     dplyr::select(.data$`_id`, dplyr::starts_with("Fishing_Trip")) %>%

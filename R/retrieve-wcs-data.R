@@ -1,3 +1,38 @@
+#' Download WCS Surveys from Kobotoolbox
+#'
+#' This function retrieves survey data from Kobotoolbox for a specific project.
+#' It allows users to customize the filename using a prefix, choose between CSV or RDS formats,
+#' and decide whether to append versioning information to the filename.
+#' The resulting files are downloaded to the working directory or specified path,
+#' with paths returned as a character vector.
+#'
+#' @param prefix Name to be used as the prefix of the file names to be
+#'   downloaded. Can be a path.
+#' @param file_format Either "csv" or "rds",
+#' @param append_version Whether to append versioning information to the
+#'   filename using \link{add_version}..
+#' @param url The URL of kobotoolbox (often referred to as 'kpi-url').
+#' @param project_id Is the asset id of the asset for which the data is
+#' to be downloaded.
+#' @param username Username of your kobotoolbox account.
+#' @param psswd Password of the account.
+#' @param encoding Encoding to be used. Default is "UTF-8".
+#'
+#' @return A character vector with paths of the downloaded files.
+#' @export
+#' @examples
+#' \dontrun{
+#' file_list <- retrieve_wcs_surveys(
+#'   prefix = "my_data",
+#'   file_format = "csv",
+#'   append_version = TRUE,
+#'   url = "kf.kobotoolbox.org",
+#'   project_id = "my_project_id",
+#'   username = "admin",
+#'   psswd = "admin",
+#'   encoding = "UTF-8"
+#' )
+#' }
 retrieve_wcs_surveys <- function(prefix = NULL,
                                  file_format = NULL,
                                  append_version = NULL,

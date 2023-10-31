@@ -1,3 +1,40 @@
+#' Pre-process Zanzibar WCS surveys
+#'
+#' Downloads raw structured data from cloud storage services and pre-process
+#' into a binary format that is easier to deal with in R.
+#'
+#' This function downloads the survey data from a given version (specified in
+#' the config file `conf.yml`.The parameters needed are:
+#'
+#' ```
+#' surveys:
+#'   wcs_surveys:
+#'     asset_id:
+#'     username:
+#'     password:
+#'     file_prefix:
+#'   version:
+#'     preprocess:
+#' storage:
+#'   storage_name:
+#'     key:
+#'     options:
+#'       project:
+#'       bucket:
+#'       service_account_key:
+#' ```
+#'
+#' Progress through the function is tracked using the package *logger*.
+#'
+#' @param log_threshold
+#' @inheritParams ingest_wcs_surveys
+#' @keywords workflow
+#' @return no outputs. This function is used for it's side effects
+#' @seealso \code{\link[=pt_nest_trip]{pt_nest_trip}}, \code{\link[=pt_nest_catch]{pt_nest_catch}},
+#'   \code{\link[=pt_nest_length]{pt_nest_length}}, \code{\link[=pt_nest_market]{pt_nest_market}},
+#'   \code{\link[=pt_nest_attachments]{pt_nest_attachments}}
+#' @export
+#'
 preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
 
