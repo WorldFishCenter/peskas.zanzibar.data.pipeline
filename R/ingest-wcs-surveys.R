@@ -54,7 +54,6 @@ ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     encoding = "UTF-8"
   )
 
-  pars$
   logger::log_info("Uploading files to cloud...")
   # Iterate over multiple storage providers if there are more than one
   purrr::map(pars$storage, ~ upload_cloud_file(file_list, .$key, .$options))
