@@ -19,7 +19,7 @@ production:
   storage:
     google:
       options:
-        bucket: zanzibar
+        bucket: zanzibar-prod
 
 local:
   inherits: development

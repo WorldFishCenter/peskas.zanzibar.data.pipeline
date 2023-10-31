@@ -1,0 +1,60 @@
+name: Peskas Zanzibar Data Pipeline
+
+on:
+  push:
+  schedule:
+    - cron:  '0 0 */2 * *'
+
+env:
+  WCS_SURVEYS_ID: ${{ secrets.WCS_SURVEYS_ID }}
+  WCS_SURVEYS_UNAME: ${{ secrets.WCS_SURVEYS_UNAME }}
+  WCS_SURVEYS_PSSW: ${{ secrets.WCS_SURVEYS_PSSW }}
+  GCP_SA_KEY: ${{ secrets.PESKAS_DATAINGESTION_GCS_KEY }}
+jobs:
+  build-container:
+    name: Build R container
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Build image with cache
+        id: build-docker
+        uses: whoan/docker-build-with-cache-action@v5
+        with:
+          username: $GITHUB_ACTOR
+          password: "${{ secrets.GITHUB_TOKEN }}"
+          registry: docker.pkg.github.com
+          image_name: r-runner-peskas-zanzibar
+          dockerfile: Dockerfile.prod
+
+  ingest-wcs-surveys:
+    name: Ingest WCS kobo surveys
+    needs: build-container
+    runs-on: ubuntu-20.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call ingest_wcs_surveys()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_wcs_surveys()'
+
+  preprocess-wcs-surveys:
+    name: Preprocess WCS kobo surveys
+    needs: ingest-wcs-surveys
+    runs-on: ubuntu-20.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call preprocess_wcs_surveys()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
