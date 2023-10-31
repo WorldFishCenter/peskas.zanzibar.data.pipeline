@@ -61,7 +61,7 @@ and can be seen in the figure below. Note that additional workflows
 exist to test the package in multiple environments and build the
 documentation website.
 
-\#![](man/figures/pipeline.png)
+![](man/figures/pipeline.png)
 
 The figure above illustrate the jobs that are part of the pipeline
 workflow. Note that not all of them are implemented yet.

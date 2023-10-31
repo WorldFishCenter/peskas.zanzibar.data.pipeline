@@ -1,0 +1,8 @@
+url: https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/
+template:
+  bootstrap: 5
+  bslib:
+    base_font: {google: "Montserrat"}
+    primary: "#4080cc"
+    secondary: "#cc8c40"
+
