@@ -81,8 +81,16 @@ pt_nest_catch <- function(x) {
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
-    dplyr::select(-.data$content) %>%
-    tidyr::nest("catch" = c(.data$group_catch, .data$species_catch, .data$weight_catch, .data$wgt_ind_catch, .data$type_measure), .by = .data$`_id`)
+    dplyr::mutate(weight_kg = dplyr::coalesce(.data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch)) %>%
+    dplyr::select(-c(.data$content, .data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch)) %>%
+    tidyr::nest(
+      "catch" = c(
+        .data$type_measure, .data$All_catch_in_boat, .data$group_catch,
+        .data$species_catch, .data$nb_ind_catch, .data$nb_buckets_catch,
+        .data$weight_kg
+      ),
+      .by = .data$`_id`
+    )
 }
 
 #' Nest trip catch columns
@@ -108,7 +116,7 @@ pt_nest_trip <- function(x) {
     ) %>%
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
-    dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
+    # dplyr::filter(!is.na(.data$content)) %>%
     dplyr::select(-.data$content, -.data$n)
 }
 

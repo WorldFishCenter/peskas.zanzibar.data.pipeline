@@ -25,7 +25,8 @@ Imports:
     readr,
     stringr,
     tidyr,
-    rlang
+    rlang,
+    lubridate
 Suggests: 
     covr,
     pkgdown, 

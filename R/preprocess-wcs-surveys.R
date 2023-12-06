@@ -68,10 +68,26 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     col_types = readr::cols(.default = readr::col_character())
   )
 
+  other_info <-
+    catch_surveys_raw %>%
+    dplyr::select(
+      .data$`_id`,
+      .data$today,
+      .data$start,
+      .data$end,
+      .data$survey_real,
+      .data$survey_type,
+      .data$landing_site,
+      .data$trip_info,
+      .data$people,
+      .data$boats_landed
+    )
+
   logger::log_info("Nesting survey groups' fields")
   group_surveys <-
     list(
       survey_trip = pt_nest_trip(catch_surveys_raw),
+      other_info = other_info,
       survey_catch = pt_nest_catch(catch_surveys_raw),
       survey_length = pt_nest_length(catch_surveys_raw),
       survey_market = pt_nest_market(catch_surveys_raw),

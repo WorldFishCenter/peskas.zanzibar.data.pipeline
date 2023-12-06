@@ -7,6 +7,9 @@ default:
       file_prefix: wcs_surveys
       version:
         preprocess: latest
+    preprocessed_surveys:
+      file_prefix: wcs_surveys_preprocessed
+      version: latest
   storage:
     google:
       key: gcs
