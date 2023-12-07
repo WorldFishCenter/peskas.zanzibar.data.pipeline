@@ -34,7 +34,6 @@
 #'
 #' Progress through the function is tracked using the package *logger*.
 #'
-#' @param log_threshold
 #' @inheritParams ingest_wcs_surveys
 #' @keywords workflow
 #' @return no outputs. This function is used for it's side effects

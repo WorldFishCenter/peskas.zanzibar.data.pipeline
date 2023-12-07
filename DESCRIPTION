@@ -25,18 +25,18 @@ Imports:
     readr,
     stringr,
     tidyr,
-    rlang
+    rlang,
+    lubridate
 Suggests: 
     covr,
-    pkgdown, 
-    sessioninfo, 
+    pkgdown,
+    sessioninfo,
     tibble,
-    roxygen2, 
-    tidyselect, 
-    remotes, 
-    tidytext, 
+    roxygen2,
+    tidyselect,
+    remotes,
+    tidytext,
     KoboconnectR,
-    lubridate,
     univOutl
 Encoding: UTF-8
 LazyData: true

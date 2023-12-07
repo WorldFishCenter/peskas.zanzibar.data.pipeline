@@ -26,6 +26,7 @@ RUN install2.r --error --skipinstalled \
     readr \
     stringr \
     tidyr \
+    lubridate \
     rlang
 
 # Install suggests
@@ -39,7 +40,6 @@ RUN install2.r --error --skipinstalled \
     remotes \
     tidytext \
     KoboconnectR \
-    lubridate \
     univOutl
 
 # Install local package
