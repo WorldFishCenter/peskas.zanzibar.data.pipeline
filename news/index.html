@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,19 @@
       
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.0" id="peskaszanzibardatapipeline-020">peskas.zanzibar.data.pipeline 0.2.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-020"></a></h2>
+<div class="section level5">
+<h5 id="new-features-0-2-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h5>
+<p>Added the validation step and updated the preprocessing step for wcs kobo surveys data, see <code><a href="../reference/preprocess_wcs_surveys.html">preprocess_wcs_surveys()</a></code> and <code>validate_wcs_surveys()</code> functions. Currently, validation for catch weight, length and market values are obtained using median absolute deviation method (MAD) leveraging on the k parameters of the <code><a href="https://rdrr.io/pkg/univOutl/man/LocScaleB.html" class="external-link">univOutl::LocScaleB</a></code> function.</p>
+<p>In order to accurately spot any outliers, validation is performed based on gear type and species.</p>
+<p><strong>N.B. VALIDATION PARAMETERS ARE NOT YET TUNED</strong></p>
+</div>
+<div class="section level5">
+<h5 id="changes-0-2-0">Changes<a class="anchor" aria-label="anchor" href="#changes-0-2-0"></a></h5>
+<p>No need to run the pipeline every two days, decreased not to every 4 days.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="peskaszanzibardatapipeline-010">peskas.zanzibar.data.pipeline 0.1.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-010"></a></h2>
 <p>Drop parent repository code (peskas.timor.pipeline), add infrastructure to download WCS survey data and upload it to cloud storage providers</p>
