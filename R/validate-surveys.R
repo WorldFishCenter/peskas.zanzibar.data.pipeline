@@ -77,7 +77,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::left_join(trips_info, validated_groups, by = "submission_id")
 
   validated_filename <-
-    paste(pars$surveys$wcs_surveys$validated_surveys$file_prefix, sep = "_") %>%
+    pars$surveys$wcs_surveys$validated_surveys$file_prefix %>%
     add_version(extension = "rds")
 
   readr::write_rds(
