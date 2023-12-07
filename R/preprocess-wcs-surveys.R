@@ -98,10 +98,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     ~ dplyr::left_join(.x, .y, by = "_id")
   )
 
-  preprocessed_filename <- paste(pars$surveys$wcs_surveys$file_prefix,
-    "preprocessed",
-    sep = "_"
-  ) %>%
+  preprocessed_filename <- pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix %>%
     add_version(extension = "rds")
 
   readr::write_rds(
