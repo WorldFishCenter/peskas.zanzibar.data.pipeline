@@ -25,7 +25,7 @@ RUN install2.r --error --skipinstalled \
     tidyselect \
     remotes \
     tidytext \
-    KoboconnectR
+    KoboconnectR \
     lubridate \
     univOutl
 #RUN Rscript -e "devtools::install_version('glmmTMB', version = '1.1.5')"
