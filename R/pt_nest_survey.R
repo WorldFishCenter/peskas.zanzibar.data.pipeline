@@ -24,7 +24,13 @@ pt_nest_length <- function(x) {
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
     dplyr::select(-.data$content) %>%
-    tidyr::nest("length" = c(.data$family, .data$species, .data$sex, .data$total_length), .by = .data$`_id`)
+    tidyr::nest(
+      "length" = c(
+        .data$family, .data$species,
+        .data$sex, .data$total_length
+      ),
+      .by = .data$`_id`
+    )
 }
 
 #' Nest market group columns
@@ -53,7 +59,13 @@ pt_nest_market <- function(x) {
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
     dplyr::select(-.data$content) %>%
-    tidyr::nest("market" = c(.data$group_market, .data$species_market, .data$weight_market, .data$price_sold_for), .by = .data$`_id`)
+    tidyr::nest(
+      "market" = c(
+        .data$group_market, .data$species_market,
+        .data$weight_market, .data$price_sold_for
+      ),
+      .by = .data$`_id`
+    )
 }
 
 #' Nest catch catch columns
@@ -81,13 +93,18 @@ pt_nest_catch <- function(x) {
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
-    dplyr::mutate(weight_kg = dplyr::coalesce(.data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch)) %>%
-    dplyr::select(-c(.data$content, .data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch)) %>%
+    dplyr::mutate(
+      weight_kg = dplyr::coalesce(.data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch),
+      nb_elements = dplyr::coalesce(.data$nb_ind_catch, .data$nb_buckets_catch)
+    ) %>%
+    dplyr::select(-c(
+      .data$content, .data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch,
+      .data$nb_ind_catch, .data$nb_buckets_catch
+    )) %>%
     tidyr::nest(
       "catch" = c(
         .data$type_measure, .data$All_catch_in_boat, .data$group_catch,
-        .data$species_catch, .data$nb_ind_catch, .data$nb_buckets_catch,
-        .data$weight_kg
+        .data$species_catch, .data$nb_elements, .data$weight_kg
       ),
       .by = .data$`_id`
     )

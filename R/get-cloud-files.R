@@ -10,7 +10,7 @@
 get_preprocessed_surveys <- function(pars) {
   wcs_preprocessed_surveys <-
     cloud_object_name(
-      prefix = pars$surveys$preprocessed_surveys$file_prefix,
+      prefix = pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix,
       provider = pars$storage$google$key,
       extension = "rds",
       version = pars$surveys$wcs_surveys$version$preprocess,

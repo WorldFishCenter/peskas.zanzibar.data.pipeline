@@ -39,6 +39,8 @@ RUN install2.r --error --skipinstalled \
     remotes \
     tidytext \
     KoboconnectR
+    lubridate \
+    univOutl
 
 # Install local package
 COPY . /home

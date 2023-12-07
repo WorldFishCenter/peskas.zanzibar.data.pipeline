@@ -3,7 +3,7 @@ name: Peskas Zanzibar Data Pipeline
 on:
   push:
   schedule:
-    - cron:  '0 0 */2 * *'
+    - cron:  '0 0 */4 * *'
 
 env:
   WCS_SURVEYS_ID: ${{ secrets.WCS_SURVEYS_ID }}
@@ -26,7 +26,6 @@ jobs:
           registry: docker.pkg.github.com
           image_name: r-runner-peskas-zanzibar
           dockerfile: Dockerfile.prod
-
   ingest-wcs-surveys:
     name: Ingest WCS kobo surveys
     needs: build-container
@@ -42,7 +41,6 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_wcs_surveys()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_wcs_surveys()'
-
   preprocess-wcs-surveys:
     name: Preprocess WCS kobo surveys
     needs: ingest-wcs-surveys
@@ -58,3 +56,18 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call preprocess_wcs_surveys()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
+  validate-wcs-surveys:
+    name: Validate WCS kobo surveys
+    needs: preprocess-wcs-surveys
+    runs-on: ubuntu-20.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call validate_wcs_surveys()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'

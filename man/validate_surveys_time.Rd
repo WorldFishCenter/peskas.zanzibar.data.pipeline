@@ -2,9 +2,9 @@
 % Please edit documentation in R/validation-functions.R
 \name{validate_surveys_time}
 \alias{validate_surveys_time}
-\title{Validate surveys' temporal parameters}
+\title{Validate surveys' fishing duration}
 \usage{
-validate_surveys_time(data, hrs_max = NULL, hrs_min)
+validate_surveys_time(data = NULL, hrs_max = NULL, hrs_min = NULL)
 }
 \arguments{
 \item{data}{A preprocessed data frame}
@@ -14,12 +14,12 @@ validate_surveys_time(data, hrs_max = NULL, hrs_min)
 \item{hrs_min}{Lower threshold of fishing trip duration.}
 }
 \value{
-A list containing data frames with validated catch dates and catch
+A list containing data frames with validated catch
 duration.
 }
 \description{
-This function takes a preprocessed landings' matrix and validate temporal
-info associated to each survey.
+This function takes a preprocessed landings' matrix and validate fishing trip
+duration associated to each survey.
 }
 \examples{
 \dontrun{

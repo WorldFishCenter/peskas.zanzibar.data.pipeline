@@ -4,12 +4,22 @@ default:
       asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
       username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
       password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
-      file_prefix: wcs_surveys
+      file_prefix: wcs-surveys
       version:
         preprocess: latest
-    preprocessed_surveys:
-      file_prefix: wcs_surveys_preprocessed
-      version: latest
+      preprocessed_surveys:
+        file_prefix: wcs-surveys-preprocessed
+        version: latest
+      validated_surveys:
+        file_prefix: wcs-surveys-validated
+        version: latest
+      validation:
+        duration_min: 1
+        duration_max: 72
+        K_nb_elements_max: 2
+        K_weight_max: 2
+        K_length_max: 2
+        K_price_max: 2
   storage:
     google:
       key: gcs
