@@ -1,3 +1,30 @@
+#' Validate WCS Surveys Data
+#'
+#' This function validates Wildlife Conservation Society (WCS) survey data. It reads
+#'  configuration parameters, preprocesses surveys,
+#' and performs various validations on survey duration, catches, lengths, and market data.
+#'  It also logs the process at specified
+#' log thresholds. The function consolidates validated data and saves it as an RDS file,
+#'  which is then uploaded to cloud storage.
+#'
+#' @param log_threshold A log level threshold from the `logger` package, used to
+#'  set the minimum level of log messages to be captured.
+#' @importFrom logger log_threshold log_info
+#' @importFrom dplyr select left_join mutate
+#' @importFrom purrr map reduce
+#' @importFrom lubridate with_tz
+#' @importFrom readr write_rds
+#'
+#' @return No return value; this function is called for its side effects,
+#' including data validation, file creation, and cloud uploading.
+#' @export
+#'
+#' @examples
+#' # Assuming necessary configuration and data are available:
+#' \dontrun{
+#' validate_wcs_surveys(log_threshold = logger::INFO)
+#' }
+#' @seealso \code{\link{validate_catch}}, \code{\link{validate_length}}, \code{\link{validate_market}}
 validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
 
