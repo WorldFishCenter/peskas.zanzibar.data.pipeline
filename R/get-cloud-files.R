@@ -26,3 +26,33 @@ get_preprocessed_surveys <- function(pars) {
 
   readr::read_rds(wcs_preprocessed_surveys)
 }
+
+
+#' Download WCS validated surveys
+#'
+#' Download validated WCS data from Google Cloud.
+#'
+#' @param pars The configuration file.
+#'
+#' @return A rds dataframe of validated survey landings.
+#' @export
+#'
+get_validated_surveys <- function(pars) {
+  wcs_validated_surveys <-
+    cloud_object_name(
+      prefix = pars$surveys$wcs_surveys$validated_surveys$file_prefix,
+      provider = pars$storage$google$key,
+      extension = "rds",
+      version = pars$surveys$wcs_surveys$version$preprocess,
+      options = pars$storage$google$options
+    )
+
+  logger::log_info("Retrieving {wcs_validated_surveys}")
+  download_cloud_file(
+    name = wcs_validated_surveys,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+
+  readr::read_rds(wcs_validated_surveys)
+}

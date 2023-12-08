@@ -65,11 +65,28 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       date = lubridate::with_tz(.data$today, "Africa/Dar_es_Salaam"),
       date = as.Date(date)
     ) %>%
+    # convert fields
+    dplyr::mutate(dplyr::across(.cols = c(
+      .data$lat,
+      .data$lon,
+      .data$engine
+    ), ~ as.numeric(.x))) %>%
     dplyr::select(
-      .data$submission_id, .data$date, .data$survey_real, .data$survey_type,
-      .data$landing_site, .data$fishing_location, .data$fishing_ground_name,
-      .data$fishing_ground_type, .data$fishing_ground_depth, .data$gear_type,
-      .data$gear_type, .data$boat_type, .data$engine_yn, .data$engine,
+      .data$submission_id,
+      .data$date,
+      .data$survey_real,
+      .data$survey_type,
+      .data$landing_site,
+      .data$lat,
+      .data$lon,
+      .data$fishing_location,
+      .data$fishing_ground_name,
+      .data$fishing_ground_type,
+      .data$fishing_ground_depth,
+      .data$gear_type,
+      .data$boat_type,
+      .data$engine_yn,
+      .data$engine,
       .data$boats_landed
     )
 

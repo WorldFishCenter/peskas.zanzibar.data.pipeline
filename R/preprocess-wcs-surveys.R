@@ -69,6 +69,10 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   other_info <-
     catch_surveys_raw %>%
+    tidyr::separate(.data$gps,
+      into = c("lat", "lon", "drop1", "drop2"),
+      sep = " "
+    ) %>%
     dplyr::select(
       .data$`_id`,
       .data$today,
@@ -77,6 +81,8 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       .data$survey_real,
       .data$survey_type,
       .data$landing_site,
+      .data$lat,
+      .data$lon,
       .data$trip_info,
       .data$people,
       .data$boats_landed
