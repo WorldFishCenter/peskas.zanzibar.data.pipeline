@@ -157,7 +157,7 @@ validate_catch <- function(data = NULL, k_max_nb = NULL, k_max_weight = NULL) {
     dplyr::mutate(alert_number = dplyr::coalesce(.data$alert_weight, .data$alert_nb)) %>%
     tidyr::nest(
       "catch" = c(
-        .data$type_measure, .data$All_catch_in_boat, .data$group_catch,
+        .data$type_measure, .data$group_catch,
         .data$species_catch, .data$nb_elements, .data$weight_kg
       ),
       .by = c(.data$submission_id, .data$alert_number)

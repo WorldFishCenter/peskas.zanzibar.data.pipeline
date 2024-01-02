@@ -32,14 +32,11 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   preprocessed_surveys <- get_preprocessed_surveys(pars)
 
   # define validation parameters
-  hrs_min <- pars$surveys$wcs_surveys$validation$duration_min
-  hrs_max <- pars$surveys$wcs_surveys$validation$duration_max
   k_max_nb <- pars$surveys$wcs_surveys$validation$K_nb_elements_max
   k_max_weight <- pars$surveys$wcs_surveys$validation$K_weight_max
   k_max_length <- pars$surveys$wcs_surveys$validation$K_length_max
   k_max_price <- pars$surveys$wcs_surveys$validation$K_price_max
 
-  surveys_duration_alerts <- validate_surveys_time(data = preprocessed_surveys, hrs_min = hrs_min, hrs_max = hrs_max)
   logger::log_info("Validating catches groups")
   surveys_catch_alerts <- validate_catch(data = preprocessed_surveys, k_max_nb = k_max_nb, k_max_weight = k_max_weight)
   logger::log_info("Validating lengths group")
@@ -50,7 +47,6 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_info("Renaming data fields")
   validated_groups <-
     list(
-      surveys_duration_alerts,
       surveys_catch_alerts,
       surveys_length_alerts,
       surveys_market_alerts
@@ -63,14 +59,19 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::mutate(
       submission_id = as.integer(.data$`_id`),
       date = lubridate::with_tz(.data$today, "Africa/Dar_es_Salaam"),
-      date = as.Date(date)
+      date = as.Date(date),
+      landing_site = stringr::str_to_title(.data$landing_site)
     ) %>%
     # convert fields
-    dplyr::mutate(dplyr::across(.cols = c(
-      .data$lat,
-      .data$lon,
-      .data$engine
-    ), ~ as.numeric(.x))) %>%
+    dplyr::mutate(
+      dplyr::across(.cols = c(
+        .data$lat,
+        .data$lon,
+        .data$engine,
+        .data$people,
+        .data$boats_landed
+      ), ~ as.numeric(.x))
+    ) %>%
     dplyr::select(
       .data$submission_id,
       .data$date,
@@ -79,6 +80,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       .data$landing_site,
       .data$lat,
       .data$lon,
+      trip_duration_days = .data$fishing_duration,
       .data$fishing_location,
       .data$fishing_ground_name,
       .data$fishing_ground_type,
@@ -87,6 +89,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       .data$boat_type,
       .data$engine_yn,
       .data$engine,
+      .data$people,
       .data$boats_landed
     )
 

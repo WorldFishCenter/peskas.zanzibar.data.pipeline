@@ -14,8 +14,6 @@ default:
         file_prefix: wcs-surveys-validated
         version: latest
       validation:
-        duration_min: 1
-        duration_max: 72
         K_nb_elements_max: 2
         K_weight_max: 2
         K_length_max: 2
