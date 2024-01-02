@@ -37,7 +37,10 @@ Suggests:
     remotes,
     tidytext,
     KoboconnectR,
-    univOutl
+    univOutl,
+    reticulate,
+    stringi,
+    taxize
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

@@ -27,7 +27,12 @@ RUN install2.r --error --skipinstalled \
     remotes \
     tidytext \
     KoboconnectR \
-    univOutl
+    univOutl \
+    taxize \
+    reticulate \
+    stringi \
+    taxize
+
 #RUN Rscript -e "devtools::install_version('glmmTMB', version = '1.1.5')"
 # Rstudio interface preferences
 COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json

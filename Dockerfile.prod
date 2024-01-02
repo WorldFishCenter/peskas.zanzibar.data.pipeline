@@ -40,7 +40,11 @@ RUN install2.r --error --skipinstalled \
     remotes \
     tidytext \
     KoboconnectR \
-    univOutl
+    univOutl \
+    taxize \
+    reticulate \
+    stringi \
+    taxize
 
 # Install local package
 COPY . /home
