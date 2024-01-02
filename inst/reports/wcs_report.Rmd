@@ -1,0 +1,294 @@
+---
+title: "WCS Zanzibar"
+date: "`r Sys.Date()`"
+geometry: "left=3cm,right=3cm,top=2cm,bottom=2cm"
+output:
+  bookdown::html_document2:
+   toc: true
+   toc_depth: 3
+   css: style.css
+header-includes: 
+  - \usepackage{float} 
+  - \floatplacement{figure}{H}
+  - \usepackage{leading}
+  - \leading{16pt}
+nocite: '@*'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(magrittr)
+my_palette <- c(
+  "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00",
+  "#cccc28", "#A65628", "#F781BF", "#999999", "#66C2A5",
+  "#FC8D62", "#00BFFF", "#808000"
+)
+
+catch_palette <- 
+  c(
+  "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00",
+  "#cccc28", "#A65628", "#F781BF", "#999999", "#66C2A5",
+  "#FC8D62", "#00BFFF", "#808000", "#ccff00", "#FAEBD7",
+  "#00FFFF", "#7FFFD4"
+)
+
+setwd("../..")
+pars <- peskas.zanzibar.data.pipeline::read_config()
+validated <-
+  peskas.zanzibar.data.pipeline::get_validated_surveys(pars)
+```
+
+# Aim
+
+The aim of this report is to provide an overview of WCS SSF data in Zanzibar. The analysis is structured on the following key aspects:
+
+-   Data Availability Across Sites: To assess the consistency and frequency of data collection at each landing site, thereby identifying any patterns or gaps in data collection efforts.
+
+-   Distribution of Gear and Boat Types: To evaluate the distribution and prevalence of fishing gear and boat types used across the landing sites.
+
+-   Catch Composition: To analyze the catch composition at each landing site, focusing on the five most commonly caught fish families.
+
+-   Market Value Distribution: To investigate the market prices per kilogram of different fish families.
+
+# Data distribution
+
+The map illustrates the geographic spread of Wildlife Conservation Society (WCS) surveys along the Tanzanian coast, including Zanzibar and Pemba. The height and color of the columns on the map indicate the quantity of surveys conducted in each area. A majority of these surveys are concentrated on the western sides of the islands, and in the northern region of the Tanzanian mainland, particularly around *Moa*.
+
+```{r, echo=FALSE}
+htmltools::tags$iframe(
+  src = "https://storage.googleapis.com/public-timor/kepler_wcs_map.html",
+  width = "100%",
+  height = "500px",
+  style = "border: none;"
+)
+```
+
+The visualized plot ranks various sites by their data availability over time, with the x-axis tracking the timeline from late 2021 to nowdays. Sites with the most available data, such as *Mangapwani*, are ranked at the top and exhibit a nearly continuous presence of dark bars, indicating a robust and consistent data record. As we progress down the y-axis, the frequency of dark bars decreases, denoting a decline in data availability. For example, middle-ranked sites like *Jambiani* and *Chole* have data points, but these are more intermittent and spread out over time. At the very bottom of the plot, sites like *Chwaka* have very few bars, showing that data is collected infrequently. The descending order of the sites from top to bottom illustrates a gradient from high to low data availability, reflecting the varying degrees of data capture or reporting across these locations.
+
+The representation indicates that landing sites divide in two main blocks when considering missing data distribution. Indeed, progressing below the landing site *Jasini* data are very sparse, accounting for less than 100 surveys collected. **Consequently, all further analyses were limited to the landing sites at and above *Jasini*, due to the more complete data available there.**
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+sites <- 
+  validated %>%
+  dplyr::select(submission_id, landing_site) %>%
+  dplyr::group_by(landing_site) %>%
+  dplyr::count() %>% 
+  dplyr::arrange(-n) %>% 
+  dplyr::filter(n > 150) %>% 
+  magrittr::extract2("landing_site")
+
+
+validated %>%
+  dplyr::select(submission_id, date, landing_site) %>%
+  tidyr::complete(landing_site, date) %>%
+  dplyr::mutate(record = ifelse(is.na(submission_id), 0, 1)) %>%
+  dplyr::group_by(landing_site) %>%
+  dplyr::mutate(obs = sum(record)) %>%
+  ggplot(aes(date, reorder(landing_site, obs), fill = as.factor(record))) +
+  theme_minimal() +
+  geom_tile(width = 3) +
+  coord_cartesian(expand = FALSE) +
+  scale_fill_manual(values = c("transparent", "#047474")) +
+  scale_x_date(date_breaks = "4 months", date_labels = "%y-%b") +
+  theme(legend.position = "") +
+  labs(y = "", x = "Date")
+```
+
+The diagram illustrates the distribution and types of surveys conducted at various landing sites. The width of each band in the diagram reflects the volume of data collected for each element. There are three main types of surveys represented, with 'catch' surveys being the most dominant. 'Length' and 'market' surveys appear to be less frequent in comparison. Within the data collected from 'catch' surveys, measurements of 'weight' are the most prevalent, followed by 'unknown' measurement types and measurements taken using a 'bucket.' For more detailed information, you can interact with the diagram by hovering over specific areas of the plot, which will provide additional insights.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+validated_sankey <- 
+  validated %>% 
+  tidyr::unnest(catch) %>% 
+  dplyr::filter(landing_site %in% sites) %>%
+  dplyr::select(survey_type, type_measure, landing_site) %>% 
+  dplyr::mutate(type_measure = ifelse(is.na(type_measure), "unknown", type_measure)) %>% 
+  dplyr::arrange(type_measure) %>% 
+  dplyr::filter(!type_measure == "length")
+  
+highcharter::hchart(highcharter::data_to_sankey(validated_sankey), "sankey", name = "N. surveys") %>% 
+  highcharter::hc_subtitle(text= "Surveys profile") 
+
+
+```
+
+# Fishery profile
+
+## Gear and boat type
+
+The bar charts below illustrate a detailed breakdown of gear and boat types used across various landing sites. Each landing site has a unique combination of gear types, indicating a certain level of diversity in fishing practices from one site to another. While there is a common set of gear types used across many sites---like 'beach seines', 'gill nets', and 'long_line_long'---the proportion of each gear type varies by site. This variation suggests that while the same types of gear may be available at different sites, the preference or suitability of a particular gear type is site-specific. Some sites appear to have a more homogenous gear usage, with one or two types of gear dominating the bar, while others display a more heterogeneous mix, indicating a more varied fishing practice. Hover on the plot to get insights.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+validated %>%
+  dplyr::filter(survey_type == "catch" &
+                  survey_real == "real",
+                landing_site %in% sites) %>%
+  dplyr::select(landing_site, gear_type) %>%
+  dplyr::mutate(gear_type = ifelse(is.na(gear_type), "unknown", gear_type)) %>%
+  dplyr::mutate(
+    gear_type = stringr::str_remove_all(gear_type, "_[0-9]+"),
+    gear_list = stringr::str_split(gear_type, " ")
+  ) %>%
+  tidyr::unnest(gear_list) %>%
+  dplyr::select(-gear_type) %>%
+  dplyr::group_by(landing_site) %>%
+  dplyr::mutate(tot_obs = dplyr::n()) %>%
+  dplyr::group_by(landing_site, gear_list) %>%
+  dplyr::summarise(
+    tot_obs = dplyr::first(tot_obs),
+    n = dplyr::n()
+  ) %>%
+  dplyr::ungroup() %>%
+  tidyr::complete(landing_site, gear_list) %>%
+  tidyr::replace_na(replace = list(n = 0)) %>%
+  dplyr::arrange(-tot_obs) %>%
+  apexcharter::apex(
+    type = "bar",
+    mapping = apexcharter::aes(x = landing_site, y = n, fill = gear_list),
+    height = 500
+  ) %>%
+  apexcharter::ax_chart(
+    stacked = TRUE
+  ) %>%
+  apexcharter::ax_colors(my_palette) %>%
+  apexcharter::ax_xaxis(
+    title = list(
+      text = "N. surveys"
+    )
+  )
+```
+
+Similar to the previous chart, the sites are ranked by the total number of survey. Each bar is color-coded to represent various boat types such as canoes, fiberglass boats, different sizes of sailboats (large, medium, small), other boats, support boats, and some unspecified or unknown types. Some landing sites have a diverse mix of boat types, as shown by the multiple colors within their bars. Other sites appear to have a more uniform distribution, relying primarily on one type of boat, like canoes or small sailboats. This diversity in boat type usage among the sites suggests that each location may have its own fishing practices. Hover on the plot to get insights.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+validated %>%
+  dplyr::filter(survey_type == "catch" & survey_real == "real",
+                landing_site %in% sites) %>%
+  dplyr::select(landing_site, boat_type) %>%
+  dplyr::mutate(boat_type = ifelse(is.na(boat_type), "unknown", boat_type)) %>%
+  dplyr::group_by(landing_site) %>%
+  dplyr::mutate(tot_obs = dplyr::n()) %>%
+  dplyr::group_by(landing_site, boat_type) %>%
+  dplyr::summarise(
+    tot_obs = dplyr::first(tot_obs),
+    n = dplyr::n()
+  ) %>%
+  dplyr::ungroup() %>%
+  tidyr::complete(landing_site, boat_type) %>%
+  tidyr::replace_na(replace = list(n = 0)) %>%
+  dplyr::arrange(-tot_obs) %>%
+  apexcharter::apex(
+    type = "bar",
+    mapping = apexcharter::aes(x = landing_site, y = n, fill = boat_type),
+    height = 500
+  ) %>%
+  apexcharter::ax_chart(
+    stacked = TRUE
+  ) %>%
+  apexcharter::ax_colors(my_palette) %>%
+  apexcharter::ax_xaxis(
+    title = list(
+      text = "N. surveys"
+    )
+  )
+```
+
+# Catch composition
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+val_taxa <-
+  validated %>%
+  dplyr::filter(survey_type == "catch" & survey_real == "real",
+                landing_site %in% sites) %>%
+  tidyr::unnest(catch) %>%
+  peskas.zanzibar.data.pipeline::expand_taxa()
+```
+
+The Global Biodiversity Information Facility (GBIF) was utilized to acquire standardized taxonomic information from catch composition data. For each taxonomic entry, the most recent classification was specifically extracted, primarily focusing on the family rank and extending to the genus and species ranks where applicable.
+
+The bar chart below shows the relative catch composition at various landing sites, focusing on the five most prevalent fish families at each site, with all other families combined into the "Others" category. Each bar's color segments correspond to one of these top families, with their length proportional to their relative catch percentage, while the "Others" category captures the collective presence of all additional families.
+
+The chart reveals that while there's a core set of fish families commonly found across many sites, there's also considerable variation in the dominant families from one site to the next. Some landing sites have a more balanced composition among the top families while other sites are characterized by one or two families making up a large portion of the catch. Overall, the plot indicates a huge diversity in catch composition among the landing sites. Hover on the plot to get insights.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+top5 <-
+  val_taxa %>%
+  dplyr::select(submission_id, landing_site, family, weight_kg) %>%
+  dplyr::group_by(landing_site, family) %>%
+  dplyr::summarise(tot_weight = sum(weight_kg, na.rm = T)) %>%
+  dplyr::group_by(landing_site) %>%
+  dplyr::arrange(-tot_weight, .by_group = T) %>%
+  dplyr::slice_head(n = 5) %>%
+  dplyr::ungroup() %>%
+  magrittr::extract2("family") %>%
+  unique()
+
+
+val_taxa %>%
+  dplyr::filter(!is.na(family)) %>%
+  dplyr::select(submission_id, landing_site, family, weight_kg) %>%
+  dplyr::mutate(family = ifelse(family %in% top5, family, "Others")) %>%
+  dplyr::group_by(landing_site, family) %>%
+  dplyr::summarise(weight_tot = sum(weight_kg, na.rm = T)) %>%
+  dplyr::group_by(landing_site) %>%
+  dplyr::arrange(-weight_tot, .by_group = T) %>%
+  dplyr::slice_head(n = 5) %>%
+  dplyr::ungroup() %>%
+  tidyr::complete(landing_site, family) %>%
+  tidyr::replace_na(list(weight_tot = 0)) %>%
+  dplyr::group_by(landing_site) %>%
+  dplyr::arrange(-weight_tot, .by_group = T) %>%
+  dplyr::mutate(weight_tot = round(weight_tot, 2)) %>%
+  apexcharter::apex(
+    type = "bar",
+    mapping = apexcharter::aes(x = landing_site, y = weight_tot, fill = family),
+    height = 500
+  ) %>%
+  apexcharter::ax_chart(
+    stacked = TRUE,
+    stackType = "100%"
+  ) %>%
+  apexcharter::ax_colors(catch_palette) %>%
+  apexcharter::ax_xaxis(
+    title = list(
+      text = "Relative catch composition (%)"
+    )
+  )
+```
+
+# Market
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+validated_market <-
+  validated %>%
+  dplyr::filter(survey_real == "real",
+                landing_site %in% sites) %>%
+  tidyr::unnest(market) %>%
+  dplyr::rename(species_catch = species_market) %>%
+  peskas.zanzibar.data.pipeline::expand_taxa()
+```
+
+The boxplot visualizes the distribution of market prices per kilogram for different fish families, with the y-axis listing the families ranked by the median price. The red dotted line represent 1 USD per kg. *Caesionidae*, at the top, has the highest median price and also shows a wide dispersion, suggesting a large variation in prices. Apart from *Caesionidae* most of the families have a similar price per kg dispersion, suggesting a consistent pricing range.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+validated_market %>%
+  dplyr::filter(!is.na(species_catch)) %>%
+  dplyr::mutate(pricekg_USD = price_kg / 2508.75) %>%
+  dplyr::select(submission_id, landing_site, pricekg_USD, family, genus, species) %>%
+  dplyr::group_by(family) %>%
+  dplyr::filter(!is.na(family)) %>%
+  dplyr::mutate(mean_price = mean(pricekg_USD, na.rm = T)) %>%
+  ggplot(aes(y = reorder(family, mean_price), x = pricekg_USD)) +
+  theme_minimal() +
+  geom_boxplot(color = "grey20", fill = "#66C2A5", alpha = 0.5, size = 0.25) +
+  coord_flip() +
+  geom_vline(xintercept = 1, linetype = 2, color = "firebrick") +
+  labs(x = "Price per kg (USD)", y = "") +
+  scale_x_continuous(n.breaks = 12) +
+  coord_cartesian(x = c(0, NA), expand = F)
+```
