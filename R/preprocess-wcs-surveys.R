@@ -113,7 +113,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     compress = "gz"
   )
 
-  logger::log_info("Uploading {preprocessed_filename} to cloud sorage")
+  logger::log_info("Uploading {preprocessed_filename} to cloud storage")
   upload_cloud_file(
     file = preprocessed_filename,
     provider = pars$storage$google$key,
