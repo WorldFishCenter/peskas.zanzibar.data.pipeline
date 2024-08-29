@@ -40,7 +40,7 @@ ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   pars <- read_config()
 
   file_list <- retrieve_wcs_surveys(
-    prefix = pars$surveys$wcs_surveys$file_prefix,
+    prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "kf.kobotoolbox.org",
     project_id = pars$surveys$wcs_surveys$asset_id,
@@ -109,7 +109,7 @@ retrieve_wcs_surveys <- function(
 
   logger::log_info("Converting WCS Fish Catch Survey Kobo data to tabular format...")
   tabular_data <- purrr::map_dfr(data_raw, flatten_row)
-  data_filename <- paste(prefix, "raw", sep = "_")
+  data_filename <- prefix
 
   if (isTRUE(append_version)) {
     parquet_filename <- add_version(data_filename, "parquet")

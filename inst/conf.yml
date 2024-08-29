@@ -4,9 +4,11 @@ default:
       asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
       username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
       password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
-      file_prefix: wcs-surveys
       version:
         preprocess: latest
+      raw_surveys:
+        file_prefix: wcs-surveys-raw
+        version: latest
       preprocessed_surveys:
         file_prefix: wcs-surveys-preprocessed
         version: latest

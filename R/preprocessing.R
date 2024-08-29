@@ -38,7 +38,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   pars <- read_config()
 
   wcs_surveys_parquet <- cloud_object_name(
-    prefix = pars$surveys$wcs_surveys$file_prefix,
+    prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
     provider = pars$storage$google$key,
     extension = "parquet",
     version = pars$surveys$wcs_surveys$version$preprocess,
@@ -53,7 +53,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   )
 
   catch_surveys_raw <- arrow::read_parquet(
-    file = wcs_surveys_parquet,
+    file = wcs_surveys_parquet
   )
 
   other_info <-
