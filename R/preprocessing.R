@@ -1,0 +1,349 @@
+#' Pre-process Zanzibar WCS Surveys
+#'
+#' Downloads and preprocesses raw structured WCS survey data from cloud storage into a binary format. The process includes nesting multiple columns related to species information into single columns within a dataframe, which helps reduce its width and organize data efficiently for analysis.
+#'
+#' Configurations are read from `conf.yml` with the following necessary parameters:
+#'
+#' ```
+#' surveys:
+#'   wcs_surveys:
+#'     asset_id:
+#'     username:
+#'     password:
+#'     file_prefix:
+#'   version:
+#'     preprocess:
+#' storage:
+#'   storage_name:
+#'     key:
+#'     options:
+#'       project:
+#'       bucket:
+#'       service_account_key:
+#' ```
+#'
+#' The function uses logging to track progress.
+#'
+#' @inheritParams ingest_wcs_surveys
+#' @return None; the function is used for its side effects.
+#' @export
+#' @keywords workflow preprocessing
+#' @seealso \code{\link[=pt_nest_trip]{pt_nest_trip}}, \code{\link[=pt_nest_catch]{pt_nest_catch}},
+#' \code{\link[=pt_nest_length]{pt_nest_length}}, \code{\link[=pt_nest_market]{pt_nest_market}},
+#' \code{\link[=pt_nest_attachments]{pt_nest_attachments}}
+#'
+preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+
+  pars <- read_config()
+
+  wcs_surveys_parquet <- cloud_object_name(
+    prefix = pars$surveys$wcs_surveys$file_prefix,
+    provider = pars$storage$google$key,
+    extension = "parquet",
+    version = pars$surveys$wcs_surveys$version$preprocess,
+    options = pars$storage$google$options
+  )
+
+  logger::log_info("Retrieving {wcs_surveys_parquet}")
+  download_cloud_file(
+    name = wcs_surveys_parquet,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+
+  catch_surveys_raw <- arrow::read_parquet(
+    file = wcs_surveys_parquet,
+  )
+
+  other_info <-
+    catch_surveys_raw %>%
+    tidyr::separate(.data$gps,
+      into = c("lat", "lon", "drop1", "drop2"),
+      sep = " "
+    ) %>%
+    dplyr::select(
+      .data$`_id`,
+      .data$today,
+      .data$start,
+      .data$end,
+      .data$survey_real,
+      .data$survey_type,
+      .data$landing_site,
+      .data$lat,
+      .data$lon,
+      .data$trip_info,
+      .data$people,
+      .data$boats_landed
+    )
+
+  logger::log_info("Nesting survey groups' fields")
+  group_surveys <-
+    list(
+      survey_trip = pt_nest_trip(catch_surveys_raw),
+      other_info = other_info,
+      survey_catch = pt_nest_catch(catch_surveys_raw),
+      survey_length = pt_nest_length(catch_surveys_raw),
+      survey_market = pt_nest_market(catch_surveys_raw),
+      survey_attachments = pt_nest_attachments(catch_surveys_raw)
+    )
+
+  wcs_surveys_nested <- purrr::reduce(
+    group_surveys,
+    ~ dplyr::full_join(.x, .y, by = "_id")
+  )
+
+  preprocessed_filename <- pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix %>%
+    add_version(extension = "parquet")
+
+  arrow::write_parquet(
+    x = wcs_surveys_nested,
+    sink = preprocessed_filename,
+    compression = "lz4",
+    compression_level = 12
+  )
+
+  logger::log_info("Uploading {preprocessed_filename} to cloud storage")
+  upload_cloud_file(
+    file = preprocessed_filename,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+}
+
+
+#' Nest Length Group Columns
+#'
+#' Nests length group columns obtained from the structured data of WCS landings surveys.
+#' This reduces the width of data by converting multiple related columns into a single nested column.
+#'
+#' @param x Data frame of WCS survey data in tabular format.
+#' @return A data frame with length data nested into a single 'length' column,
+#'         which contains a tibble for each row with multiple measurements.
+#' @keywords internal
+#'
+pt_nest_length <- function(x) {
+  x %>%
+    dplyr::select(.data$`_id`, dplyr::starts_with("Length_Frequency_Survey")) %>%
+    tidyr::pivot_longer(-c(.data$`_id`)) %>%
+    dplyr::mutate(
+      n = stringr::str_extract(.data$name, "(\\d+)"),
+      name = stringr::str_remove(.data$name, "(\\d+)"),
+      name = stringr::str_remove(.data$name, pattern = "Length_Frequency_Survey/catch_length..Length_Frequency_Survey/catch_length/")
+    ) %>%
+    tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
+    dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
+    dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
+    dplyr::select(-.data$content) %>%
+    tidyr::nest(
+      "length" = c(
+        .data$family, .data$species,
+        .data$sex, .data$total_length
+      ),
+      .by = .data$`_id`
+    )
+}
+
+#' Nest Market Group Columns
+#'
+#' Nests market group columns from structured WCS landings survey data. This method organizes
+#' multiple related market data points into a single nested 'market' column per row.
+#'
+#' @param x Data frame of WCS survey data in tabular format.
+#' @return A data frame with market data nested into a 'market' column, containing a tibble
+#'         for each row with various market-related attributes.
+#' @keywords internal
+#' @export
+#'
+pt_nest_market <- function(x) {
+  x %>%
+    dplyr::select(.data$`_id`, dplyr::starts_with("Market_Catch_Survey")) %>%
+    tidyr::pivot_longer(-c(.data$`_id`)) %>%
+    dplyr::mutate(
+      n = stringr::str_extract(.data$name, "(\\d+)"),
+      name = stringr::str_remove(.data$name, "(\\d+)"),
+      name = stringr::str_remove(.data$name, pattern = "Market_Catch_Survey/catch_market..Market_Catch_Survey/catch_market/")
+    ) %>%
+    tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
+    dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
+    dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
+    dplyr::select(-.data$content) %>%
+    tidyr::nest(
+      "market" = c(
+        .data$group_market, .data$species_market,
+        .data$weight_market, .data$price_sold_for
+      ),
+      .by = .data$`_id`
+    )
+}
+
+#' Nest Catch Group Columns
+#'
+#' Nests catch group columns from WCS structured survey data to organize multiple
+#' related catch data points into a single nested 'catch' column per row.
+#'
+#' @param x Data frame of WCS survey data in tabular format.
+#' @return A data frame with catch data nested into a 'catch' column, containing a tibble
+#'         for each row with various catch-related attributes.
+#' @keywords internal
+#' @export
+#'
+pt_nest_catch <- function(x) {
+  x %>%
+    dplyr::select(.data$`_id`, dplyr::starts_with("Total_Catch_Survey")) %>%
+    tidyr::pivot_longer(-c(.data$`_id`)) %>%
+    dplyr::mutate(
+      n = stringr::str_extract(.data$name, "(\\d+)"),
+      name = stringr::str_remove(.data$name, "(\\d+)"),
+      name = stringr::str_remove(.data$name, pattern = "Total_Catch_Survey/catch_catch..Total_Catch_Survey/catch_catch/")
+    ) %>%
+    tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
+    dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
+    dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
+    dplyr::mutate(
+      weight_kg = dplyr::coalesce(.data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch),
+      nb_elements = dplyr::coalesce(.data$nb_ind_catch, .data$nb_buckets_catch)
+    ) %>%
+    dplyr::select(-c(
+      .data$content, .data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch,
+      .data$nb_ind_catch, .data$nb_buckets_catch
+    )) %>%
+    tidyr::nest(
+      "catch" = c(
+        .data$type_measure, .data$All_catch_in_boat, .data$group_catch,
+        .data$species_catch, .data$nb_elements, .data$weight_kg
+      ),
+      .by = .data$`_id`
+    )
+}
+
+#' Nest Trip Group Columns
+#'
+#' Processes and nests trip-related columns from structured WCS landings survey data into a single 'trip' column. This approach consolidates trip information into nested tibbles within the dataframe, simplifying the structure for analysis.
+#'
+#' @param x A data frame containing structured survey data in tabular format.
+#' @return A data frame with trip data nested into a single 'trip' column containing a tibble for each row, corresponding to the various trip details.
+#' @keywords internal
+#' @export
+#'
+pt_nest_trip <- function(x) {
+  x %>%
+    dplyr::select(.data$`_id`, dplyr::starts_with("Fishing_Trip")) %>%
+    tidyr::pivot_longer(-c(.data$`_id`)) %>%
+    dplyr::mutate(
+      n = stringr::str_extract(.data$name, "(\\d+)"),
+      name = stringr::str_remove(.data$name, "(\\d+)"),
+      name = stringr::str_remove(.data$name, pattern = "Fishing_Trip/")
+    ) %>%
+    tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
+    dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
+    # dplyr::filter(!is.na(.data$content)) %>%
+    dplyr::select(-.data$content, -.data$n)
+}
+
+#' Nest Attachment Columns
+#'
+#' Nests attachment-related columns from structured WCS survey data, organizing multiple attachment entries into a single nested column. This function addresses the challenge of handling wide data tables by converting them into more manageable nested data frames.
+#'
+#' @param x A data frame containing raw survey data, potentially with multiple attachments per survey entry.
+#' @return A data frame with attachment information nested into a single '_attachments' column, containing a tibble for each row.
+#' @keywords internal
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' dummy_landings <- tidyr::tibble(
+#'   `_id` = "123",
+#'   `_attachments.0.download_url` = "http://url-1.com",
+#'   `_attachments.0.id` = "01",
+#'   `_attachments.1.download_url` = "http://url-2.com",
+#'   `_attachments.1.id` = "02",
+#'   `_attachments.2.download_url` = NA,
+#'   `_attachments.2.id` = NA
+#' )
+#' pt_nest_attachments(dummy_landings)
+#' }
+#'
+pt_nest_attachments <- function(x) {
+  x %>%
+    # Using the .data pronoun to avoid RMD check notes
+    dplyr::select(.data$`_id`, dplyr::starts_with("_attachments")) %>%
+    dplyr::mutate_all(as.character) %>%
+    # Column names follow the form "_attachments.0.download_large_url"
+    tidyr::pivot_longer(
+      cols = -.data$`_id`,
+      names_to = c("n", "field"),
+      names_prefix = "_attachments.",
+      names_sep = "\\."
+    ) %>%
+    # We want one attachment per row and fields as columns
+    tidyr::pivot_wider(names_from = "field", values_from = "value") %>%
+    # Attachments already have id and this column is superfluous
+    dplyr::select(-.data$n) %>%
+    dplyr::group_by(.data$`_id`) %>%
+    tidyr::nest() %>%
+    dplyr::ungroup() %>%
+    dplyr::rename("_attachments" = "data") %>%
+    # If there are no attachments empty the nested data frames
+    dplyr::mutate(
+      `_id` = as.integer(.data$`_id`),
+      `_attachments` = purrr::map(
+        .data$`_attachments`,
+        ~ dplyr::filter(., !is.na(.data$id))
+      )
+    )
+}
+
+
+#' Expand Taxonomic Vectors into a Data Frame
+#'
+#' Converts a vector of species identifiers into a detailed data frame containing taxonomic classification. Each identifier should follow the format 'family_genus_species', which is expanded to include comprehensive taxonomic details.
+#'
+#' @param data A vector of species identifiers formatted as 'family_genus_species'. If not provided, the function will return an error.
+#' @return A data frame where each row corresponds to a species, enriched with taxonomic classification information including family, genus, species, and additional taxonomic ranks.
+#' @keywords data transformation
+#' @export
+#' @examples
+#' \dontrun{
+#' species_vector <- c("lutjanidae_lutjanus_spp", "scaridae_spp", "acanthuridae_naso_hexacanthus")
+#' expanded_data <- expand_taxa(species_vector)
+#' }
+#' @details This function splits each species identifier into its constituent parts, replaces underscores with spaces for readability, and retrieves taxonomic classification from the GBIF database using the `taxize` package.
+#' @note Requires internet access to fetch data from the GBIF database. The accuracy of results depends on the correct formatting of input data and the availability of taxonomic data in the GBIF database.
+#'
+expand_taxa <- function(data = NULL) {
+  taxa_expanded <-
+    data %>%
+    dplyr::mutate(species_list = stringr::str_split(.data$species_catch, pattern = " ")) %>%
+    tidyr::unnest(.data$species_list) %>%
+    dplyr::mutate(
+      species_list = stringr::str_replace(.data$species_list, pattern = "_", replacement = " "),
+      species_list = stringr::str_replace(.data$species_list, pattern = "_", replacement = " "),
+      words = stringi::stri_count_words(.data$species_list),
+      genus_species = dplyr::case_when(
+        .data$words == 3 ~ stringr::str_extract(.data$species_list, "\\S+\\s+\\S+$"),
+        TRUE ~ NA_character_
+      ),
+      species_list = ifelse(.data$words == 3, NA_character_, .data$species_list),
+      catch_group = dplyr::coalesce(.data$species_list, .data$genus_species),
+      catch_group = stringr::str_replace(.data$catch_group, pattern = " spp.", replacement = ""),
+      catch_group = stringr::str_replace(.data$catch_group, pattern = " spp", replacement = ""),
+      catch_group = stringr::str_replace(.data$catch_group, pattern = "_spp", replacement = ""),
+      catch_group = ifelse(.data$catch_group == "acanthocybium solandiri", "acanthocybium solandri", .data$catch_group),
+      catch_group = ifelse(.data$catch_group == "panaeidae", "penaeidae", .data$catch_group),
+      catch_group = ifelse(.data$catch_group == "mulidae", "mullidae", .data$catch_group),
+      catch_group = ifelse(.data$catch_group == "casio xanthonotus", "caesio xanthonotus", .data$catch_group),
+    ) %>%
+    dplyr::select(-c(.data$species_list, .data$genus_species, .data$words))
+
+  groups_rank <-
+    taxize::classification(unique(taxa_expanded$catch_group), db = "gbif", rows = 1) %>%
+    purrr::imap(~ .x %>%
+      dplyr::as_tibble() %>%
+      dplyr::mutate(catch_group = .y)) %>%
+    dplyr::bind_rows() %>%
+    tidyr::pivot_wider(id_cols = .data$catch_group, names_from = .data$rank, values_from = .data$name) %>%
+    dplyr::select(-c(.data$class, .data$`NA`))
+
+  dplyr::left_join(taxa_expanded, groups_rank, by = "catch_group")
+}

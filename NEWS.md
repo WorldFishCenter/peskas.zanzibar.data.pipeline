@@ -1,3 +1,13 @@
+# peskas.zanzibar.data.pipeline 1.0.0
+
+#### Improvements
+- All the functions are now documented and indexed according to keywords
+- Thin out the R folder gathering functions by modules
+
+#### Changes
+- Move to parquet format rather than CSV/RDS
+
+
 # peskas.zanzibar.data.pipeline 0.2.0
 
 #### New features

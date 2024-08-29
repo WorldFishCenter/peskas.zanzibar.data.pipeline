@@ -10,7 +10,7 @@ RUN install2.r --error --skipinstalled \
     logger \
     magrittr \
     purrr \
-    readr \
+    arrow \
     stringr \
     tidyr \
     lubridate \
@@ -30,9 +30,7 @@ RUN install2.r --error --skipinstalled \
     univOutl \
     taxize \
     reticulate \
-    stringi \
-    taxize
+    stringi
 
-#RUN Rscript -e "devtools::install_version('glmmTMB', version = '1.1.5')"
 # Rstudio interface preferences
 COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json

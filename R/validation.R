@@ -1,3 +1,110 @@
+#' Validate WCS Surveys Data
+#'
+#' Validates Wildlife Conservation Society (WCS) survey data by checking for inconsistencies in survey duration, catches, lengths, and market data. The function preprocesses surveys, performs validations, logs the process, and uploads the validated data to cloud storage.
+#'
+#' @param log_threshold The logging level used as a threshold for the `logger` package, which controls the verbosity of logging output.
+#' @return None; the function is used for its side effects, which include data validation and uploading validated data to cloud storage.
+#' @keywords workflow validation
+#' @export
+#' @examples
+#' \dontrun{
+#' validate_wcs_surveys(log_threshold = logger::INFO)
+#' }
+#' @seealso \code{\link{validate_catch}}, \code{\link{validate_length}}, \code{\link{validate_market}}
+#'
+#'
+validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+
+  pars <- read_config()
+  preprocessed_surveys <- get_preprocessed_surveys(pars)
+
+  # define validation parameters
+  k_max_nb <- pars$surveys$wcs_surveys$validation$K_nb_elements_max
+  k_max_weight <- pars$surveys$wcs_surveys$validation$K_weight_max
+  k_max_length <- pars$surveys$wcs_surveys$validation$K_length_max
+  k_max_price <- pars$surveys$wcs_surveys$validation$K_price_max
+
+  logger::log_info("Validating catches groups")
+  surveys_catch_alerts <- validate_catch(data = preprocessed_surveys, k_max_nb = k_max_nb, k_max_weight = k_max_weight)
+  logger::log_info("Validating lengths group")
+  surveys_length_alerts <- validate_length(data = preprocessed_surveys, k_max_length = k_max_length)
+  logger::log_info("Validating markets group")
+  surveys_market_alerts <- validate_market(data = preprocessed_surveys, k_max_price = k_max_price)
+
+  logger::log_info("Renaming data fields")
+  validated_groups <-
+    list(
+      surveys_catch_alerts,
+      surveys_length_alerts,
+      surveys_market_alerts
+    ) %>%
+    purrr::map(~ dplyr::select(.x, -alert_number)) %>%
+    purrr::reduce(dplyr::left_join, by = "submission_id")
+
+  trips_info <-
+    preprocessed_surveys %>%
+    dplyr::mutate(
+      submission_id = as.integer(.data$`_id`),
+      date = lubridate::with_tz(.data$today, "Africa/Dar_es_Salaam"),
+      date = as.Date(date),
+      landing_site = stringr::str_to_title(.data$landing_site)
+    ) %>%
+    # convert fields
+    dplyr::mutate(
+      dplyr::across(.cols = c(
+        .data$lat,
+        .data$lon,
+        .data$engine,
+        .data$people,
+        .data$boats_landed
+      ), ~ as.numeric(.x))
+    ) %>%
+    dplyr::select(
+      .data$submission_id,
+      .data$date,
+      .data$survey_real,
+      .data$survey_type,
+      .data$landing_site,
+      .data$lat,
+      .data$lon,
+      trip_duration_days = .data$fishing_duration,
+      .data$fishing_location,
+      .data$fishing_ground_name,
+      .data$fishing_ground_type,
+      .data$fishing_ground_depth,
+      .data$gear_type,
+      .data$boat_type,
+      .data$engine_yn,
+      .data$engine,
+      .data$people,
+      .data$boats_landed
+    )
+
+  validated_surveys <-
+    dplyr::left_join(trips_info, validated_groups, by = "submission_id")
+
+  validated_filename <-
+    pars$surveys$wcs_surveys$validated_surveys$file_prefix %>%
+    add_version(extension = "parquet")
+
+  arrow::write_parquet(
+    x = validated_surveys,
+    sink = validated_filename,
+    compression = "lz4",
+    compression_level = 12
+  )
+
+
+  logger::log_info("Uploading {validated_filename} to cloud sorage")
+  upload_cloud_file(
+    file = validated_filename,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+}
+
+
 #' Generate an alert vector based on the `univOutl::LocScaleB()` function
 #'
 #' @param x numeric vector where outliers will be checked
@@ -8,6 +115,10 @@
 #'
 #' @return a vector of the same lenght as x
 #' @importFrom stats mad
+#'
+#' @keywords validation
+#' @export
+#'
 alert_outlier <- function(x,
                           no_alert_value = NA_real_,
                           alert_if_larger = no_alert_value,
@@ -48,27 +159,17 @@ alert_outlier <- function(x,
 }
 
 
-#' Validate surveys' fishing duration
+#' Validate Fishing Duration in WCS Surveys
 #'
-#' This function takes a preprocessed landings' matrix and validate fishing trip
-#' duration associated to each survey.
+#' Checks fishing durations reported in WCS surveys against specified maximum and minimum hour thresholds, identifying and flagging any durations outside these bounds.
 #'
-#' @param data A preprocessed data frame
-#' @param hrs_max Upper threshold of fishing trip duration.
-#' @param hrs_min Lower threshold of fishing trip duration.
-#'
-#' @return A list containing data frames with validated catch
-#'   duration.
-#'
-#' @importFrom rlang .data
+#' @param data Data frame containing preprocessed survey data.
+#' @param hrs_max Maximum allowable duration in hours.
+#' @param hrs_min Minimum allowable duration in hours.
+#' @return Data frame with validation results, including flags for surveys that do not meet duration criteria.
+#' @keywords validation
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' pars <- read_config()
-#' landings <- get_preprocessed_surveys(pars)
-#' validate_surveys_time(landings, hrs_max = 72, hrs_min = 1)
-#' }
 validate_surveys_time <- function(data = NULL, hrs_max = NULL, hrs_min = NULL) {
   data %>%
     dplyr::select(.data$`_id`, .data$fishing_duration) %>%
@@ -111,15 +212,14 @@ validate_surveys_time <- function(data = NULL, hrs_max = NULL, hrs_min = NULL) {
 #' detected outliers, and nested catch data.
 #' @export
 #'
+#' @keywords validation
+#' @export
 #' @examples
 #' \dontrun{
 #' # Assuming you have a data frame `catch_data` with the necessary structure:
 #' validated_catch <- validate_catch(data = catch_data, k_max_nb = 10, k_max_weight = 100)
 #' }
 #'
-#' @importFrom dplyr select mutate group_by ungroup case_when coalesce
-#' @importFrom tidyr unnest nest
-#' @importFrom magrittr %>%
 validate_catch <- function(data = NULL, k_max_nb = NULL, k_max_weight = NULL) {
   data %>%
     dplyr::select("_id", "gear_type", "catch") %>%
@@ -182,15 +282,14 @@ validate_catch <- function(data = NULL, k_max_nb = NULL, k_max_weight = NULL) {
 #' detected outliers, and nested length data.
 #' @export
 #'
+#' @keywords validation
+#' @export
 #' @examples
 #' \dontrun{
 #' # Assuming you have a data frame `length_data` with the necessary structure:
 #' validated_length <- validate_length(data = length_data, k_max_length = 200)
 #' }
 #'
-#' @importFrom dplyr select mutate group_by ungroup case_when
-#' @importFrom tidyr unnest nest
-#' @importFrom magrittr %>%
 validate_length <- function(data = NULL, k_max_length = NULL) {
   data %>%
     dplyr::select("_id", "gear_type", "length") %>%
@@ -244,17 +343,14 @@ validate_length <- function(data = NULL, k_max_length = NULL) {
 #'
 #' @return A data frame with the original market data, additional columns for
 #' detected outliers, and nested market data.
-#' @export
 #'
+#' @keywords validation
+#' @export
 #' @examples
 #' \dontrun{
 #' # Assuming you have a data frame `market_data` with the necessary structure:
 #' validated_market <- validate_market(data = market_data, k_max_price = 100)
 #' }
-#'
-#' @importFrom dplyr select mutate group_by ungroup case_when
-#' @importFrom tidyr unnest nest
-#' @importFrom magrittr %>%
 validate_market <- function(data = NULL, k_max_price = NULL) {
   data %>%
     dplyr::select("_id", "gear_type", "market") %>%

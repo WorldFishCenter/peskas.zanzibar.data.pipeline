@@ -23,7 +23,7 @@ RUN install2.r --error --skipinstalled \
     logger \
     magrittr \
     purrr \
-    readr \
+    arrow \
     stringr \
     tidyr \
     lubridate \
@@ -41,10 +41,8 @@ RUN install2.r --error --skipinstalled \
     tidytext \
     KoboconnectR \
     univOutl \
-    taxize \
     reticulate \
-    stringi \
-    taxize
+    stringi
 
 # Install local package
 COPY . /home

@@ -1,7 +1,7 @@
 Package: peskas.zanzibar.data.pipeline
 Title: Functions to Implement the Zanzibar Small Scale Fisheries
     Data Pipeline
-Version: 0.2.0
+Version: 1.0.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",
@@ -22,12 +22,12 @@ Imports:
     logger,
     magrittr,
     purrr,
-    readr,
     stringr,
     tidyr,
     rlang,
     lubridate,
-    taxize
+    taxize,
+    arrow
 Suggests: 
     covr,
     pkgdown,

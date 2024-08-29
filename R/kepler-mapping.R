@@ -6,6 +6,7 @@
 #'
 #' @param data_path Data to add to map.
 #'
+#' @keywords visualization
 #' @return A self-contained map in html.
 #' @export
 #'

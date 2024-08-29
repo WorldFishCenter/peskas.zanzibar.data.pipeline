@@ -12,3 +12,44 @@ template:
         family: IBM Plex Sans
     code_font:
       google: Fira Mono
+
+
+reference:
+- title: Cloud Storage
+  desc: Functions that interact with cloud storage providers.
+  contents:
+  - has_keyword("storage")
+
+- title: Workflow
+  desc: >
+    These are arguably the most important functions in the package. Each of
+    these functions executes a step in the data pipeline.
+- contents:
+  - has_keyword("workflow")
+
+- title: Ingestion
+  desc: Functions dedicated to data pulling and ingestion from servers
+- contents:
+  - has_keyword("ingestion")
+
+- title: Preprocessing
+  desc: Functions dedicated to the preprocessing module and general data processing
+  contents:
+  - has_keyword("preprocessing")
+  - expand_taxa
+
+- title: Validation
+  desc: Functions dedicated to the validation module
+  contents:
+  - has_keyword("validation")
+
+- title: Helper functions
+  desc: Functions dedicated to data processing.
+  contents:
+  - has_keyword("helper")
+
+- title: Export
+  desc: Functions dedicated dissemination of processed and validated data and visualizations
+  contents:
+  - has_keyword("export")
+  - kepler_mapper
