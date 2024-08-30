@@ -13,6 +13,8 @@
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/cloud_storage_authenticate.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/download_cloud_file.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/expand_taxa.html</loc></url>
+<url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/flatten_field.html</loc></url>
+<url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/flatten_row.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_preprocessed_surveys.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_validated_surveys.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/index.html</loc></url>
@@ -26,6 +28,7 @@
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/pt_nest_market.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/pt_nest_trip.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/read_config.html</loc></url>
+<url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/rename_child.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/retrieve_wcs_surveys.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/tidyeval.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/upload_cloud_file.html</loc></url>
