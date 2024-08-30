@@ -10,7 +10,7 @@ Authors@R:
              comment = c(ORCID = "0000-0003-3126-7341")),
       person(given = "WorldFish",
              role = "cph"))
-Description: This package implements the data and modelling
+Description: Implements the data processing and modelling
     pipelines underpining the Peskas system.
 License: GPL-3
 Imports:
@@ -26,7 +26,6 @@ Imports:
     tidyr,
     rlang,
     lubridate,
-    taxize,
     arrow,
     cleaner
 Suggests: 
@@ -41,7 +40,8 @@ Suggests:
     KoboconnectR,
     univOutl,
     reticulate,
-    stringi
+    stringi,
+    taxize
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

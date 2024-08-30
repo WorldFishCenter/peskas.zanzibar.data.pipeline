@@ -10,11 +10,11 @@ RUN install2.r --error --skipinstalled \
     logger \
     magrittr \
     purrr \
-    arrow \
     stringr \
     tidyr \
+    rlang \
     lubridate \
-    rlang
+    arrow
 
 # Install suggests
 RUN install2.r --error --skipinstalled \
@@ -28,9 +28,9 @@ RUN install2.r --error --skipinstalled \
     tidytext \
     KoboconnectR \
     univOutl \
-    taxize \
     reticulate \
-    stringi
+    stringi \
+    taxize
 
 # Rstudio interface preferences
 COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json
