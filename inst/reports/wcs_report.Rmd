@@ -38,6 +38,7 @@ catch_palette <-
 
 setwd("../..")
 pars <- peskas.zanzibar.data.pipeline::read_config()
+
 validated <-
   peskas.zanzibar.data.pipeline::get_validated_surveys(pars)
 ```
@@ -75,7 +76,7 @@ The representation indicates that landing sites divide in two main blocks when c
 
 sites <- 
   validated %>%
-  dplyr::select(submission_id, landing_site) %>%
+  dplyr::select(survey_id, landing_site) %>%
   dplyr::group_by(landing_site) %>%
   dplyr::count() %>% 
   dplyr::arrange(-n) %>% 
@@ -84,12 +85,14 @@ sites <-
 
 
 validated %>%
-  dplyr::select(submission_id, date, landing_site) %>%
-  tidyr::complete(landing_site, date) %>%
-  dplyr::mutate(record = ifelse(is.na(submission_id), 0, 1)) %>%
+  dplyr::filter(submission_date > "2010-01-01") %>% 
+  dplyr::mutate(landing_site = stringr::str_to_title(landing_site)) %>%
+  dplyr::select(survey_id, submission_date, landing_site) %>%
+  tidyr::complete(landing_site, submission_date) %>%
+  dplyr::mutate(record = ifelse(is.na(survey_id), 0, 1)) %>%
   dplyr::group_by(landing_site) %>%
   dplyr::mutate(obs = sum(record)) %>%
-  ggplot(aes(date, reorder(landing_site, obs), fill = as.factor(record))) +
+  ggplot(aes(submission_date, reorder(landing_site, obs), fill = as.factor(record))) +
   theme_minimal() +
   geom_tile(width = 3) +
   coord_cartesian(expand = FALSE) +
@@ -97,6 +100,7 @@ validated %>%
   scale_x_date(date_breaks = "4 months", date_labels = "%y-%b") +
   theme(legend.position = "") +
   labs(y = "", x = "Date")
+
 ```
 
 The diagram illustrates the distribution and types of surveys conducted at various landing sites. The width of each band in the diagram reflects the volume of data collected for each element. There are three main types of surveys represented, with 'catch' surveys being the most dominant. 'Length' and 'market' surveys appear to be less frequent in comparison. Within the data collected from 'catch' surveys, measurements of 'weight' are the most prevalent, followed by 'unknown' measurement types and measurements taken using a 'bucket.' For more detailed information, you can interact with the diagram by hovering over specific areas of the plot, which will provide additional insights.
@@ -125,17 +129,15 @@ The bar charts below illustrate a detailed breakdown of gear and boat types used
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 validated %>%
-  dplyr::filter(survey_type == "catch" &
-                  survey_real == "real",
-                landing_site %in% sites) %>%
-  dplyr::select(landing_site, gear_type) %>%
-  dplyr::mutate(gear_type = ifelse(is.na(gear_type), "unknown", gear_type)) %>%
+  dplyr::filter(survey_type == "catch" & landing_site %in% sites) %>%
+  dplyr::select(landing_site, gear) %>%
+  dplyr::mutate(gear = ifelse(is.na(gear), "unknown", gear)) %>%
   dplyr::mutate(
-    gear_type = stringr::str_remove_all(gear_type, "_[0-9]+"),
-    gear_list = stringr::str_split(gear_type, " ")
+    gear = stringr::str_remove_all(gear, "_[0-9]+"),
+    gear_list = stringr::str_split(gear, " ")
   ) %>%
   tidyr::unnest(gear_list) %>%
-  dplyr::select(-gear_type) %>%
+  dplyr::select(-gear) %>%
   dplyr::group_by(landing_site) %>%
   dplyr::mutate(tot_obs = dplyr::n()) %>%
   dplyr::group_by(landing_site, gear_list) %>%
@@ -167,24 +169,23 @@ Similar to the previous chart, the sites are ranked by the total number of surve
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 validated %>%
-  dplyr::filter(survey_type == "catch" & survey_real == "real",
-                landing_site %in% sites) %>%
-  dplyr::select(landing_site, boat_type) %>%
-  dplyr::mutate(boat_type = ifelse(is.na(boat_type), "unknown", boat_type)) %>%
+  dplyr::filter(survey_type == "catch", landing_site %in% sites) %>%
+  dplyr::select(landing_site, propulsion_gear) %>%
+  dplyr::mutate(propulsion_gear = ifelse(is.na(propulsion_gear), "unknown", propulsion_gear)) %>%
   dplyr::group_by(landing_site) %>%
   dplyr::mutate(tot_obs = dplyr::n()) %>%
-  dplyr::group_by(landing_site, boat_type) %>%
+  dplyr::group_by(landing_site, propulsion_gear) %>%
   dplyr::summarise(
     tot_obs = dplyr::first(tot_obs),
     n = dplyr::n()
   ) %>%
   dplyr::ungroup() %>%
-  tidyr::complete(landing_site, boat_type) %>%
+  tidyr::complete(landing_site, propulsion_gear) %>%
   tidyr::replace_na(replace = list(n = 0)) %>%
   dplyr::arrange(-tot_obs) %>%
   apexcharter::apex(
     type = "bar",
-    mapping = apexcharter::aes(x = landing_site, y = n, fill = boat_type),
+    mapping = apexcharter::aes(x = landing_site, y = n, fill = propulsion_gear),
     height = 500
   ) %>%
   apexcharter::ax_chart(
@@ -203,8 +204,7 @@ validated %>%
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 val_taxa <-
   validated %>%
-  dplyr::filter(survey_type == "catch" & survey_real == "real",
-                landing_site %in% sites) %>%
+  dplyr::filter(survey_type == "catch", landing_site %in% sites) %>%
   tidyr::unnest(catch) %>%
   peskas.zanzibar.data.pipeline::expand_taxa()
 ```
@@ -218,9 +218,9 @@ The chart reveals that while there's a core set of fish families commonly found 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 top5 <-
   val_taxa %>%
-  dplyr::select(submission_id, landing_site, family, weight_kg) %>%
+  dplyr::select(survey_id, landing_site, family, catch_kg) %>%
   dplyr::group_by(landing_site, family) %>%
-  dplyr::summarise(tot_weight = sum(weight_kg, na.rm = T)) %>%
+  dplyr::summarise(tot_weight = sum(catch_kg, na.rm = T)) %>%
   dplyr::group_by(landing_site) %>%
   dplyr::arrange(-tot_weight, .by_group = T) %>%
   dplyr::slice_head(n = 5) %>%
@@ -231,10 +231,10 @@ top5 <-
 
 val_taxa %>%
   dplyr::filter(!is.na(family)) %>%
-  dplyr::select(submission_id, landing_site, family, weight_kg) %>%
+  dplyr::select(survey_id, landing_site, family, catch_kg) %>%
   dplyr::mutate(family = ifelse(family %in% top5, family, "Others")) %>%
   dplyr::group_by(landing_site, family) %>%
-  dplyr::summarise(weight_tot = sum(weight_kg, na.rm = T)) %>%
+  dplyr::summarise(weight_tot = sum(catch_kg, na.rm = T)) %>%
   dplyr::group_by(landing_site) %>%
   dplyr::arrange(-weight_tot, .by_group = T) %>%
   dplyr::slice_head(n = 5) %>%
@@ -266,8 +266,7 @@ val_taxa %>%
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 validated_market <-
   validated %>%
-  dplyr::filter(survey_real == "real",
-                landing_site %in% sites) %>%
+  dplyr::filter(landing_site %in% sites) %>%
   tidyr::unnest(market) %>%
   dplyr::rename(species_catch = species_market) %>%
   peskas.zanzibar.data.pipeline::expand_taxa()
@@ -279,7 +278,7 @@ The boxplot visualizes the distribution of market prices per kilogram for differ
 validated_market %>%
   dplyr::filter(!is.na(species_catch)) %>%
   dplyr::mutate(pricekg_USD = price_kg / 2508.75) %>%
-  dplyr::select(submission_id, landing_site, pricekg_USD, family, genus, species) %>%
+  dplyr::select(survey_id, landing_site, pricekg_USD, family, genus, species) %>%
   dplyr::group_by(family) %>%
   dplyr::filter(!is.na(family)) %>%
   dplyr::mutate(mean_price = mean(pricekg_USD, na.rm = T)) %>%

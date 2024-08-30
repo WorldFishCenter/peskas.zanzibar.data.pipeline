@@ -17,3 +17,4 @@ This function is a R wrapper of \code{kepler_wcs_mapper_py}, a python script fun
 aimed to elaborate produce a self-contained map (in html) using the
 Kepler.gl python library \url{https://docs.kepler.gl/docs/keplergl-jupyter}.
 }
+\keyword{visualization}

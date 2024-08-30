@@ -13,3 +13,4 @@ the environment parameters
 Reads configuration file in \code{conf.yml} and adds some logging lines. Wrapped
 for convenience
 }
+\keyword{helper}

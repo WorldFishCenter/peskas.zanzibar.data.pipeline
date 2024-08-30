@@ -21,7 +21,7 @@
 #' running inside a container) then this function attempts to get the sha from
 #' the environment variable `GITHUB_SHA`. If both of these methods fail, no sha
 #' versioning is added.
-#'
+#' @keywords helper
 #' @examples
 #' if (git2r::in_repository()) {
 #'   add_version("my_file", "csv")
@@ -57,6 +57,7 @@ add_version <- function(filename, extension = "", sha_nchar = 7, sep = "__") {
 #' for convenience
 #'
 #' @return the environment parameters
+#' @keywords helper
 #' @export
 #'
 read_config <- function() {

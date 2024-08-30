@@ -1,7 +1,7 @@
 Package: peskas.zanzibar.data.pipeline
 Title: Functions to Implement the Zanzibar Small Scale Fisheries
     Data Pipeline
-Version: 0.2.0
+Version: 1.0.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",
@@ -10,7 +10,7 @@ Authors@R:
              comment = c(ORCID = "0000-0003-3126-7341")),
       person(given = "WorldFish",
              role = "cph"))
-Description: This package implements the data and modelling
+Description: Implements the data processing and modelling
     pipelines underpining the Peskas system.
 License: GPL-3
 Imports:
@@ -22,12 +22,12 @@ Imports:
     logger,
     magrittr,
     purrr,
-    readr,
     stringr,
     tidyr,
     rlang,
     lubridate,
-    taxize
+    arrow,
+    cleaner
 Suggests: 
     covr,
     pkgdown,
@@ -40,7 +40,8 @@ Suggests:
     KoboconnectR,
     univOutl,
     reticulate,
-    stringi
+    stringi,
+    taxize
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

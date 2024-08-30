@@ -10,11 +10,11 @@ RUN install2.r --error --skipinstalled \
     logger \
     magrittr \
     purrr \
-    readr \
     stringr \
     tidyr \
+    rlang \
     lubridate \
-    rlang
+    arrow
 
 # Install suggests
 RUN install2.r --error --skipinstalled \
@@ -28,11 +28,9 @@ RUN install2.r --error --skipinstalled \
     tidytext \
     KoboconnectR \
     univOutl \
-    taxize \
     reticulate \
     stringi \
     taxize
 
-#RUN Rscript -e "devtools::install_version('glmmTMB', version = '1.1.5')"
 # Rstudio interface preferences
 COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json
