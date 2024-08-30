@@ -33,9 +33,11 @@ This function utilizes \code{\link[googleCloudStorageR:gcs_upload]{googleCloudSt
 \examples{
 \dontrun{
 authentication_details <- readLines("path/to/json_file.json")
-upload_cloud_file("path/to/local_file.csv",
- "gcs",
- list(service_account_key = authentication_details, bucket = "my-bucket"))
+upload_cloud_file(
+  "path/to/local_file.csv",
+  "gcs",
+  list(service_account_key = authentication_details, bucket = "my-bucket")
+)
 }
 
 }

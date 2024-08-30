@@ -42,11 +42,13 @@ For GCS, the options list should include:
 \examples{
 \dontrun{
 authentication_details <- readLines("path/to/json_file.json")
-cloud_object_name("prefix",
- "latest",
- "json",
- "gcs",
- list(service_account_key = authentication_details, bucket = "my-bucket"))
+cloud_object_name(
+  "prefix",
+  "latest",
+  "json",
+  "gcs",
+  list(service_account_key = authentication_details, bucket = "my-bucket")
+)
 #'
 }
 }

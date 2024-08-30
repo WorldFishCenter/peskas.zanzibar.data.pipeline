@@ -17,7 +17,9 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
 
   pars <- read_config()
-  preprocessed_surveys <- get_preprocessed_surveys(pars)
+
+  preprocessed_surveys <-
+    get_preprocessed_surveys(pars)
 
   # define validation parameters
   k_max_nb <- pars$surveys$wcs_surveys$validation$K_nb_elements_max
@@ -40,49 +42,32 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       surveys_market_alerts
     ) %>%
     purrr::map(~ dplyr::select(.x, -alert_number)) %>%
-    purrr::reduce(dplyr::left_join, by = "submission_id")
+    purrr::reduce(dplyr::left_join, by = "survey_id")
 
   trips_info <-
     preprocessed_surveys %>%
-    dplyr::mutate(
-      submission_id = as.integer(.data$`_id`),
-      date = lubridate::with_tz(.data$today, "Africa/Dar_es_Salaam"),
-      date = as.Date(date),
-      landing_site = stringr::str_to_title(.data$landing_site)
-    ) %>%
-    # convert fields
-    dplyr::mutate(
-      dplyr::across(.cols = c(
-        .data$lat,
-        .data$lon,
-        .data$engine,
-        .data$people,
-        .data$boats_landed
-      ), ~ as.numeric(.x))
-    ) %>%
     dplyr::select(
-      .data$submission_id,
-      .data$date,
-      .data$survey_real,
-      .data$survey_type,
-      .data$landing_site,
-      .data$lat,
-      .data$lon,
-      trip_duration_days = .data$fishing_duration,
-      .data$fishing_location,
-      .data$fishing_ground_name,
-      .data$fishing_ground_type,
-      .data$fishing_ground_depth,
-      .data$gear_type,
-      .data$boat_type,
-      .data$engine_yn,
-      .data$engine,
-      .data$people,
-      .data$boats_landed
+      "survey_id",
+      "submission_date",
+      "survey_type",
+      "landing_site",
+      "lat",
+      "lon",
+      "trip_length_days",
+      "fishing_location",
+      "fishing_ground_name",
+      "habitat",
+      "fishing_ground_depth",
+      "gear",
+      "propulsion_gear",
+      "boat_engine",
+      "engine_hp",
+      "n_fishers",
+      "n_boats"
     )
 
   validated_surveys <-
-    dplyr::left_join(trips_info, validated_groups, by = "submission_id")
+    dplyr::left_join(trips_info, validated_groups, by = "survey_id")
 
   validated_filename <-
     pars$surveys$wcs_surveys$validated_surveys$file_prefix %>%
@@ -222,45 +207,45 @@ validate_surveys_time <- function(data = NULL, hrs_max = NULL, hrs_min = NULL) {
 #'
 validate_catch <- function(data = NULL, k_max_nb = NULL, k_max_weight = NULL) {
   data %>%
-    dplyr::select("_id", "gear_type", "catch") %>%
+    dplyr::select("survey_id", "gear", "catch") %>%
     tidyr::unnest("catch") %>%
     dplyr::mutate(
-      dplyr::across(c("nb_elements", "weight_kg"), ~ as.numeric(.x)),
-      submission_id = as.integer(.data$`_id`)
+      dplyr::across(c("n_elements", "catch_kg"), ~ as.numeric(.x)),
+      survey_id = as.integer(.data$survey_id)
     ) %>%
-    dplyr::group_by(.data$type_measure, .data$gear_type, .data$group_catch) %>%
+    dplyr::group_by(.data$type_measure, .data$gear, .data$group_catch) %>%
     dplyr::mutate(
       alert_nb = alert_outlier(
-        x = .data$nb_elements,
+        x = .data$n_elements,
         # alert_if_smaller = 1,
         alert_if_larger = 2,
         logt = TRUE,
         k = k_max_nb
       ),
-      nb_elements = dplyr::case_when(
-        is.na(.data$alert_nb) ~ .data$nb_elements,
+      n_elements = dplyr::case_when(
+        is.na(.data$alert_nb) ~ .data$n_elements,
         TRUE ~ NA_real_
       ),
-      alert_weight = alert_outlier(
-        x = .data$weight_kg,
+      alert_catch = alert_outlier(
+        x = .data$catch_kg,
         # alert_if_smaller = 3,
         alert_if_larger = 4,
         logt = TRUE,
         k = k_max_weight
       ),
-      weight_kg = dplyr::case_when(
-        is.na(.data$alert_weight) ~ .data$weight_kg,
+      catch_kg = dplyr::case_when(
+        is.na(.data$alert_catch) ~ .data$catch_kg,
         TRUE ~ NA_real_
       )
     ) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(alert_number = dplyr::coalesce(.data$alert_weight, .data$alert_nb)) %>%
+    dplyr::mutate(alert_number = dplyr::coalesce(.data$alert_catch, .data$alert_nb)) %>%
     tidyr::nest(
       "catch" = c(
         .data$type_measure, .data$group_catch,
-        .data$species_catch, .data$nb_elements, .data$weight_kg
+        .data$species_catch, .data$n_elements, .data$catch_kg
       ),
-      .by = c(.data$submission_id, .data$alert_number)
+      .by = c(.data$survey_id, .data$alert_number)
     )
 }
 
@@ -292,13 +277,13 @@ validate_catch <- function(data = NULL, k_max_nb = NULL, k_max_weight = NULL) {
 #'
 validate_length <- function(data = NULL, k_max_length = NULL) {
   data %>%
-    dplyr::select("_id", "gear_type", "length") %>%
+    dplyr::select("survey_id", "gear", "length") %>%
     tidyr::unnest("length") %>%
     dplyr::mutate(
       total_length = as.numeric(.data$total_length),
-      submission_id = as.integer(.data$`_id`)
+      survey_id = as.integer(.data$survey_id)
     ) %>%
-    dplyr::group_by(.data$gear_type, .data$species) %>%
+    dplyr::group_by(.data$gear, .data$species) %>%
     dplyr::mutate(
       alert_number = alert_outlier(
         x = .data$total_length,
@@ -318,7 +303,7 @@ validate_length <- function(data = NULL, k_max_length = NULL) {
         .data$family, .data$species,
         .data$sex, .data$total_length
       ),
-      .by = c(.data$submission_id, .data$alert_number)
+      .by = c(.data$survey_id, .data$alert_number)
     )
 }
 
@@ -353,14 +338,14 @@ validate_length <- function(data = NULL, k_max_length = NULL) {
 #' }
 validate_market <- function(data = NULL, k_max_price = NULL) {
   data %>%
-    dplyr::select("_id", "gear_type", "market") %>%
+    dplyr::select("survey_id", "gear", "market") %>%
     tidyr::unnest("market") %>%
     dplyr::mutate(
-      dplyr::across(c("weight_market", "price_sold_for"), ~ as.numeric(.x)),
-      price_kg = .data$price_sold_for / .data$weight_market,
-      submission_id = as.integer(.data$`_id`)
+      dplyr::across(c("catch_kg_market", "catch_price"), ~ as.numeric(.x)),
+      price_kg = .data$catch_price / .data$catch_kg_market,
+      survey_id = as.integer(.data$survey_id)
     ) %>%
-    dplyr::group_by(.data$gear_type, .data$group_market, .data$species_market) %>%
+    dplyr::group_by(.data$gear, .data$group_market, .data$species_market) %>%
     dplyr::mutate(
       alert_number = alert_outlier(
         x = .data$price_kg,
@@ -379,6 +364,6 @@ validate_market <- function(data = NULL, k_max_price = NULL) {
       "market" = c(
         .data$group_market, .data$species_market, .data$price_kg
       ),
-      .by = c(.data$submission_id, .data$alert_number)
+      .by = c(.data$survey_id, .data$alert_number)
     )
 }

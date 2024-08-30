@@ -63,19 +63,27 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       sep = " "
     ) %>%
     dplyr::select(
-      .data$`_id`,
-      .data$today,
-      .data$start,
-      .data$end,
-      .data$survey_real,
-      .data$survey_type,
-      .data$landing_site,
-      .data$lat,
-      .data$lon,
-      .data$trip_info,
-      .data$people,
-      .data$boats_landed
+      "survey_id" = "_id",
+      submission_date = "today",
+      "survey_type",
+      "landing_site",
+      "lat",
+      "lon",
+      "trip_info",
+      n_fishers = "people",
+      n_boats = "boats_landed"
+    ) |>
+    dplyr::mutate(
+      submission_date = lubridate::with_tz(.data$submission_date, "Africa/Dar_es_Salaam"),
+      submission_date = as.Date(.data$submission_date),
+      dplyr::across(.cols = c(
+        "lat",
+        "lon",
+        "n_fishers",
+        "n_boats"
+      ), ~ as.numeric(.x))
     )
+
 
   logger::log_info("Nesting survey groups' fields")
   group_surveys <-
@@ -90,7 +98,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   wcs_surveys_nested <- purrr::reduce(
     group_surveys,
-    ~ dplyr::full_join(.x, .y, by = "_id")
+    ~ dplyr::full_join(.x, .y, by = "survey_id")
   )
 
   preprocessed_filename <- pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix %>%
@@ -124,8 +132,11 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #'
 pt_nest_length <- function(x) {
   x %>%
-    dplyr::select(.data$`_id`, dplyr::starts_with("Length_Frequency_Survey")) %>%
-    tidyr::pivot_longer(-c(.data$`_id`)) %>%
+    dplyr::select(
+      survey_id = .data$`_id`,
+      dplyr::starts_with("Length_Frequency_Survey")
+    ) %>%
+    tidyr::pivot_longer(-c(.data$survey_id)) %>%
     dplyr::mutate(
       n = stringr::str_extract(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, "(\\d+)"),
@@ -134,13 +145,14 @@ pt_nest_length <- function(x) {
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
-    dplyr::select(-.data$content) %>%
+    dplyr::select(-"content") |>
+    dplyr::mutate(total_length = as.numeric(.data$total_length)) |>
     tidyr::nest(
       "length" = c(
         .data$family, .data$species,
         .data$sex, .data$total_length
       ),
-      .by = .data$`_id`
+      .by = .data$survey_id
     )
 }
 
@@ -157,8 +169,11 @@ pt_nest_length <- function(x) {
 #'
 pt_nest_market <- function(x) {
   x %>%
-    dplyr::select(.data$`_id`, dplyr::starts_with("Market_Catch_Survey")) %>%
-    tidyr::pivot_longer(-c(.data$`_id`)) %>%
+    dplyr::select(
+      survey_id = .data$`_id`,
+      dplyr::starts_with("Market_Catch_Survey")
+    ) %>%
+    tidyr::pivot_longer(-c("survey_id")) %>%
     dplyr::mutate(
       n = stringr::str_extract(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, "(\\d+)"),
@@ -168,12 +183,20 @@ pt_nest_market <- function(x) {
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
     dplyr::select(-.data$content) %>%
+    dplyr::rename(
+      catch_price = .data$price_sold_for,
+      catch_kg_market = .data$weight_market
+    ) |>
+    dplyr::mutate(
+      catch_kg_market = as.numeric(.data$catch_kg_market),
+      catch_price = as.numeric(.data$catch_price)
+    ) |>
     tidyr::nest(
       "market" = c(
         .data$group_market, .data$species_market,
-        .data$weight_market, .data$price_sold_for
+        .data$catch_kg_market, .data$catch_price
       ),
-      .by = .data$`_id`
+      .by = .data$survey_id
     )
 }
 
@@ -190,8 +213,11 @@ pt_nest_market <- function(x) {
 #'
 pt_nest_catch <- function(x) {
   x %>%
-    dplyr::select(.data$`_id`, dplyr::starts_with("Total_Catch_Survey")) %>%
-    tidyr::pivot_longer(-c(.data$`_id`)) %>%
+    dplyr::select(
+      survey_id = .data$`_id`,
+      dplyr::starts_with("Total_Catch_Survey")
+    ) %>%
+    tidyr::pivot_longer(-c(.data$survey_id)) %>%
     dplyr::mutate(
       n = stringr::str_extract(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, "(\\d+)"),
@@ -208,12 +234,25 @@ pt_nest_catch <- function(x) {
       .data$content, .data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch,
       .data$nb_ind_catch, .data$nb_buckets_catch
     )) %>%
+    dplyr::rename(
+      n_elements = .data$nb_elements,
+      length_individual = .data$len_ind_catch,
+      all_catch_in_boat = .data$All_catch_in_boat,
+      catch_kg = .data$weight_kg
+    ) |>
+    dplyr::mutate(
+      all_catch_in_boat = tolower(.data$all_catch_in_boat),
+      all_catch_in_boat = cleaner::clean_character(.data$all_catch_in_boat),
+      length_individual = as.numeric(.data$length_individual),
+      catch_kg = as.numeric(.data$catch_kg),
+      n_elements = as.numeric(.data$n_elements)
+    ) |>
     tidyr::nest(
       "catch" = c(
-        .data$type_measure, .data$All_catch_in_boat, .data$group_catch,
-        .data$species_catch, .data$nb_elements, .data$weight_kg
+        .data$type_measure, .data$all_catch_in_boat, .data$group_catch,
+        .data$species_catch, .data$n_elements, .data$catch_kg
       ),
-      .by = .data$`_id`
+      .by = .data$survey_id
     )
 }
 
@@ -228,8 +267,11 @@ pt_nest_catch <- function(x) {
 #'
 pt_nest_trip <- function(x) {
   x %>%
-    dplyr::select(.data$`_id`, dplyr::starts_with("Fishing_Trip")) %>%
-    tidyr::pivot_longer(-c(.data$`_id`)) %>%
+    dplyr::select(
+      survey_id = .data$`_id`,
+      dplyr::starts_with("Fishing_Trip")
+    ) %>%
+    tidyr::pivot_longer(-c(.data$survey_id)) %>%
     dplyr::mutate(
       n = stringr::str_extract(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, "(\\d+)"),
@@ -238,7 +280,32 @@ pt_nest_trip <- function(x) {
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     # dplyr::filter(!is.na(.data$content)) %>%
-    dplyr::select(-.data$content, -.data$n)
+    dplyr::select(-"content", -"n") |>
+    dplyr::rename(
+      fishing_ground_name = .data$fishing_ground_name,
+      habitat = .data$fishing_ground_type,
+      trip_length_days = .data$fishing_duration,
+      propulsion_gear = .data$boat_type,
+      propulsion_gear_other = .data$other_boat,
+      boat_engine = .data$engine_yn,
+      engine_hp = .data$engine,
+      gear = .data$gear_type,
+      gear_other = .data$gear_type_other,
+    ) |>
+    dplyr::mutate(
+      boat_engine = ifelse(.data$boat_engine == "yes", "motorised", "unmotorised"),
+      fishing_location = tolower(.data$fishing_location),
+      fishing_location = cleaner::clean_character(.data$fishing_location),
+      gear_other = tolower(.data$gear_other),
+      gear_other = cleaner::clean_character(.data$gear_other),
+      fishing_ground_name = tolower(.data$fishing_ground_name),
+      fishing_ground_name = cleaner::clean_character(.data$fishing_ground_name),
+      engine_hp = as.numeric(.data$engine_hp),
+      trip_length_days = dplyr::case_when(
+        trip_length_days == ">3" ~ 4,
+        TRUE ~ as.numeric(.data$trip_length_days)
+      )
+    )
 }
 
 #' Nest Attachment Columns
@@ -267,11 +334,14 @@ pt_nest_trip <- function(x) {
 pt_nest_attachments <- function(x) {
   x %>%
     # Using the .data pronoun to avoid RMD check notes
-    dplyr::select(.data$`_id`, dplyr::starts_with("_attachments")) %>%
+    dplyr::select(
+      survey_id = .data$`_id`,
+      dplyr::starts_with("_attachments")
+    ) %>%
     dplyr::mutate_all(as.character) %>%
     # Column names follow the form "_attachments.0.download_large_url"
     tidyr::pivot_longer(
-      cols = -.data$`_id`,
+      cols = -.data$survey_id,
       names_to = c("n", "field"),
       names_prefix = "_attachments.",
       names_sep = "\\."
@@ -280,13 +350,13 @@ pt_nest_attachments <- function(x) {
     tidyr::pivot_wider(names_from = "field", values_from = "value") %>%
     # Attachments already have id and this column is superfluous
     dplyr::select(-.data$n) %>%
-    dplyr::group_by(.data$`_id`) %>%
+    dplyr::group_by(.data$survey_id) %>%
     tidyr::nest() %>%
     dplyr::ungroup() %>%
     dplyr::rename("_attachments" = "data") %>%
     # If there are no attachments empty the nested data frames
     dplyr::mutate(
-      `_id` = as.integer(.data$`_id`),
+      survey_id = as.integer(.data$survey_id),
       `_attachments` = purrr::map(
         .data$`_attachments`,
         ~ dplyr::filter(., !is.na(.data$id))

@@ -52,9 +52,11 @@ cloud_storage_authenticate <- function(provider, options) {
 #' @examples
 #' \dontrun{
 #' authentication_details <- readLines("path/to/json_file.json")
-#' upload_cloud_file("path/to/local_file.csv",
-#'  "gcs",
-#'  list(service_account_key = authentication_details, bucket = "my-bucket"))
+#' upload_cloud_file(
+#'   "path/to/local_file.csv",
+#'   "gcs",
+#'   list(service_account_key = authentication_details, bucket = "my-bucket")
+#' )
 #' }
 #'
 upload_cloud_file <- function(file, provider, options, name = file) {
@@ -100,11 +102,13 @@ upload_cloud_file <- function(file, provider, options, name = file) {
 #' @examples
 #' \dontrun{
 #' authentication_details <- readLines("path/to/json_file.json")
-#' cloud_object_name("prefix",
-#'  "latest",
-#'  "json",
-#'  "gcs",
-#'  list(service_account_key = authentication_details, bucket = "my-bucket"))
+#' cloud_object_name(
+#'   "prefix",
+#'   "latest",
+#'   "json",
+#'   "gcs",
+#'   list(service_account_key = authentication_details, bucket = "my-bucket")
+#' )
 #' #'
 #' }
 cloud_object_name <- function(prefix, version = "latest", extension = "",
@@ -172,10 +176,12 @@ cloud_object_name <- function(prefix, version = "latest", extension = "",
 #' @examples
 #' \dontrun{
 #' authentication_details <- readLines("path/to/json_file.json")
-#' download_cloud_file("object_name.json",
-#'  "gcs",
-#'  list(service_account_key = authentication_details, bucket = "my-bucket"),
-#'  "local_path/to/save/object.json")
+#' download_cloud_file(
+#'   "object_name.json",
+#'   "gcs",
+#'   list(service_account_key = authentication_details, bucket = "my-bucket"),
+#'   "local_path/to/save/object.json"
+#' )
 #' }
 #'
 download_cloud_file <- function(name, provider, options, file = name) {

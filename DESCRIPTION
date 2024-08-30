@@ -27,7 +27,8 @@ Imports:
     rlang,
     lubridate,
     taxize,
-    arrow
+    arrow,
+    cleaner
 Suggests: 
     covr,
     pkgdown,
