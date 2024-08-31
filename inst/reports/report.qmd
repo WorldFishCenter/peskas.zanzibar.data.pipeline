@@ -88,18 +88,29 @@ validated %>%
   dplyr::filter(submission_date > "2010-01-01") %>% 
   dplyr::mutate(landing_site = stringr::str_to_title(landing_site)) %>%
   dplyr::select(survey_id, submission_date, landing_site) %>%
-  tidyr::complete(landing_site, submission_date) %>%
-  dplyr::mutate(record = ifelse(is.na(survey_id), 0, 1)) %>%
-  dplyr::group_by(landing_site) %>%
-  dplyr::mutate(obs = sum(record)) %>%
-  ggplot(aes(submission_date, reorder(landing_site, obs), fill = as.factor(record))) +
+  dplyr::mutate(submission_date = lubridate::floor_date(submission_date, "month")) %>%
+  dplyr::group_by(submission_date, landing_site) %>%
+  dplyr::summarise(n = dplyr::n()) %>%
+  dplyr::ungroup() %>% 
+  tidyr::complete(landing_site, submission_date, fill = list(n = 0)) %>%
+  ggplot(aes(submission_date, reorder(landing_site, n))) +
   theme_minimal() +
-  geom_tile(width = 3) +
+  geom_tile(aes(submission_date, reorder(landing_site, n), fill = n, alpha = log(n)), color = "white", size = 0.3) +
+  scale_fill_viridis_c(direction = -1) +
   coord_cartesian(expand = FALSE) +
-  scale_fill_manual(values = c("transparent", "#047474")) +
-  scale_x_date(date_breaks = "4 months", date_labels = "%y-%b") +
-  theme(legend.position = "") +
-  labs(y = "", x = "Date")
+  guides(alpha = "none") +
+  scale_x_date(
+    date_breaks = "4 month",
+    date_labels = "%y-%b",
+    expand = c(0, 0)
+  ) +
+  labs(
+    x = "Month of the year",
+    fill = "Number of surveys",
+    y = ""
+  )+
+  theme(legend.position = "bottom",
+        panel.grid.minor  = element_blank())
 
 ```
 
