@@ -27,28 +27,10 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   k_max_length <- pars$surveys$wcs_surveys$validation$K_length_max
   k_max_price <- pars$surveys$wcs_surveys$validation$K_price_max
 
-  logger::log_info("Validating catches groups")
-  surveys_catch_alerts <- validate_catch(data = preprocessed_surveys, k_max_nb = k_max_nb, k_max_weight = k_max_weight)
-  logger::log_info("Validating lengths group")
-  surveys_length_alerts <- validate_length(data = preprocessed_surveys, k_max_length = k_max_length)
-  logger::log_info("Validating markets group")
-  surveys_market_alerts <- validate_market(data = preprocessed_surveys, k_max_price = k_max_price)
-
-  logger::log_info("Renaming data fields")
-  validated_groups <-
-    list(
-      surveys_catch_alerts,
-      surveys_length_alerts,
-      surveys_market_alerts
-    ) %>%
-    purrr::map(~ dplyr::select(.x, -alert_number)) %>%
-    purrr::reduce(dplyr::left_join, by = "survey_id")
-
   trips_info <-
     preprocessed_surveys %>%
     dplyr::select(
       "survey_id",
-      "submission_date",
       "survey_type",
       "landing_site",
       "lat",
@@ -66,8 +48,30 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       "n_boats"
     )
 
+  logger::log_info("Validating dates")
+  surveys_dates_alerts <- validate_dates(data = preprocessed_surveys)
+  logger::log_info("Validating catches groups")
+  surveys_catch_alerts <- validate_catch(data = preprocessed_surveys, k_max_nb = k_max_nb, k_max_weight = k_max_weight)
+  logger::log_info("Validating lengths group")
+  surveys_length_alerts <- validate_length(data = preprocessed_surveys, k_max_length = k_max_length)
+  logger::log_info("Validating markets group")
+  surveys_market_alerts <- validate_market(data = preprocessed_surveys, k_max_price = k_max_price)
+
+  logger::log_info("Renaming data fields")
+  validated_groups <-
+    list(
+      surveys_dates_alerts,
+      surveys_catch_alerts,
+      surveys_length_alerts,
+      surveys_market_alerts
+    ) %>%
+    purrr::map(~ dplyr::select(.x, -alert_number)) |>
+    purrr::reduce(dplyr::left_join, by = "survey_id")
+
+
   validated_surveys <-
-    dplyr::left_join(trips_info, validated_groups, by = "survey_id")
+    dplyr::left_join(trips_info, validated_groups, by = "survey_id") |>
+    dplyr::select("survey_id", "submission_date", dplyr::everything())
 
   validated_filename <-
     pars$surveys$wcs_surveys$validated_surveys$file_prefix %>%
@@ -144,33 +148,34 @@ alert_outlier <- function(x,
 }
 
 
-#' Validate Fishing Duration in WCS Surveys
+#' Validate Submission Dates in WCS Surveys
 #'
-#' Checks fishing durations reported in WCS surveys against specified maximum and minimum hour thresholds, identifying and flagging any durations outside these bounds.
+#' This function validates the submission dates in WCS surveys. It flags any submissions with dates earlier than January 1, 2020.
 #'
-#' @param data Data frame containing preprocessed survey data.
-#' @param hrs_max Maximum allowable duration in hours.
-#' @param hrs_min Minimum allowable duration in hours.
-#' @return Data frame with validation results, including flags for surveys that do not meet duration criteria.
+#' @param data Data frame containing preprocessed survey data. If NULL, the function will return NULL.
+#' @return A data frame with the following columns:
+#'   \item{submission_date}{Date of survey submission. Dates before 2020-01-01 are set to NA.}
+#'   \item{alert_number}{Numeric. 1 if the submission date is invalid (NA), NA otherwise.}
+#'   \item{survey_id}{Integer. Unique identifier for each survey_id}
+#' @details
+#' The function performs the following operations:
+#' 1. Selects 'survey_id' and 'submission_date' columns from the input data.
+#' 2. Sets submission dates before 2020-01-01 to NA.
+#' 3. Creates an alert_number column: 1 for invalid dates, NA for valid dates.
 #' @keywords validation
 #' @export
+#' @examples
+#' \dontrun{
+#' validated_data <- validate_dates(survey_data)
+#' }
 #'
-validate_surveys_time <- function(data = NULL, hrs_max = NULL, hrs_min = NULL) {
+validate_dates <- function(data = NULL) {
   data %>%
-    dplyr::select(.data$`_id`, .data$fishing_duration) %>%
-    dplyr::mutate(fishing_duration = abs(as.numeric(.data$fishing_duration))) %>%
+    dplyr::select("survey_id", "submission_date") %>%
     dplyr::transmute(
-      trip_duration = dplyr::case_when(
-        .data$fishing_duration > hrs_max |
-          .data$fishing_duration < hrs_min ~ NA_real_,
-        TRUE ~ .data$fishing_duration
-      ), # test if catch duration is longer than hrs_max or minor than hrs_min
-      alert_number = dplyr::case_when(
-        .data$fishing_duration > hrs_max |
-          .data$fishing_duration < hrs_min ~ 1,
-        TRUE ~ NA_real_
-      ),
-      submission_id = as.integer(.data$`_id`)
+      submission_date = dplyr::case_when(.data$submission_date < "2020-01-01" ~ NA, TRUE ~ .data$submission_date),
+      alert_number = ifelse(is.na(.data$submission_date), 1, NA_real_),
+      survey_id = as.integer(.data$survey_id)
     )
 }
 
@@ -217,7 +222,6 @@ validate_catch <- function(data = NULL, k_max_nb = NULL, k_max_weight = NULL) {
     dplyr::mutate(
       alert_nb = alert_outlier(
         x = .data$n_elements,
-        # alert_if_smaller = 1,
         alert_if_larger = 2,
         logt = TRUE,
         k = k_max_nb
@@ -228,8 +232,7 @@ validate_catch <- function(data = NULL, k_max_nb = NULL, k_max_weight = NULL) {
       ),
       alert_catch = alert_outlier(
         x = .data$catch_kg,
-        # alert_if_smaller = 3,
-        alert_if_larger = 4,
+        alert_if_larger = 3,
         logt = TRUE,
         k = k_max_weight
       ),
@@ -287,8 +290,7 @@ validate_length <- function(data = NULL, k_max_length = NULL) {
     dplyr::mutate(
       alert_number = alert_outlier(
         x = .data$total_length,
-        # alert_if_smaller = 1,
-        alert_if_larger = 2,
+        alert_if_larger = 4,
         logt = TRUE,
         k = k_max_length
       ),
@@ -349,8 +351,7 @@ validate_market <- function(data = NULL, k_max_price = NULL) {
     dplyr::mutate(
       alert_number = alert_outlier(
         x = .data$price_kg,
-        # alert_if_smaller = 1,
-        alert_if_larger = 2,
+        alert_if_larger = 5,
         logt = TRUE,
         k = k_max_price
       ),

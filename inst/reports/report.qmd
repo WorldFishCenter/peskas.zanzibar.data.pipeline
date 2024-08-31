@@ -1,23 +1,23 @@
 ---
 title: "WCS Zanzibar"
-date: "`r Sys.Date()`"
-geometry: "left=3cm,right=3cm,top=2cm,bottom=2cm"
-output:
-  bookdown::html_document2:
-   toc: true
-   toc_depth: 3
-   css: style.css
-header-includes: 
-  - \usepackage{float} 
-  - \floatplacement{figure}{H}
-  - \usepackage{leading}
-  - \leading{16pt}
-nocite: '@*'
+format:
+   html:
+     self-contained: true
+     theme:
+       light: flatly
+       dark: darkly
+code-fold: true
+code-summary: "Show the code"
+editor: visual
+css: style.css
+toc: true
+toc_float: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(ggplot2)
