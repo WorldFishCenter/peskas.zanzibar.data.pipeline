@@ -237,53 +237,54 @@ rename_child <- function(x, i, p) {
 #'
 #' @export
 #'
-get_trips <- function(token = NULL,
-  secret = NULL,
-  dateFrom = NULL,
-  dateTo = NULL,
-  imeis = NULL,
-  deviceInfo = FALSE,
-  withLastSeen = FALSE,
-  tags = NULL) {
-# Base URL
-base_url <- paste0("https://analytics.pelagicdata.com/api/", token, "/v1/trips/", dateFrom, "/", dateTo)
+get_trips <- function(
+    token = NULL,
+    secret = NULL,
+    dateFrom = NULL,
+    dateTo = NULL,
+    imeis = NULL,
+    deviceInfo = FALSE,
+    withLastSeen = FALSE,
+    tags = NULL) {
+  # Base URL
+  base_url <- paste0("https://analytics.pelagicdata.com/api/", token, "/v1/trips/", dateFrom, "/", dateTo)
 
-# Build query parameters
-query_params <- list()
-if (!is.null(imeis)) {
-query_params$imeis <- paste(imeis, collapse = ",")
-}
-if (deviceInfo) {
-query_params$deviceInfo <- "true"
-}
-if (withLastSeen) {
-query_params$withLastSeen <- "true"
-}
-if (!is.null(tags)) {
-query_params$tags <- paste(tags, collapse = ",")
-}
+  # Build query parameters
+  query_params <- list()
+  if (!is.null(imeis)) {
+    query_params$imeis <- paste(imeis, collapse = ",")
+  }
+  if (deviceInfo) {
+    query_params$deviceInfo <- "true"
+  }
+  if (withLastSeen) {
+    query_params$withLastSeen <- "true"
+  }
+  if (!is.null(tags)) {
+    query_params$tags <- paste(tags, collapse = ",")
+  }
 
-# Build the request
-req <- httr2::request(base_url) %>%
-httr2::req_headers(
-"X-API-SECRET" = secret,
-"Content-Type" = "application/json"
-) %>%
-httr2::req_url_query(!!!query_params)
+  # Build the request
+  req <- httr2::request(base_url) %>%
+    httr2::req_headers(
+      "X-API-SECRET" = secret,
+      "Content-Type" = "application/json"
+    ) %>%
+    httr2::req_url_query(!!!query_params)
 
-# Perform the request
-resp <- req %>% httr2::req_perform()
+  # Perform the request
+  resp <- req %>% httr2::req_perform()
 
-# Check for HTTP errors
-if (httr2::resp_status(resp) != 200) {
-stop("Request failed with status: ", httr2::resp_status(resp), "\n", httr2::resp_body_string(resp))
-}
+  # Check for HTTP errors
+  if (httr2::resp_status(resp) != 200) {
+    stop("Request failed with status: ", httr2::resp_status(resp), "\n", httr2::resp_body_string(resp))
+  }
 
-# Read CSV content
-content_text <- httr2::resp_body_string(resp)
-trips_data <- readr::read_csv(content_text, show_col_types = FALSE)
+  # Read CSV content
+  content_text <- httr2::resp_body_string(resp)
+  trips_data <- readr::read_csv(content_text, show_col_types = FALSE)
 
-return(trips_data)
+  return(trips_data)
 }
 
 
@@ -349,94 +350,93 @@ return(trips_data)
 #'
 #' @export
 get_trip_points <- function(token = NULL,
-        secret = NULL,
-        id = NULL,
-        dateFrom = NULL,
-        dateTo = NULL,
-        path = NULL,
-        imeis = NULL,
-        deviceInfo = FALSE,
-        errant = FALSE,
-        withLastSeen = FALSE,
-        tags = NULL,
-        overwrite = TRUE) {
-# Build base URL based on whether ID is provided
-if (!is.null(id)) {
-base_url <- paste0(
-"https://analytics.pelagicdata.com/api/",
-token,
-"/v1/trips/",
-id,
-"/points"
-)
-} else {
-if (is.null(dateFrom) || is.null(dateTo)) {
-stop("dateFrom and dateTo are required when id is not provided")
-}
-base_url <- paste0(
-"https://analytics.pelagicdata.com/api/",
-token,
-"/v1/points/",
-dateFrom,
-"/",
-dateTo
-)
-}
+                            secret = NULL,
+                            id = NULL,
+                            dateFrom = NULL,
+                            dateTo = NULL,
+                            path = NULL,
+                            imeis = NULL,
+                            deviceInfo = FALSE,
+                            errant = FALSE,
+                            withLastSeen = FALSE,
+                            tags = NULL,
+                            overwrite = TRUE) {
+  # Build base URL based on whether ID is provided
+  if (!is.null(id)) {
+    base_url <- paste0(
+      "https://analytics.pelagicdata.com/api/",
+      token,
+      "/v1/trips/",
+      id,
+      "/points"
+    )
+  } else {
+    if (is.null(dateFrom) || is.null(dateTo)) {
+      stop("dateFrom and dateTo are required when id is not provided")
+    }
+    base_url <- paste0(
+      "https://analytics.pelagicdata.com/api/",
+      token,
+      "/v1/points/",
+      dateFrom,
+      "/",
+      dateTo
+    )
+  }
 
-# Build query parameters
-query_params <- list()
-if (!is.null(imeis)) {
-query_params$imeis <- paste(imeis, collapse = ",")
-}
-if (deviceInfo) {
-query_params$deviceInfo <- "true"
-}
-if (errant) {
-query_params$errant <- "true"
-}
-if (withLastSeen) {
-query_params$withLastSeen <- "true"
-}
-if (!is.null(tags)) {
-query_params$tags <- paste(tags, collapse = ",")
-}
-# Add format=csv if saving to file
-if (!is.null(path)) {
-query_params$format <- "csv"
-}
+  # Build query parameters
+  query_params <- list()
+  if (!is.null(imeis)) {
+    query_params$imeis <- paste(imeis, collapse = ",")
+  }
+  if (deviceInfo) {
+    query_params$deviceInfo <- "true"
+  }
+  if (errant) {
+    query_params$errant <- "true"
+  }
+  if (withLastSeen) {
+    query_params$withLastSeen <- "true"
+  }
+  if (!is.null(tags)) {
+    query_params$tags <- paste(tags, collapse = ",")
+  }
+  # Add format=csv if saving to file
+  if (!is.null(path)) {
+    query_params$format <- "csv"
+  }
 
-# Build the request
-req <- httr2::request(base_url) %>%
-httr2::req_headers(
-"X-API-SECRET" = secret,
-"Content-Type" = "application/json"
-) %>%
-httr2::req_url_query(!!!query_params)
+  # Build the request
+  req <- httr2::request(base_url) %>%
+    httr2::req_headers(
+      "X-API-SECRET" = secret,
+      "Content-Type" = "application/json"
+    ) %>%
+    httr2::req_url_query(!!!query_params)
 
-# Perform the request
-resp <- req %>% httr2::req_perform()
+  # Perform the request
+  resp <- req %>% httr2::req_perform()
 
-# Check for HTTP errors first
-if (httr2::resp_status(resp) != 200) {
-stop(
-"Request failed with status: ",
-httr2::resp_status(resp),
-"\n",
-httr2::resp_body_string(resp)
-)
+  # Check for HTTP errors first
+  if (httr2::resp_status(resp) != 200) {
+    stop(
+      "Request failed with status: ",
+      httr2::resp_status(resp),
+      "\n",
+      httr2::resp_body_string(resp)
+    )
+  }
+
+  # Handle the response based on whether path is provided
+  if (!is.null(path)) {
+    # Write the response content to file
+    writeBin(httr2::resp_body_raw(resp), path)
+    result <- path
+  } else {
+    # Read CSV content
+    content_text <- httr2::resp_body_string(resp)
+    result <- readr::read_csv(content_text, show_col_types = FALSE)
+  }
+
+  return(result)
 }
-
-# Handle the response based on whether path is provided
-if (!is.null(path)) {
-# Write the response content to file
-writeBin(httr2::resp_body_raw(resp), path)
-result <- path
-} else {
-# Read CSV content
-content_text <- httr2::resp_body_string(resp)
-result <- readr::read_csv(content_text, show_col_types = FALSE)
-}
-
-return(result)
-}
-

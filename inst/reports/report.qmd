@@ -28,13 +28,13 @@ my_palette <- c(
   "#FC8D62", "#00BFFF", "#808000"
 )
 
-catch_palette <- 
+catch_palette <-
   c(
-  "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00",
-  "#cccc28", "#A65628", "#F781BF", "#999999", "#66C2A5",
-  "#FC8D62", "#00BFFF", "#808000", "#ccff00", "#FAEBD7",
-  "#00FFFF", "#7FFFD4"
-)
+    "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00",
+    "#cccc28", "#A65628", "#F781BF", "#999999", "#66C2A5",
+    "#FC8D62", "#00BFFF", "#808000", "#ccff00", "#FAEBD7",
+    "#00FFFF", "#7FFFD4"
+  )
 
 setwd("../..")
 pars <- peskas.zanzibar.data.pipeline::read_config()
@@ -73,25 +73,24 @@ The visualized plot ranks various sites by their data availability over time, wi
 The representation indicates that landing sites divide in two main blocks when considering missing data distribution. Indeed, progressing below the landing site *Jasini* data are very sparse, accounting for less than 100 surveys collected. **Consequently, all further analyses were limited to the landing sites at and above *Jasini*, due to the more complete data available there.**
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-sites <- 
+sites <-
   validated %>%
   dplyr::select(survey_id, landing_site) %>%
   dplyr::group_by(landing_site) %>%
-  dplyr::count() %>% 
-  dplyr::arrange(-n) %>% 
-  dplyr::filter(n > 150) %>% 
+  dplyr::count() %>%
+  dplyr::arrange(-n) %>%
+  dplyr::filter(n > 150) %>%
   magrittr::extract2("landing_site")
 
 
 validated %>%
-  dplyr::filter(submission_date > "2010-01-01") %>% 
+  dplyr::filter(submission_date > "2010-01-01") %>%
   dplyr::mutate(landing_site = stringr::str_to_title(landing_site)) %>%
   dplyr::select(survey_id, submission_date, landing_site) %>%
   dplyr::mutate(submission_date = lubridate::floor_date(submission_date, "month")) %>%
   dplyr::group_by(submission_date, landing_site) %>%
   dplyr::summarise(n = dplyr::n()) %>%
-  dplyr::ungroup() %>% 
+  dplyr::ungroup() %>%
   tidyr::complete(landing_site, submission_date, fill = list(n = 0)) %>%
   ggplot(aes(submission_date, reorder(landing_site, n))) +
   theme_minimal() +
@@ -108,28 +107,27 @@ validated %>%
     x = "Month of the year",
     fill = "Number of surveys",
     y = ""
-  )+
-  theme(legend.position = "bottom",
-        panel.grid.minor  = element_blank())
-
+  ) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
 ```
 
 The diagram illustrates the distribution and types of surveys conducted at various landing sites. The width of each band in the diagram reflects the volume of data collected for each element. There are three main types of surveys represented, with 'catch' surveys being the most dominant. 'Length' and 'market' surveys appear to be less frequent in comparison. Within the data collected from 'catch' surveys, measurements of 'weight' are the most prevalent, followed by 'unknown' measurement types and measurements taken using a 'bucket.' For more detailed information, you can interact with the diagram by hovering over specific areas of the plot, which will provide additional insights.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-validated_sankey <- 
-  validated %>% 
-  tidyr::unnest(catch) %>% 
+validated_sankey <-
+  validated %>%
+  tidyr::unnest(catch) %>%
   dplyr::filter(landing_site %in% sites) %>%
-  dplyr::select(survey_type, type_measure, landing_site) %>% 
-  dplyr::mutate(type_measure = ifelse(is.na(type_measure), "unknown", type_measure)) %>% 
-  dplyr::arrange(type_measure) %>% 
+  dplyr::select(survey_type, type_measure, landing_site) %>%
+  dplyr::mutate(type_measure = ifelse(is.na(type_measure), "unknown", type_measure)) %>%
+  dplyr::arrange(type_measure) %>%
   dplyr::filter(!type_measure == "length")
-  
-highcharter::hchart(highcharter::data_to_sankey(validated_sankey), "sankey", name = "N. surveys") %>% 
-  highcharter::hc_subtitle(text= "Surveys profile") 
 
-
+highcharter::hchart(highcharter::data_to_sankey(validated_sankey), "sankey", name = "N. surveys") %>%
+  highcharter::hc_subtitle(text = "Surveys profile")
 ```
 
 # Fishery profile
