@@ -43,7 +43,7 @@ jobs:
         run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
   preprocess-wcs-surveys:
     name: Preprocess WCS kobo surveys
-    needs: ingest-wcs-surveys
+    needs: ingest-surveys
     runs-on: ubuntu-20.04
     container:
       image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
