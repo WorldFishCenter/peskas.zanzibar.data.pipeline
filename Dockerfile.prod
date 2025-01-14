@@ -24,10 +24,7 @@ COPY renv.lock renv.lock
 # 5) Copy the rest of the project
 COPY . /app
 
-# 6) Restore packages and ensure remotes is available
-RUN R -e 'renv::restore(repos = c(CRAN = "https://cloud.r-project.org")); if (!require("remotes")) install.packages("remotes")'
-
-# 7) Install  local package
-RUN Rscript -e 'remotes::install_local(".", dependencies = TRUE)'
+# 6) Restore packages and install the package in the renv environment
+RUN R -e 'renv::restore(repos = c(CRAN = "https://cloud.r-project.org")); renv::install(".")'
 
 COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json
