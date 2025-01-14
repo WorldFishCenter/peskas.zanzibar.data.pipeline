@@ -18,7 +18,6 @@ toc_float: true
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(magrittr)
