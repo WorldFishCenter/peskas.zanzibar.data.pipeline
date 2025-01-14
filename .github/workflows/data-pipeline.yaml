@@ -42,7 +42,7 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_surveys()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
 
   preprocess-wcs-surveys:
     name: Preprocess WCS kobo surveys
@@ -58,7 +58,7 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call preprocess_wcs_surveys()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
 
   validate-wcs-surveys:
     name: Validate WCS kobo surveys
@@ -74,4 +74,4 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call validate_wcs_surveys()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'

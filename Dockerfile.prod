@@ -12,19 +12,23 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 2) Install renv globally
-RUN install2.r --error --skipinstalled renv
+RUN R -e "install.packages('renv', repos = c(CRAN = 'https://cloud.r-project.org'))"
 
-# 3) Set up the working directory
+# 3) Set up working directory
 WORKDIR /app
 
-# 4) Copy only files that define the project's dependencies
-COPY DESCRIPTION DESCRIPTION
+# 4) Copy renv files
+RUN mkdir -p renv
+COPY .Rprofile .Rprofile
+COPY renv/activate.R renv/activate.R
+COPY renv/settings.dcf renv/settings.dcf
 COPY renv.lock renv.lock
 
-# 5) Copy the rest of the project
+# 5) Set library path
+ENV RENV_PATHS_LIBRARY renv/library
+
+# 6) Copy the rest of the project
 COPY . /app
 
-# 6) Restore packages and install the package in the renv environment
-RUN R -e 'renv::restore(repos = c(CRAN = "https://cloud.r-project.org")); renv::install(".")'
-
-COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json
+# 7) Restore and install
+RUN R -e "renv::restore()"
