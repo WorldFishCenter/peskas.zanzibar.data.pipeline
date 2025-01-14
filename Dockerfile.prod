@@ -1,53 +1,14 @@
 FROM rocker/geospatial:4.2
 
-# Tidyverse system requirements
-RUN apt-get update -qq && apt-get -y --no-install-recommends install \
-    libxml2-dev \
-    libcairo2-dev \
-    libgit2-dev \
-    default-libmysqlclient-dev \
-    libpq-dev \
-    libsasl2-dev \
-    libsqlite3-dev \
-    libssh2-1-dev \
-    unixodbc-dev && \
-  rm -rf /var/lib/apt/lists/*
+# 1) Install renv so we can restore packages from renv.lock
+RUN install2.r --error --skipinstalled renv
 
-# Install imports
-RUN install2.r --error --skipinstalled \
-    config \
-    dplyr \
-    git2r \
-    googleAuthR \
-    googleCloudStorageR \
-    logger \
-    magrittr \
-    purrr \
-    stringr \
-    tidyr \
-    rlang \
-    lubridate \
-    arrow
+# 2) Create a working directory and copy your entire project there
+WORKDIR /app
+COPY . /app
 
-# Install suggests
-RUN install2.r --error --skipinstalled \
-    covr \
-    pkgdown \
-    sessioninfo \
-    tibble \
-    roxygen2 \
-    tidyselect \
-    remotes \
-    tidytext \
-    KoboconnectR \
-    univOutl \
-    reticulate \
-    stringi \
-    taxize
+# 3) Restore packages according to renv.lock
+RUN R -e 'renv::restore()'
 
-# Install local package
-COPY . /home
-WORKDIR /home
-RUN Rscript -e 'remotes::install_local(dependencies = TRUE)'
-
-ENTRYPOINT ["Rscript"]
+# 4) Copy RStudio interface preferences (if needed)
+COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json
