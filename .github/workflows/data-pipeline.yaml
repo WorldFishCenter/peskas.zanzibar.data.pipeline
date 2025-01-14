@@ -26,8 +26,8 @@ jobs:
           registry: docker.pkg.github.com
           image_name: r-runner-peskas-zanzibar
           dockerfile: Dockerfile.prod
-  ingest-wcs-surveys:
-    name: Ingest WCS kobo surveys
+  ingest-surveys:
+    name: Ingest kobo surveys
     needs: build-container
     runs-on: ubuntu-20.04
     container:
@@ -39,8 +39,8 @@ jobs:
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
-      - name: Call ingest_wcs_surveys()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_wcs_surveys()'
+      - name: Call ingest_surveys()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
   preprocess-wcs-surveys:
     name: Preprocess WCS kobo surveys
     needs: ingest-wcs-surveys

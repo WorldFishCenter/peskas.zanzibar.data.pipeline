@@ -1,46 +1,76 @@
-#' Ingest WCS Catch Survey Data
+#' Ingest WCS and WF Catch Survey Data
 #'
-#' This function automates the downloading of WCS fish catch survey data collected through Kobo Toolbox and uploads it to cloud storage services. The filenames are versioned to include date-time stamps and, if available, the first 7 digits of the Git commit SHA.
+#' @description
+#' This function handles the automated ingestion of fish catch survey data from both WCS
+#' and WF sources through Kobo Toolbox. It performs the following operations:
+#' 1. Downloads the survey data from Kobo Toolbox
+#' 2. Processes and formats the data
+#' 3. Uploads the processed files to configured cloud storage locations
 #'
-#' Configuration parameters required from `conf.yml` include:
+#' @details
+#' The function requires specific configuration in the `conf.yml` file with the following structure:
 #'
-#' ```
+#' ```yaml
 #' surveys:
 #'   wcs_surveys:
-#'     asset_id:
-#'     username:
-#'     password:
-#'     file_prefix:
+#'     raw_surveys:
+#'       file_prefix: "wcs_raw_data"     # Prefix for output files
+#'       asset_id: "xxxxx"               # Kobo Toolbox asset ID
+#'       username: "user@example.com"    # Kobo Toolbox username
+#'       password: "password123"         # Kobo Toolbox password
+#'   wf_surveys:
+#'     raw_surveys:
+#'       file_prefix: "wf_raw_data"
+#'       asset_id: "yyyyy"
+#'       username: "user2@example.com"
+#'       password: "password456"
 #' storage:
-#'   storage_name:
-#'     key:
+#'   gcp:                               # Storage provider name
+#'     key: "google"                    # Storage provider identifier
 #'     options:
-#'       project:
-#'       bucket:
-#'       service_account_key:
+#'       project: "project-id"          # Cloud project ID
+#'       bucket: "bucket-name"          # Storage bucket name
+#'       service_account_key: "path/to/key.json"
 #' ```
 #'
-#' Progress through the function is tracked using the package *logger*.
+#' The function processes both WCS and WF surveys sequentially, with separate logging
+#' for each step. For each survey:
+#' - Downloads data using the `retrieve_surveys()` function
+#' - Converts the data to parquet format
+#' - Uploads the resulting files to all configured storage providers
 #'
+#' Error handling is managed through the logger package, with informative messages
+#' at each step of the process.
 #'
-#' Logging progress is managed using the `logger` package.
+#' @param log_threshold The logging threshold to use. Default is logger::DEBUG.
+#'   See `logger::log_levels` for available options.
 #'
-#' @param log_threshold Log level used as the threshold for logging (see [logger::log_levels]).
-#' @return None; the function is used for its side effects.
-#' @export
-#' @keywords workflow ingestion
+#' @return None (invisible). The function performs its operations for side effects:
+#'   - Creates parquet files locally
+#'   - Uploads files to configured cloud storage
+#'   - Generates logs of the process
+#'
 #' @examples
 #' \dontrun{
-#' ingest_wcs_surveys(logger::DEBUG)
+#' # Run with default debug logging
+#' ingest_surveys()
+#'
+#' # Run with info-level logging only
+#' ingest_surveys(logger::INFO)
 #' }
 #'
-ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
+#' @seealso
+#' * [retrieve_surveys()] for details on the survey retrieval process
+#' * [upload_cloud_file()] for details on the cloud upload process
+#'
+#' @export
+ingest_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
-
   pars <- read_config()
 
+  # WCS Survey
   logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
-  file_list <- retrieve_surveys(
+  wcs_files <- retrieve_surveys(
     prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "kf.kobotoolbox.org",
@@ -50,21 +80,13 @@ ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     encoding = "UTF-8"
   )
 
-  logger::log_info("Uploading files to cloud...")
-  # Iterate over multiple storage providers if there are more than one
-  purrr::map(pars$storage, ~ upload_cloud_file(file_list, .$key, .$options))
-  logger::log_success("Files upload succeded")
-}
+  logger::log_info("Uploading WCS files to cloud...")
+  purrr::map(pars$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
+  logger::log_success("WCS files upload succeeded")
 
-
-ingest_wf_surveys <- function(log_threshold = logger::DEBUG) {
-  logger::log_threshold(log_threshold)
-
-  pars <- read_config()
-
+  # WF Survey
   logger::log_info("Downloading WF Fish Catch Survey Kobo data...")
-
-  file_list <- retrieve_surveys(
+  wf_files <- retrieve_surveys(
     prefix = pars$surveys$wf_surveys$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "kf.kobotoolbox.org",
@@ -74,12 +96,10 @@ ingest_wf_surveys <- function(log_threshold = logger::DEBUG) {
     encoding = "UTF-8"
   )
 
-  logger::log_info("Uploading files to cloud...")
-  # Iterate over multiple storage providers if there are more than one
-  purrr::map(pars$storage, ~ upload_cloud_file(file_list, .$key, .$options))
-  logger::log_success("Files upload succeded")
+  logger::log_info("Uploading WF files to cloud...")
+  purrr::map(pars$storage, ~ upload_cloud_file(wf_files, .$key, .$options))
+  logger::log_success("WF files upload succeeded")
 }
-
 
 #' Retrieve Surveys from Kobotoolbox
 #'
@@ -263,52 +283,52 @@ rename_child <- function(x, i, p) {
 #'
 get_trips <- function(
     token = NULL,
-  secret = NULL,
-  dateFrom = NULL,
-  dateTo = NULL,
-  imeis = NULL,
-  deviceInfo = FALSE,
-  withLastSeen = FALSE,
-  tags = NULL) {
-# Base URL
-base_url <- paste0("https://analytics.pelagicdata.com/api/", token, "/v1/trips/", dateFrom, "/", dateTo)
+    secret = NULL,
+    dateFrom = NULL,
+    dateTo = NULL,
+    imeis = NULL,
+    deviceInfo = FALSE,
+    withLastSeen = FALSE,
+    tags = NULL) {
+  # Base URL
+  base_url <- paste0("https://analytics.pelagicdata.com/api/", token, "/v1/trips/", dateFrom, "/", dateTo)
 
-# Build query parameters
-query_params <- list()
-if (!is.null(imeis)) {
-query_params$imeis <- paste(imeis, collapse = ",")
-}
-if (deviceInfo) {
-query_params$deviceInfo <- "true"
-}
-if (withLastSeen) {
-query_params$withLastSeen <- "true"
-}
-if (!is.null(tags)) {
-query_params$tags <- paste(tags, collapse = ",")
-}
+  # Build query parameters
+  query_params <- list()
+  if (!is.null(imeis)) {
+    query_params$imeis <- paste(imeis, collapse = ",")
+  }
+  if (deviceInfo) {
+    query_params$deviceInfo <- "true"
+  }
+  if (withLastSeen) {
+    query_params$withLastSeen <- "true"
+  }
+  if (!is.null(tags)) {
+    query_params$tags <- paste(tags, collapse = ",")
+  }
 
-# Build the request
-req <- httr2::request(base_url) %>%
-httr2::req_headers(
-"X-API-SECRET" = secret,
-"Content-Type" = "application/json"
-) %>%
-httr2::req_url_query(!!!query_params)
+  # Build the request
+  req <- httr2::request(base_url) %>%
+    httr2::req_headers(
+      "X-API-SECRET" = secret,
+      "Content-Type" = "application/json"
+    ) %>%
+    httr2::req_url_query(!!!query_params)
 
-# Perform the request
-resp <- req %>% httr2::req_perform()
+  # Perform the request
+  resp <- req %>% httr2::req_perform()
 
-# Check for HTTP errors
-if (httr2::resp_status(resp) != 200) {
-stop("Request failed with status: ", httr2::resp_status(resp), "\n", httr2::resp_body_string(resp))
-}
+  # Check for HTTP errors
+  if (httr2::resp_status(resp) != 200) {
+    stop("Request failed with status: ", httr2::resp_status(resp), "\n", httr2::resp_body_string(resp))
+  }
 
-# Read CSV content
-content_text <- httr2::resp_body_string(resp)
-trips_data <- readr::read_csv(content_text, show_col_types = FALSE)
+  # Read CSV content
+  content_text <- httr2::resp_body_string(resp)
+  trips_data <- readr::read_csv(content_text, show_col_types = FALSE)
 
-return(trips_data)
+  return(trips_data)
 }
 
 
@@ -374,93 +394,93 @@ return(trips_data)
 #'
 #' @export
 get_trip_points <- function(token = NULL,
-        secret = NULL,
-        id = NULL,
-        dateFrom = NULL,
-        dateTo = NULL,
-        path = NULL,
-        imeis = NULL,
-        deviceInfo = FALSE,
-        errant = FALSE,
-        withLastSeen = FALSE,
-        tags = NULL,
-        overwrite = TRUE) {
-# Build base URL based on whether ID is provided
-if (!is.null(id)) {
-base_url <- paste0(
-"https://analytics.pelagicdata.com/api/",
-token,
-"/v1/trips/",
-id,
-"/points"
-)
-} else {
-if (is.null(dateFrom) || is.null(dateTo)) {
-stop("dateFrom and dateTo are required when id is not provided")
-}
-base_url <- paste0(
-"https://analytics.pelagicdata.com/api/",
-token,
-"/v1/points/",
-dateFrom,
-"/",
-dateTo
-)
-}
+                            secret = NULL,
+                            id = NULL,
+                            dateFrom = NULL,
+                            dateTo = NULL,
+                            path = NULL,
+                            imeis = NULL,
+                            deviceInfo = FALSE,
+                            errant = FALSE,
+                            withLastSeen = FALSE,
+                            tags = NULL,
+                            overwrite = TRUE) {
+  # Build base URL based on whether ID is provided
+  if (!is.null(id)) {
+    base_url <- paste0(
+      "https://analytics.pelagicdata.com/api/",
+      token,
+      "/v1/trips/",
+      id,
+      "/points"
+    )
+  } else {
+    if (is.null(dateFrom) || is.null(dateTo)) {
+      stop("dateFrom and dateTo are required when id is not provided")
+    }
+    base_url <- paste0(
+      "https://analytics.pelagicdata.com/api/",
+      token,
+      "/v1/points/",
+      dateFrom,
+      "/",
+      dateTo
+    )
+  }
 
-# Build query parameters
-query_params <- list()
-if (!is.null(imeis)) {
-query_params$imeis <- paste(imeis, collapse = ",")
-}
-if (deviceInfo) {
-query_params$deviceInfo <- "true"
-}
-if (errant) {
-query_params$errant <- "true"
-}
-if (withLastSeen) {
-query_params$withLastSeen <- "true"
-}
-if (!is.null(tags)) {
-query_params$tags <- paste(tags, collapse = ",")
-}
-# Add format=csv if saving to file
-if (!is.null(path)) {
-query_params$format <- "csv"
-}
+  # Build query parameters
+  query_params <- list()
+  if (!is.null(imeis)) {
+    query_params$imeis <- paste(imeis, collapse = ",")
+  }
+  if (deviceInfo) {
+    query_params$deviceInfo <- "true"
+  }
+  if (errant) {
+    query_params$errant <- "true"
+  }
+  if (withLastSeen) {
+    query_params$withLastSeen <- "true"
+  }
+  if (!is.null(tags)) {
+    query_params$tags <- paste(tags, collapse = ",")
+  }
+  # Add format=csv if saving to file
+  if (!is.null(path)) {
+    query_params$format <- "csv"
+  }
 
-# Build the request
-req <- httr2::request(base_url) %>%
-httr2::req_headers(
-"X-API-SECRET" = secret,
-"Content-Type" = "application/json"
-) %>%
-httr2::req_url_query(!!!query_params)
+  # Build the request
+  req <- httr2::request(base_url) %>%
+    httr2::req_headers(
+      "X-API-SECRET" = secret,
+      "Content-Type" = "application/json"
+    ) %>%
+    httr2::req_url_query(!!!query_params)
 
-# Perform the request
-resp <- req %>% httr2::req_perform()
+  # Perform the request
+  resp <- req %>% httr2::req_perform()
 
-# Check for HTTP errors first
-if (httr2::resp_status(resp) != 200) {
-stop(
-"Request failed with status: ",
-httr2::resp_status(resp),
-"\n",
-httr2::resp_body_string(resp)
-)
-}
+  # Check for HTTP errors first
+  if (httr2::resp_status(resp) != 200) {
+    stop(
+      "Request failed with status: ",
+      httr2::resp_status(resp),
+      "\n",
+      httr2::resp_body_string(resp)
+    )
+  }
 
-# Handle the response based on whether path is provided
-if (!is.null(path)) {
-# Write the response content to file
-writeBin(httr2::resp_body_raw(resp), path)
-result <- path
-} else {
-# Read CSV content
-content_text <- httr2::resp_body_string(resp)
-result <- readr::read_csv(content_text, show_col_types = FALSE)
-}
+  # Handle the response based on whether path is provided
+  if (!is.null(path)) {
+    # Write the response content to file
+    writeBin(httr2::resp_body_raw(resp), path)
+    result <- path
+  } else {
+    # Read CSV content
+    content_text <- httr2::resp_body_string(resp)
+    result <- readr::read_csv(content_text, show_col_types = FALSE)
+  }
 
-return(result)
+  return(result)
 }

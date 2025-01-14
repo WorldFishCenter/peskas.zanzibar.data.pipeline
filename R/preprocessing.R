@@ -24,7 +24,7 @@
 #'
 #' The function uses logging to track progress.
 #'
-#' @inheritParams ingest_wcs_surveys
+#' @inheritParams ingest_surveys
 #' @return None; the function is used for its side effects.
 #' @export
 #' @keywords workflow preprocessing
