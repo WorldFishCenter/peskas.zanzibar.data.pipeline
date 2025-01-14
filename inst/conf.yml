@@ -20,6 +20,26 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
+    wf_surveys:
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      version:
+        preprocess: latest
+      raw_surveys:
+        file_prefix: wf-surveys-raw
+        version: latest
+      preprocessed_surveys:
+        file_prefix: wf-surveys-preprocessed
+        version: latest
+      validated_surveys:
+        file_prefix: wf-surveys-validated
+        version: latest
+      validation:
+        K_nb_elements_max: 2
+        K_weight_max: 2
+        K_length_max: 2
+        K_price_max: 2
   storage:
     google:
       key: gcs
@@ -41,6 +61,10 @@ local:
       asset_id: !expr readLines('auth/wcs_surveys_ID')
       username: !expr readLines('auth/wcs_surveys_USNAME')
       password: !expr readLines('auth/wcs_surveys_PSSW')
+    wf_surveys:
+      asset_id: !expr readLines('auth/wf_surveys_ID')
+      username: !expr readLines('auth/wf_surveys_USNAME')
+      password: !expr readLines('auth/wf_surveys_PSSW')
   storage:
     google:
       options:

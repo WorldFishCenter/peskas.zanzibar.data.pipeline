@@ -4,7 +4,9 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libxml2-dev \
     libgit2-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libfontconfig1-dev \
+    libfreetype6-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # 1) Install renv so we can restore packages from renv.lock
 RUN install2.r --error --skipinstalled renv

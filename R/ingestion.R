@@ -39,7 +39,8 @@ ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   pars <- read_config()
 
-  file_list <- retrieve_wcs_surveys(
+  logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
+  file_list <- retrieve_surveys(
     prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "kf.kobotoolbox.org",
@@ -56,7 +57,31 @@ ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 }
 
 
-#' Retrieve WCS Surveys from Kobotoolbox
+ingest_wf_surveys <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+
+  pars <- read_config()
+
+  logger::log_info("Downloading WF Fish Catch Survey Kobo data...")
+
+  file_list <- retrieve_surveys(
+    prefix = pars$surveys$wf_surveys$raw_surveys$file_prefix,
+    append_version = TRUE,
+    url = "kf.kobotoolbox.org",
+    project_id = pars$surveys$wf_surveys$asset_id,
+    username = pars$surveys$wf_surveys$username,
+    psswd = pars$surveys$wf_surveys$password,
+    encoding = "UTF-8"
+  )
+
+  logger::log_info("Uploading files to cloud...")
+  # Iterate over multiple storage providers if there are more than one
+  purrr::map(pars$storage, ~ upload_cloud_file(file_list, .$key, .$options))
+  logger::log_success("Files upload succeded")
+}
+
+
+#' Retrieve Surveys from Kobotoolbox
 #'
 #' Downloads survey data from Kobotoolbox for a specified project and uploads the data in Parquet format. File naming can include versioning details.
 #'
@@ -73,7 +98,7 @@ ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #' @keywords ingestion
 #' @examples
 #' \dontrun{
-#' file_list <- retrieve_wcs_surveys(
+#' file_list <- retrieve_surveys(
 #'   prefix = "my_data",
 #'   append_version = TRUE,
 #'   url = "kf.kobotoolbox.org",
@@ -84,7 +109,7 @@ ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #' )
 #' }
 #'
-retrieve_wcs_surveys <- function(
+retrieve_surveys <- function(
     prefix = NULL,
     append_version = NULL,
     url = NULL,
@@ -92,7 +117,6 @@ retrieve_wcs_surveys <- function(
     username = NULL,
     psswd = NULL,
     encoding = NULL) {
-  logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
   data_raw <-
     KoboconnectR::kobotools_kpi_data(
       url = url,
