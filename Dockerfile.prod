@@ -1,26 +1,23 @@
-FROM rocker/r-ver
+FROM rocker/tidyverse:4.3
 
-# Tidyverse system requirements
-RUN apt-get update -qq && apt-get -y --no-install-recommends install \
+# 1) Install system libraries needed by your packages
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    libcurl4-openssl-dev \
     libxml2-dev \
-    libcairo2-dev \
     libgit2-dev \
-    default-libmysqlclient-dev \
-    libpq-dev \
-    libsasl2-dev \
-    libsqlite3-dev \
-    libssh2-1-dev \
-    unixodbc-dev && \
-  rm -rf /var/lib/apt/lists/*
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install renv so we can restore packages from renv.lock
 # 2) Install renv so we can restore packages from renv.lock
 RUN install2.r --error --skipinstalled renv
 
 # 3) Set up the working directory
-WORKDIR /home
+WORKDIR /app
 
-# 4) Copy only the files that define the project's dependencies (for better Docker caching)
+# 4) Copy only files that define the project’s dependencies (for better layer caching)
 COPY DESCRIPTION DESCRIPTION
 COPY renv.lock renv.lock
 
@@ -28,13 +25,10 @@ COPY renv.lock renv.lock
 RUN R -e 'renv::restore()'
 
 # 6) Copy the rest of your project
-COPY . /home
+COPY . /app
 
-# 7) Install local package
-RUN Rscript -e 'remotes::install_local(dependencies = TRUE)'
+# 7) Install your local package (assuming this is a proper R package project)
+RUN Rscript -e 'remotes::install_local(".", dependencies = TRUE)'
 
-# 8) RStudio interface preferences 
+# 8) (Optional) Copy RStudio interface preferences
 COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json
-
-# 9) Default entrypoint
-ENTRYPOINT ["Rscript"]
