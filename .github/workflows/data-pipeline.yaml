@@ -10,6 +10,7 @@ env:
   WCS_SURVEYS_UNAME: ${{ secrets.WCS_SURVEYS_UNAME }}
   WCS_SURVEYS_PSSW: ${{ secrets.WCS_SURVEYS_PSSW }}
   GCP_SA_KEY: ${{ secrets.PESKAS_DATAINGESTION_GCS_KEY }}
+
 jobs:
   build-container:
     name: Build R container
@@ -26,6 +27,7 @@ jobs:
           registry: docker.pkg.github.com
           image_name: r-runner-peskas-zanzibar
           dockerfile: Dockerfile.prod
+
   ingest-surveys:
     name: Ingest kobo surveys
     needs: build-container
@@ -36,11 +38,15 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Checkout repository  # Add this step
+        uses: actions/checkout@v2
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_surveys()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
+        run: |
+          Rscript -e 'renv::load(); peskas.zanzibar.data.pipeline::ingest_surveys()'
+
   preprocess-wcs-surveys:
     name: Preprocess WCS kobo surveys
     needs: ingest-surveys
@@ -51,11 +57,15 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Checkout repository  # Add this step
+        uses: actions/checkout@v2
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call preprocess_wcs_surveys()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
+        run: |
+          Rscript -e 'renv::load(); peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
+
   validate-wcs-surveys:
     name: Validate WCS kobo surveys
     needs: preprocess-wcs-surveys
@@ -66,8 +76,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Checkout repository  # Add this step
+        uses: actions/checkout@v2
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call validate_wcs_surveys()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
+        run: |
+          Rscript -e 'renv::load(); peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
