@@ -11,8 +11,8 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libfribidi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 2) Install renv so we can restore packages from renv.lock
-RUN install2.r --error --skipinstalled renv
+# 2) Install renv AND remotes globally
+RUN install2.r --error --skipinstalled renv remotes
 
 # 3) Set up the working directory
 WORKDIR /app
