@@ -1,5 +1,6 @@
 FROM rocker/tidyverse:4.3
 
+# 1) Install system libraries needed by the packages
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libxml2-dev \
@@ -10,20 +11,23 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libfribidi-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# 2) Install renv globally
+RUN install2.r --error --skipinstalled renv
+
+# 3) Set up the working directory
 WORKDIR /app
 
-# Copy files needed for renv
+# 4) Copy only files that define the project's dependencies
 COPY DESCRIPTION DESCRIPTION
 COPY renv.lock renv.lock
 
-# Copy the rest of your project now too
+# 5) Copy the rest of the project
 COPY . /app
 
-# Install renv + remotes globally (optional, if you want a fallback)
-RUN install2.r --error --skipinstalled renv remotes
+# 6) Restore packages and ensure remotes is available
+RUN R -e 'renv::restore(repos = c(CRAN = "https://cloud.r-project.org")); if (!require("remotes")) install.packages("remotes")'
 
-# Single RUN command: restore + install_local in the same R session
-RUN Rscript -e '
-  renv::restore();
-  remotes::install_local(".", dependencies = TRUE)
-'
+# 7) Install  local package
+RUN Rscript -e 'remotes::install_local(".", dependencies = TRUE)'
+
+COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json
