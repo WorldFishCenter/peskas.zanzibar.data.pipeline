@@ -89,7 +89,7 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   wf_files <- retrieve_surveys(
     prefix = pars$surveys$wf_surveys$raw_surveys$file_prefix,
     append_version = TRUE,
-    url = "kf.kobotoolbox.org",
+    url = "eu.kobotoolbox.org",
     project_id = pars$surveys$wf_surveys$asset_id,
     username = pars$surveys$wf_surveys$username,
     psswd = pars$surveys$wf_surveys$password,

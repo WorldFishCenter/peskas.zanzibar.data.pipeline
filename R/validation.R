@@ -52,8 +52,8 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   surveys_dates_alerts <- validate_dates(data = preprocessed_surveys)
   logger::log_info("Validating catches groups")
   surveys_catch_alerts <- validate_catch(data = preprocessed_surveys, k_max_nb = k_max_nb, k_max_weight = k_max_weight)
-  logger::log_info("Validating lengths group")
-  surveys_length_alerts <- validate_length(data = preprocessed_surveys, k_max_length = k_max_length)
+  # logger::log_info("Validating lengths group")
+  # surveys_length_alerts <- validate_length(data = preprocessed_surveys, k_max_length = k_max_length)
   logger::log_info("Validating markets group")
   surveys_market_alerts <- validate_market(data = preprocessed_surveys, k_max_price = k_max_price)
 
@@ -62,7 +62,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     list(
       surveys_dates_alerts,
       surveys_catch_alerts,
-      surveys_length_alerts,
+      # surveys_length_alerts,
       surveys_market_alerts
     ) %>%
     purrr::map(~ dplyr::select(.x, -alert_number)) |>

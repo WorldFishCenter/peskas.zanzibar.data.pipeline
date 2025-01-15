@@ -91,7 +91,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       survey_trip = pt_nest_trip(catch_surveys_raw),
       other_info = other_info,
       survey_catch = pt_nest_catch(catch_surveys_raw),
-      survey_length = pt_nest_length(catch_surveys_raw),
+      # survey_length = pt_nest_length(catch_surveys_raw),
       survey_market = pt_nest_market(catch_surveys_raw),
       survey_attachments = pt_nest_attachments(catch_surveys_raw)
     )
@@ -119,6 +119,114 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   )
 }
 
+preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+
+  pars <- read_config()
+
+  wf_surveys_parquet <- cloud_object_name(
+    prefix = pars$surveys$wf_surveys$raw_surveys$file_prefix,
+    provider = pars$storage$google$key,
+    extension = "parquet",
+    version = pars$surveys$wf_surveys$version$preprocess,
+    options = pars$storage$google$options
+  )
+
+  logger::log_info("Retrieving {wf_surveys_parquet}")
+  download_cloud_file(
+    name = wf_surveys_parquet,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+
+  catch_surveys_raw <- arrow::read_parquet(
+    file = wf_surveys_parquet
+  )
+
+  general_info <-
+    catch_surveys_raw %>%
+    dplyr::rename_with(~ stringr::str_remove(., "group_general/")) %>%
+    dplyr::select(
+      "submission_id" = "_id",
+      "landing_date",
+      "landing_site",
+      "survey_activity",
+      "survey_activity_whynot",
+      "catch_outcome",
+      submission_date = "today"
+    ) %>%
+    # dplyr::mutate(landing_code = dplyr::coalesce(.data$landing_site_palma, .data$landing_site_mocimboa)) %>%
+    # tidyr::separate(.data$gps,
+    #  into = c("lat", "lon", "drop1", "drop2"),
+    #  sep = " "
+    # ) %>%
+    # dplyr::relocate("landing_code", .after = "district") %>%
+    dplyr::mutate(
+      landing_date = lubridate::as_datetime(.data$landing_date),
+      submission_date = lubridate::as_datetime(.data$submission_date)
+    ) %>%
+    # dplyr::left_join(metadata$landing_site, by = c("district", "landing_code")) %>%
+    dplyr::relocate("submission_date", .after = "landing_date")
+
+  trip_info <-
+    catch_surveys_raw %>%
+    dplyr::rename_with(~ stringr::str_remove(., "group_trip/")) %>%
+    dplyr::select(
+      "submission_id" = "_id",
+      # "has_boat",
+      # "boat_reg_no",
+      "has_PDS",
+      # tracker_imei = "PDS_IMEI",
+      vessel_code = "vessel_type",
+      # "propulsion_gear",
+      "trip_duration",
+      habitat_code = "habitat",
+      male_fishers = "no_fishers/no_men_fishers",
+      female_fishers = "no_fishers/no_women_fishers",
+      child_fishers = "no_fishers/no_child_fishers",
+      gear_code = "gear_type",
+      "mesh_size",
+      "hook_size"
+      # "hook_size_other"
+    ) %>%
+    dplyr::mutate(dplyr::across(dplyr::ends_with("fishers"), ~ stringr::str_remove(.x, "_")), # Remove the suffix but need to be fixed
+      dplyr::across(c("trip_duration", "mesh_size", "hook_size", "hook_size_other", dplyr::ends_with("fishers")), as.numeric),
+      tot_fishers = rowSums(dplyr::across(dplyr::ends_with("fishers")), na.rm = TRUE),
+      propulsion_gear = dplyr::case_when(
+        .data$propulsion_gear == "1" ~ "Motor",
+        .data$propulsion_gear == "2" ~ "Vela",
+        .data$propulsion_gear == "3" ~ "Remo",
+        TRUE ~ NA_character_
+      ),
+      hook_size = dplyr::coalesce(.data$hook_size, .data$hook_size_other)
+    ) %>%
+    dplyr::left_join(metadata$habitat, by = c("habitat_code")) %>%
+    dplyr::left_join(metadata$vessel_type, by = c("vessel_code")) %>%
+    dplyr::left_join(metadata$gear_type, by = c("gear_code")) %>%
+    dplyr::relocate("habitat", .after = "tracker_imei") %>%
+    dplyr::relocate("vessel_type", .after = "habitat") %>%
+    dplyr::relocate("gear", .after = "vessel_type") %>%
+    dplyr::select(-c("habitat_code", "vessel_code", "gear_code", "hook_size_other", "male_fishers", "female_fishers", "child_fishers"))
+
+
+
+  preprocessed_filename <- pars$surveys$wf_surveys$preprocessed_surveys$file_prefix %>%
+    add_version(extension = "parquet")
+
+  arrow::write_parquet(
+    x = wf_surveys_nested,
+    sink = preprocessed_filename,
+    compression = "lz4",
+    compression_level = 12
+  )
+
+  logger::log_info("Uploading {preprocessed_filename} to cloud storage")
+  upload_cloud_file(
+    file = preprocessed_filename,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+}
 
 #' Nest Length Group Columns
 #'
@@ -131,7 +239,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #' @keywords internal
 #'
 pt_nest_length <- function(x) {
-  x %>%
+  catch_surveys_raw %>%
     dplyr::select(
       survey_id = .data$`_id`,
       dplyr::starts_with("Length_Frequency_Survey")
