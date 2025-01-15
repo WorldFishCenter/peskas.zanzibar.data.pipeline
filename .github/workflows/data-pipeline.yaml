@@ -9,8 +9,10 @@ env:
   WCS_SURVEYS_ID: ${{ secrets.WCS_SURVEYS_ID }}
   WCS_SURVEYS_UNAME: ${{ secrets.WCS_SURVEYS_UNAME }}
   WCS_SURVEYS_PSSW: ${{ secrets.WCS_SURVEYS_PSSW }}
+  WF_SURVEYS_ID: ${{ secrets.WF_SURVEYS_ID }}
+  WF_SURVEYS_USNAME: ${{ secrets.WF_SURVEYS_USNAME }}
+  WF_SURVEYS_PSSW: ${{ secrets.WF_SURVEYS_PSSW }}
   GCP_SA_KEY: ${{ secrets.PESKAS_DATAINGESTION_GCS_KEY }}
-
 jobs:
   build-container:
     name: Build R container
