@@ -1,6 +1,6 @@
 FROM rocker/tidyverse:4.3
 
-# 1) Install system libraries needed by the packages
+# 1) Install system libraries needed 
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libxml2-dev \
@@ -11,23 +11,24 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libfribidi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 2) Install renv globally
-RUN R -e "install.packages('renv', repos = c(CRAN = 'https://cloud.r-project.org'))"
+# 2) Install renv globally 
+RUN R -e "install.packages('renv', repos = 'https://cloud.r-project.org')"
 
-# 3) Set up working directory
+# 3) Set a working directory
 WORKDIR /app
 
-# 4) Copy renv files that exist
-RUN mkdir -p renv
-COPY .Rprofile .Rprofile
-COPY renv/activate.R renv/activate.R
-COPY renv.lock renv.lock
+# 4) Copy only the renv files first
+ENV RENV_PATHS_LIBRARY=/app/renv/library
 
-# 5) Set library path
-ENV RENV_PATHS_LIBRARY renv/library
+COPY renv.lock renv.lock
+RUN mkdir -p renv
+COPY renv/activate.R renv/activate.R
+
+# 5) Restore packages from renv.lock
+RUN R -e "renv::restore()"
 
 # 6) Copy the rest of the project
 COPY . /app
 
-# 7) Restore and install
-RUN R -e "renv::restore()"
+# 7) Install  local package 
+RUN R CMD INSTALL .
