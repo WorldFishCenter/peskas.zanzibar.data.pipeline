@@ -40,6 +40,23 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
+    ba_surveys:
+      version:
+        preprocess: latest
+      raw_surveys:
+        file_prefix: ba-surveys-raw
+        version: latest
+      preprocessed_surveys:
+        file_prefix: ba-surveys-preprocessed
+        version: latest
+      validated_surveys:
+        file_prefix: ba-surveys-validated
+        version: latest
+      validation:
+        K_nb_elements_max: 2
+        K_weight_max: 2
+        K_length_max: 2
+        K_price_max: 2
   storage:
     google:
       key: gcs
@@ -47,7 +64,12 @@ default:
         project: peskas
         bucket: zanzibar-dev
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
-
+  metadata:
+    google_sheets:
+      name: metadata-tables
+      sheet_id: !expr Sys.getenv("GOOGLE_SHEET_ID")
+      tables:
+        - devices
 production:
   storage:
     google:
@@ -69,5 +91,7 @@ local:
     google:
       options:
         service_account_key: !expr readLines("auth/gcp-sa-peskas_ingestion-key.json")
-
+  metadata:
+    google_sheets:
+      sheet_id: !expr readLines("auth/metadata-sheet-id")
 

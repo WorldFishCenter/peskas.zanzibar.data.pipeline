@@ -19,7 +19,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   pars <- read_config()
 
   preprocessed_surveys <-
-    get_preprocessed_surveys(pars)
+    get_preprocessed_surveys(pars, prefix = pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix)
 
   # define validation parameters
   k_max_nb <- pars$surveys$wcs_surveys$validation$K_nb_elements_max
@@ -93,6 +93,13 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   )
 }
 
+
+#validate_ba_surveys <- function(){
+#  logger::log_threshold(log_threshold)
+#  pars <- read_config()
+#  preprocessed_surveys <-
+#    get_preprocessed_surveys(pars, pars$surveys$ba_surveys$preprocessed_surveys$file_prefix)
+#}
 
 #' Generate an alert vector based on the `univOutl::LocScaleB()` function
 #'

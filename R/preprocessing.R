@@ -119,10 +119,44 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   )
 }
 
+#' Pre-process WorldFish Surveys
+#'
+#' Downloads and preprocesses raw structured WorldFish survey data from cloud storage into a binary format.
+#' The process includes organizing data from general and trip information into a structured format
+#' optimized for analysis.
+#'
+#' Configurations are read from `conf.yml` with the following necessary parameters:
+#'
+#' ```
+#' surveys:
+#'   wf_surveys:
+#'     asset_id:
+#'     username:
+#'     password:
+#'     file_prefix:
+#'   version:
+#'     preprocess:
+#' storage:
+#'   storage_name:
+#'     key:
+#'     options:
+#'       project:
+#'       bucket:
+#'       service_account_key:
+#' ```
+#'
+#' The function uses logging to track progress.
+#'
+#' @inheritParams ingest_surveys
+#' @return None; the function is used for its side effects.
+#' @export
+#' @keywords workflow preprocessing
+#'
 preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
 
   pars <- read_config()
+  metadata <- get_metadata()
 
   wf_surveys_parquet <- cloud_object_name(
     prefix = pars$surveys$wf_surveys$raw_surveys$file_prefix,
@@ -213,8 +247,122 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
   preprocessed_filename <- pars$surveys$wf_surveys$preprocessed_surveys$file_prefix %>%
     add_version(extension = "parquet")
 
+  # arrow::write_parquet(
+  #  x = wf_surveys_nested,
+  #  sink = preprocessed_filename,
+  #  compression = "lz4",
+  #  compression_level = 12
+  # )
+
+  # logger::log_info("Uploading {preprocessed_filename} to cloud storage")
+  # upload_cloud_file(
+  #  file = preprocessed_filename,
+  #  provider = pars$storage$google$key,
+  #  options = pars$storage$google$options
+  # )
+}
+
+#' Pre-process Blue Alliance Surveys
+#'
+#' Downloads and preprocesses raw structured Blue Alliance survey data from cloud storage into a binary format.
+#' The process includes date standardization and survey ID generation for unique trip identification.
+#'
+#' Configurations are read from `conf.yml` with the following necessary parameters:
+#'
+#' ```
+#' surveys:
+#'   ba_surveys:
+#'     asset_id:
+#'     username:
+#'     password:
+#'     file_prefix:
+#'   version:
+#'     preprocess:
+#' storage:
+#'   storage_name:
+#'     key:
+#'     options:
+#'       project:
+#'       bucket:
+#'       service_account_key:
+#' ```
+#'
+#' The function uses logging to track progress and creates unique survey IDs using CRC32 hashing
+#' of concatenated trip attributes.
+#'
+#' @inheritParams ingest_surveys
+#' @return None; the function is used for its side effects.
+#' @export
+#' @keywords workflow preprocessing
+#'
+preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+
+  pars <- read_config()
+
+  ba_surveys_csv <- cloud_object_name(
+    prefix = pars$surveys$ba_surveys$raw_surveys$file_prefix,
+    provider = pars$storage$google$key,
+    extension = "csv",
+    version = pars$surveys$ba_surveys$version$preprocess,
+    options = pars$storage$google$options
+  )
+
+  logger::log_info("Retrieving {ba_surveys_csv}")
+  download_cloud_file(
+    name = ba_surveys_csv,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+
+  catch_surveys_raw <-
+    readr::read_csv2(ba_surveys_csv, show_col_types = FALSE) |>
+    dplyr::mutate(date = paste(.data$date, .data$year)) %>% # Combine date and year
+    dplyr::mutate(date = lubridate::dmy(.data$date)) %>% # Convert to Date format
+    dplyr::rename(
+      landing_date = "date",
+      catch_taxon = "Taxon"
+    ) |>
+    dplyr::select(-c("month", "year")) |>
+    dplyr::rowwise() %>%
+    dplyr::mutate(survey_id = digest::digest(
+      paste(.data$landing_date, .data$fisher_id, .data$landing_site, .data$n_fishers, .data$gear, .data$trip_duration, .data$n_fishers,
+        sep = "_"
+      ),
+      algo = "crc32"
+    )) |>
+    dplyr::ungroup() |>
+    dplyr::select("survey_id", dplyr::everything()) |>
+    dplyr::mutate(dplyr::across(dplyr::where(is.character), ~ tolower(.x))) |>
+    # fix taxa names
+    dplyr::mutate(catch_taxon = dplyr::case_when(
+      .data$catch_taxon == "cheilunus trilobatus" ~ "cheilinus trilobatus",
+      .data$catch_taxon == "pufflamen crysopterum" ~ "sufflamen chrysopterum",
+      .data$catch_taxon == "sufflamen crysopterum" ~ "sufflamen chrysopterum",
+      .data$catch_taxon == "perupeneus fraserorum" ~ "parupeneus fraserorum",
+      .data$catch_taxon == "perupeneus macronemus" ~ "parupeneus macronemus",
+      .data$catch_taxon == "octopus mucronatus" ~ "octopus",
+      .data$catch_taxon == "parupeneus signutus" ~ "parupeneus",
+      .data$catch_taxon == "perupeneus" ~ "parupeneus",
+      .data$catch_taxon == "acanhocybium solandri" ~ "acanthocybium solandri",
+      .data$catch_taxon == "parupeneus signutu" ~ "parupeneus",
+      .data$catch_taxon == "gymnothorax crobroris" ~ "gymnothorax cribroris",
+      .data$catch_taxon == "perupeneus signatus" ~ "parupeneus signatus",
+      .data$catch_taxon == "gymonthorax favagineus" ~ "gymnothorax favagineus",
+      .data$catch_taxon == "colotomus carolinus" ~ "calotomus carolinus",
+      .data$catch_taxon == "pegullus naatalensis" ~ "pagellus natalensis",
+      .data$catch_taxon == "scomberomorus plurineatus" ~ "scomberomorus plurilineatus",
+      .data$catch_taxon == "lethrinus fulvus" ~ "lethrinus",
+      .data$catch_taxon == "neotrygon caeruieopunctata" ~ "neotrygon caeruleopunctata",
+      .data$catch_taxon == "myuripristis berndti" ~ "myripristis berndti",
+      TRUE ~ .data$catch_taxon
+    ))
+
+  preprocessed_filename <- pars$surveys$ba_surveys$preprocessed_surveys$file_prefix %>%
+    add_version(extension = "parquet")
+
   arrow::write_parquet(
-    x = wf_surveys_nested,
+    x = catch_surveys_raw,
     sink = preprocessed_filename,
     compression = "lz4",
     compression_level = 12
@@ -228,6 +376,7 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
   )
 }
 
+
 #' Nest Length Group Columns
 #'
 #' Nests length group columns obtained from the structured data of WCS landings surveys.
@@ -239,7 +388,7 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
 #' @keywords internal
 #'
 pt_nest_length <- function(x) {
-  catch_surveys_raw %>%
+  x %>%
     dplyr::select(
       survey_id = .data$`_id`,
       dplyr::starts_with("Length_Frequency_Survey")

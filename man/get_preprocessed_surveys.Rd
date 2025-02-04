@@ -2,12 +2,14 @@
 % Please edit documentation in R/storage.R
 \name{get_preprocessed_surveys}
 \alias{get_preprocessed_surveys}
-\title{Download WCS Preprocessed Surveys}
+\title{Download Preprocessed Surveys}
 \usage{
-get_preprocessed_surveys(pars)
+get_preprocessed_surveys(pars, prefix = NULL)
 }
 \arguments{
 \item{pars}{A list representing the configuration settings, typically obtained from a YAML configuration file.}
+
+\item{prefix}{A character string specifying the organization prefix to retrieve preprocessed surveys, either "wcs" or "ba".}
 }
 \value{
 A dataframe of preprocessed survey landings, loaded from Parquet files.
@@ -18,7 +20,7 @@ Retrieves preprocessed survey data from Google Cloud Storage, specifically confi
 \examples{
 \dontrun{
 config <- peskas.zanzibar.pipeline::read_config()
-df_preprocessed <- get_preprocessed_surveys(config)
+df_preprocessed <- get_preprocessed_surveys(config, prefix = "ba")
 }
 
 }

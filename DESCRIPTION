@@ -30,7 +30,9 @@ Imports:
     arrow,
     cleaner,
     httr2,
-    readr
+    readr,
+    googlesheets4,
+    digest
 Suggests: 
     covr,
     pkgdown,
