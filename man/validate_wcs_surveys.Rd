@@ -7,21 +7,30 @@
 validate_wcs_surveys(log_threshold = logger::DEBUG)
 }
 \arguments{
-\item{log_threshold}{The logging level used as a threshold for the \code{logger} package, which controls the verbosity of logging output.}
+\item{log_threshold}{The logging level threshold for the logger package (e.g., DEBUG, INFO)}
 }
 \value{
-None; the function is used for its side effects, which include data validation and uploading validated data to cloud storage.
+None. Writes validated data to parquet file and uploads to cloud storage
 }
 \description{
-Validates Wildlife Conservation Society (WCS) survey data by checking for inconsistencies in survey duration, catches, lengths, and market data. The function preprocesses surveys, performs validations, logs the process, and uploads the validated data to cloud storage.
+Validates Wildlife Conservation Society (WCS) survey data by performing quality checks and calculating catch metrics.
+The function follows these main steps:
+\enumerate{
+\item Preprocesses survey data
+\item Validates catches using predefined thresholds for weights, counts and prices
+\item Calculates revenue and CPUE metrics
+\item Uploads validated data to cloud storage
 }
-\examples{
-\dontrun{
-validate_wcs_surveys(log_threshold = logger::INFO)
+}
+\details{
+The validation includes:
+\itemize{
+\item Basic data quality checks (e.g., negative catches, missing values)
+\item Gear-specific validations (e.g., number of fishers per gear type)
+\item Weight thresholds by catch type (individual vs bucket measures)
+\item Market price validations (valid price ranges per kg)
 }
 }
-\seealso{
-\code{\link{validate_catch}}, \code{\link{validate_length}}, \code{\link{validate_market}}
-}
+\keyword{fisheries}
 \keyword{validation}
 \keyword{workflow}

@@ -52,9 +52,13 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     options = pars$storage$google$options
   )
 
-  catch_surveys_raw <- arrow::read_parquet(
-    file = wcs_surveys_parquet
-  )
+  catch_surveys_raw <-
+    arrow::read_parquet(
+      file = wcs_surveys_parquet
+    ) |>
+    # filter for real surveys
+    dplyr::filter(.data$survey_real == "real")
+
 
   other_info <-
     catch_surveys_raw %>%
@@ -71,7 +75,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       "lon",
       "trip_info",
       n_fishers = "people",
-      n_boats = "boats_landed"
+      "boats_landed"
     ) |>
     dplyr::mutate(
       submission_date = lubridate::with_tz(.data$submission_date, "Africa/Dar_es_Salaam"),
@@ -80,7 +84,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
         "lat",
         "lon",
         "n_fishers",
-        "n_boats"
+        "boats_landed"
       ), ~ as.numeric(.x))
     )
 
@@ -100,6 +104,9 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     group_surveys,
     ~ dplyr::full_join(.x, .y, by = "survey_id")
   )
+
+  unique(group_surveys$survey_trip$gear) |>
+    sort()
 
   preprocessed_filename <- pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix %>%
     add_version(extension = "parquet")
@@ -207,40 +214,28 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::rename_with(~ stringr::str_remove(., "group_trip/")) %>%
     dplyr::select(
       "submission_id" = "_id",
-      # "has_boat",
+      "has_boat",
       # "boat_reg_no",
       "has_PDS",
-      # tracker_imei = "PDS_IMEI",
-      vessel_code = "vessel_type",
-      # "propulsion_gear",
+      tracker_imei = "PDS_IMEI",
+      "vessel_type",
+      "propulsion_gear",
       "trip_duration",
-      habitat_code = "habitat",
+      "habitat",
       male_fishers = "no_fishers/no_men_fishers",
       female_fishers = "no_fishers/no_women_fishers",
       child_fishers = "no_fishers/no_child_fishers",
-      gear_code = "gear_type",
+      "gear",
       "mesh_size",
       "hook_size"
-      # "hook_size_other"
     ) %>%
     dplyr::mutate(dplyr::across(dplyr::ends_with("fishers"), ~ stringr::str_remove(.x, "_")), # Remove the suffix but need to be fixed
-      dplyr::across(c("trip_duration", "mesh_size", "hook_size", "hook_size_other", dplyr::ends_with("fishers")), as.numeric),
-      tot_fishers = rowSums(dplyr::across(dplyr::ends_with("fishers")), na.rm = TRUE),
-      propulsion_gear = dplyr::case_when(
-        .data$propulsion_gear == "1" ~ "Motor",
-        .data$propulsion_gear == "2" ~ "Vela",
-        .data$propulsion_gear == "3" ~ "Remo",
-        TRUE ~ NA_character_
-      ),
-      hook_size = dplyr::coalesce(.data$hook_size, .data$hook_size_other)
+      dplyr::across(c("trip_duration", "mesh_size", "hook_size", dplyr::ends_with("fishers")), as.numeric),
+      tot_fishers = rowSums(dplyr::across(dplyr::ends_with("fishers")), na.rm = TRUE)
     ) %>%
-    dplyr::left_join(metadata$habitat, by = c("habitat_code")) %>%
-    dplyr::left_join(metadata$vessel_type, by = c("vessel_code")) %>%
-    dplyr::left_join(metadata$gear_type, by = c("gear_code")) %>%
     dplyr::relocate("habitat", .after = "tracker_imei") %>%
     dplyr::relocate("vessel_type", .after = "habitat") %>%
-    dplyr::relocate("gear", .after = "vessel_type") %>%
-    dplyr::select(-c("habitat_code", "vessel_code", "gear_code", "hook_size_other", "male_fishers", "female_fishers", "child_fishers"))
+    dplyr::relocate("gear", .after = "vessel_type")
 
 
 
@@ -483,6 +478,11 @@ pt_nest_catch <- function(x) {
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
+    dplyr::mutate(type_measure = dplyr::case_when(
+      !is.na(.data$nb_ind_catch) ~ "individual",
+      !is.na(.data$nb_buckets_catch) ~ "bucket",
+      TRUE ~ .data$type_measure
+    )) |>
     dplyr::mutate(
       weight_kg = dplyr::coalesce(.data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch),
       nb_elements = dplyr::coalesce(.data$nb_ind_catch, .data$nb_buckets_catch)
@@ -504,6 +504,17 @@ pt_nest_catch <- function(x) {
       catch_kg = as.numeric(.data$catch_kg),
       n_elements = as.numeric(.data$n_elements)
     ) |>
+    dplyr::mutate(
+      group_catch = dplyr::case_when(
+        .data$group_catch %in% c("reef_fish", "goatfish", "parrotfish", "rabbitfish", "scavengers") ~ "reef_fish",
+        .data$group_catch %in% c("sharks_rays") ~ "sharks_rays",
+        .data$group_catch %in% c("small_pelagic") ~ "small_pelagic",
+        .data$group_catch %in% c("large_pelagic", "pelagic") ~ "large_pelagic",
+        .data$group_catch %in% c("tuna_like", "tunalike") ~ "tuna_like",
+        .data$group_catch %in% c("molluscs_crustaceans", "octopus", "squid") ~ "molluscs_crustaceans",
+        TRUE ~ .data$group_catch
+      )
+    ) |>
     tidyr::nest(
       "catch" = c(
         .data$type_measure, .data$all_catch_in_boat, .data$group_catch,
@@ -512,7 +523,6 @@ pt_nest_catch <- function(x) {
       .by = .data$survey_id
     )
 }
-
 #' Nest Trip Group Columns
 #'
 #' Processes and nests trip-related columns from structured WCS landings survey data into a single 'trip' column. This approach consolidates trip information into nested tibbles within the dataframe, simplifying the structure for analysis.
@@ -542,14 +552,15 @@ pt_nest_trip <- function(x) {
       fishing_ground_name = .data$fishing_ground_name,
       habitat = .data$fishing_ground_type,
       trip_length_days = .data$fishing_duration,
-      propulsion_gear = .data$boat_type,
-      propulsion_gear_other = .data$other_boat,
+      vessel_type = .data$boat_type,
+      vessel_type_other = .data$other_boat,
       boat_engine = .data$engine_yn,
       engine_hp = .data$engine,
       gear = .data$gear_type,
       gear_other = .data$gear_type_other,
     ) |>
     dplyr::mutate(
+      gear = dplyr::case_when(.data$gear == "spear" ~ "spear_gun", TRUE ~ .data$gear),
       boat_engine = ifelse(.data$boat_engine == "yes", "motorised", "unmotorised"),
       fishing_location = tolower(.data$fishing_location),
       fishing_location = cleaner::clean_character(.data$fishing_location),
@@ -670,7 +681,242 @@ expand_taxa <- function(data = NULL) {
       dplyr::mutate(catch_group = .y)) %>%
     dplyr::bind_rows() %>%
     tidyr::pivot_wider(id_cols = .data$catch_group, names_from = .data$rank, values_from = .data$name) %>%
-    dplyr::select(-c(.data$class, .data$`NA`))
+    dplyr::select(dplyr::everything(), -dplyr::any_of(c("class", "NA")))
 
-  dplyr::left_join(taxa_expanded, groups_rank, by = "catch_group")
+  dplyr::left_join(taxa_expanded, groups_rank, by = "catch_group") |>
+    dplyr::select(-c("kingdom", "phylum", "order"))
+}
+
+#' Preprocess Pelagic Data Systems (PDS) Track Data
+#'
+#' @description
+#' Downloads raw GPS tracks and creates a gridded summary of fishing activity.
+#'
+#' @param log_threshold The logging threshold to use. Default is logger::DEBUG.
+#' @param grid_size Numeric. Size of grid cells in meters (100, 250, 500, or 1000).
+#'
+#' @return None (invisible). Creates and uploads preprocessed files.
+#'
+#' @export
+preprocess_pds_tracks <- function(log_threshold = logger::DEBUG, grid_size = 500) {
+  logger::log_threshold(log_threshold)
+  pars <- read_config()
+
+  # Get already preprocessed tracks
+  logger::log_info("Checking existing preprocessed tracks...")
+  preprocessed_filename <- cloud_object_name(
+    prefix = paste0(pars$pds$pds_tracks$file_prefix, "-preprocessed"),
+    provider = pars$storage$google$key,
+    extension = "parquet",
+    version = pars$pds$pds_tracks$version,
+    options = pars$storage$google$options
+  )
+
+  # Get preprocessed trip IDs if file exists
+  preprocessed_trips <- tryCatch(
+    {
+      download_cloud_file(
+        name = preprocessed_filename,
+        provider = pars$storage$google$key,
+        options = pars$storage$google$options
+      )
+      preprocessed_data <- arrow::read_parquet(preprocessed_filename)
+      unique(preprocessed_data$Trip)
+    },
+    error = function(e) {
+      logger::log_info("No existing preprocessed tracks file found")
+      character(0)
+    }
+  )
+
+  # List raw tracks
+  logger::log_info("Listing raw tracks...")
+  raw_tracks <- googleCloudStorageR::gcs_list_objects(
+    bucket = pars$pds_storage$google$options$bucket,
+    prefix = pars$pds$pds_tracks$file_prefix
+  )$name
+
+  raw_trip_ids <- extract_trip_ids_from_filenames(raw_tracks)
+  new_trip_ids <- setdiff(raw_trip_ids, preprocessed_trips)
+
+  if (length(new_trip_ids) == 0) {
+    logger::log_info("No new tracks to preprocess")
+    return(invisible())
+  }
+
+  # Get raw tracks that need preprocessing
+  new_tracks <- raw_tracks[raw_trip_ids %in% new_trip_ids]
+
+  workers <- parallel::detectCores() - 1
+  logger::log_info("Setting up parallel processing with {workers} workers...")
+  future::plan(future::multisession, workers = workers)
+
+  logger::log_info("Processing {length(new_tracks)} tracks in parallel...")
+  new_processed_data <- furrr::future_map_dfr(
+    new_tracks,
+    function(track_file) {
+      download_cloud_file(
+        name = track_file,
+        provider = pars$pds_storage$google$key,
+        options = pars$pds_storage$google$options
+      )
+
+      track_data <- arrow::read_parquet(track_file) %>%
+        preprocess_track_data(grid_size = grid_size)
+
+      unlink(track_file)
+      track_data
+    },
+    .options = furrr::furrr_options(seed = TRUE),
+    .progress = TRUE
+  )
+
+  future::plan(future::sequential)
+
+  # Combine with existing preprocessed data if it exists
+  final_data <- if (length(preprocessed_trips) > 0) {
+    dplyr::bind_rows(preprocessed_data, new_processed_data)
+  } else {
+    new_processed_data
+  }
+
+  output_filename <-
+    paste0(pars$pds$pds_tracks$file_prefix, "-preprocessed") |>
+    add_version(extension = "parquet")
+
+  arrow::write_parquet(
+    final_data,
+    sink = output_filename,
+    compression = "lz4",
+    compression_level = 12
+  )
+
+  logger::log_info("Uploading preprocessed tracks...")
+  upload_cloud_file(
+    file = output_filename,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+
+  unlink(output_filename)
+  if (exists("preprocessed_filename")) unlink(preprocessed_filename)
+
+  logger::log_success("Track preprocessing complete")
+}
+
+
+
+
+
+
+
+#' Preprocess Track Data into Spatial Grid Summary
+#'
+#' @description
+#' This function processes GPS track data into a spatial grid summary, calculating time spent
+#' and other metrics for each grid cell. The grid size can be specified to analyze spatial
+#' patterns at different scales.
+#'
+#' @param data A data frame containing GPS track data with columns:
+#'   - Trip: Unique trip identifier
+#'   - Time: Timestamp of the GPS point
+#'   - Lat: Latitude
+#'   - Lng: Longitude
+#'   - Speed (M/S): Speed in meters per second
+#'   - Range (Meters): Range in meters
+#'   - Heading: Heading in degrees
+#'
+#' @param grid_size Numeric. Size of grid cells in meters. Must be one of:
+#'   - 100: ~100m grid cells
+#'   - 250: ~250m grid cells
+#'   - 500: ~500m grid cells (default)
+#'   - 1000: ~1km grid cells
+#'
+#' @return A tibble with the following columns:
+#'   - Trip: Trip identifier
+#'   - lat_grid: Latitude of grid cell center
+#'   - lng_grid: Longitude of grid cell center
+#'   - time_spent_mins: Total time spent in grid cell in minutes
+#'   - mean_speed: Average speed in grid cell (M/S)
+#'   - mean_range: Average range in grid cell (Meters)
+#'   - first_seen: First timestamp in grid cell
+#'   - last_seen: Last timestamp in grid cell
+#'   - n_points: Number of GPS points in grid cell
+#'
+#' @details
+#' The function creates a grid by rounding coordinates based on the specified grid size.
+#' Grid sizes are approximate due to the conversion from meters to degrees, with calculations
+#' based on 1 degree ≈ 111km at the equator. Time spent is calculated using the time
+#' differences between consecutive points.
+#'
+#' @examples
+#' \dontrun{
+#' # Process tracks with 500m grid (default)
+#' result_500m <- preprocess_track_data(tracks_data)
+#'
+#' # Use 100m grid for finer resolution
+#' result_100m <- preprocess_track_data(tracks_data, grid_size = 100)
+#'
+#' # Use 1km grid for broader patterns
+#' result_1km <- preprocess_track_data(tracks_data, grid_size = 1000)
+#' }
+#'
+#' @export
+preprocess_track_data <- function(data, grid_size = 500) {
+  # Define grid size in meters to degrees (approximately)
+  # 1 degree = 111km at equator
+  grid_degrees <- switch(as.character(grid_size),
+    "100" = 0.001, # ~100m
+    "250" = 0.0025, # ~250m
+    "500" = 0.005, # ~500m
+    "1000" = 0.01, # ~1km
+    stop("grid_size must be one of: 100, 250, 500, 1000")
+  )
+
+  data %>%
+    dplyr::select(
+      "Trip",
+      "Time",
+      "Lat",
+      "Lng",
+      "Speed (M/S)",
+      "Range (Meters)",
+      "Heading"
+    ) %>%
+    dplyr::group_by(.data$Trip) %>%
+    dplyr::arrange(.data$Time) %>%
+    dplyr::mutate(
+      # Create grid cells based on selected size
+      lat_grid = round(.data$Lat / grid_degrees, 0) * grid_degrees,
+      lng_grid = round(.data$Lng / grid_degrees, 0) * grid_degrees,
+
+      # Calculate time spent (difference with next point)
+      time_diff = as.numeric(difftime(
+        dplyr::lead(.data$Time),
+        .data$Time,
+        units = "mins"
+      )),
+      # For last point in series, use difference with previous point
+      time_diff = dplyr::if_else(
+        is.na(.data$time_diff),
+        as.numeric(difftime(.data$Time, dplyr::lag(.data$Time), units = "mins")),
+        .data$time_diff
+      )
+    ) %>%
+    # Group by trip and grid cell
+    dplyr::group_by(.data$Trip, .data$lat_grid, .data$lng_grid) %>%
+    dplyr::summarise(
+      time_spent_mins = sum(.data$time_diff, na.rm = TRUE),
+      mean_speed = mean(.data$`Speed (M/S)`, na.rm = TRUE),
+      mean_range = mean(.data$`Range (Meters)`, na.rm = TRUE),
+      first_seen = min(.data$Time),
+      last_seen = max(.data$Time),
+      n_points = dplyr::n(),
+      .groups = "drop"
+    ) %>%
+    dplyr::filter(.data$time_spent_mins > 0) %>%
+    dplyr::group_by(.data$Trip) %>%
+    dplyr::arrange(.data$first_seen) %>%
+    dplyr::filter(!(dplyr::row_number() %in% c(1, 2, dplyr::n() - 1, dplyr::n()))) %>%
+    dplyr::ungroup()
 }

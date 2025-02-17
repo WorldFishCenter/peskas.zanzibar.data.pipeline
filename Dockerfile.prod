@@ -1,34 +1,62 @@
-FROM rocker/tidyverse:4.3
+FROM rocker/r-ver
 
-# 1) Install system libraries needed 
-RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    libcurl4-openssl-dev \
+# Tidyverse system requirements
+RUN apt-get update -qq && apt-get -y --no-install-recommends install \
     libxml2-dev \
+    libcairo2-dev \
     libgit2-dev \
-    libfontconfig1-dev \
-    libfreetype6-dev \
-    libharfbuzz-dev \
-    libfribidi-dev \
-    && rm -rf /var/lib/apt/lists/*
+    default-libmysqlclient-dev \
+    libpq-dev \
+    libsasl2-dev \
+    libsqlite3-dev \
+    libssh2-1-dev \
+    unixodbc-dev && \
+  rm -rf /var/lib/apt/lists/*
 
-# 2) Install renv globally 
-RUN R -e "install.packages('renv', repos = 'https://cloud.r-project.org')"
 
-# 3) Set a working directory
-WORKDIR /app
+# 2) Install required R packages
+RUN install2.r --error --skipinstalled \
+    remotes \
+    config \
+    dplyr \
+    git2r \
+    googleAuthR \
+    googleCloudStorageR \
+    logger \
+    magrittr \
+    purrr \
+    stringr \
+    tidyr \
+    rlang \
+    lubridate \
+    arrow \
+    cleaner \
+    httr2 \
+    readr \
+    googlesheets4 \
+    digest \
+    furrr \
+    future \
+    mongolite
 
-# 4) Copy only the renv files first
-ENV RENV_PATHS_LIBRARY=/app/renv/library
+# 3) Install suggested packages
+RUN install2.r --error --skipinstalled \
+    covr \
+    pkgdown \
+    sessioninfo \
+    tibble \
+    roxygen2 \
+    tidyselect \
+    tidytext \
+    KoboconnectR \
+    univOutl \
+    reticulate \
+    stringi \
+    taxize
 
-COPY renv.lock renv.lock
-RUN mkdir -p renv
-COPY renv/activate.R renv/activate.R
+# Install local package
+COPY . /home
+WORKDIR /home
+RUN Rscript -e 'remotes::install_local(dependencies = TRUE)'
 
-# 5) Restore packages from renv.lock
-RUN R -e "renv::restore()"
-
-# 6) Copy the rest of the project
-COPY . /app
-
-# 7) Install  local package 
-RUN R CMD INSTALL .
+ENTRYPOINT ["Rscript"]

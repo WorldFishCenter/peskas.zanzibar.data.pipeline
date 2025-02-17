@@ -3,7 +3,7 @@ name: Peskas Zanzibar Data Pipeline
 on:
   push:
   schedule:
-    - cron: '0 0 */4 * *'
+    - cron: "0 0 */4 * *"
 
 env:
   WCS_SURVEYS_ID: ${{ secrets.WCS_SURVEYS_ID }}
@@ -13,6 +13,7 @@ env:
   WF_SURVEYS_UNAME: ${{ secrets.WF_SURVEYS_UNAME }}
   WF_SURVEYS_PSSW: ${{ secrets.WF_SURVEYS_PSSW }}
   GCP_SA_KEY: ${{ secrets.PESKAS_DATAINGESTION_GCS_KEY }}
+
 jobs:
   build-container:
     name: Build R container
@@ -20,7 +21,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      
+
       - name: Build image with cache
         id: build-docker
         uses: whoan/docker-build-with-cache-action@v5
@@ -47,6 +48,37 @@ jobs:
       - name: Call ingest_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
 
+  ingest-pds-trips:
+    name: Ingest GPS trips
+    needs: build-container
+    runs-on: ubuntu-20.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call ingest_pds_trips()
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_pds_trips()'
+
+  ingest-pds-tracks:
+    name: Ingest GPS tracks
+    needs: ingest-pds-trips
+    runs-on: ubuntu-20.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call ingest_pds_tracks()
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_pds_tracks()'
 
   preprocess-wcs-surveys:
     name: Preprocess WCS kobo surveys
@@ -64,7 +96,7 @@ jobs:
       - name: Call preprocess_wcs_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
 
-  preprocess-wcs-surveys:
+  preprocess-ba-surveys:
     name: Preprocess BlueAlliance kobo surveys
     needs: ingest-surveys
     runs-on: ubuntu-20.04
@@ -79,6 +111,22 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call preprocess_ba_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_ba_surveys()'
+
+  preprocess-pds-tracks:
+    name: Preprocess GPS tracks
+    needs: [ingest-pds-trips, ingest-pds-tracks]
+    runs-on: ubuntu-20.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call preprocess_pds_tracks()
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_pds_tracks()'
 
   validate-wcs-surveys:
     name: Validate WCS kobo surveys
@@ -95,3 +143,35 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call validate_wcs_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
+
+  validate-ba-surveys:
+    name: Validate BA kobo surveys
+    needs: preprocess-ba-surveys
+    runs-on: ubuntu-20.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call validate_ba_surveys()
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_ba_surveys()'
+
+  export-wcs-surveys:
+    name: Export aggregated data
+    needs: [validate-wcs-surveys, preprocess-pds-tracks]
+    runs-on: ubuntu-20.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call export_data()
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::export_data()'

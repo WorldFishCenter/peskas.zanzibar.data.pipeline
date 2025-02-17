@@ -1,7 +1,7 @@
 Package: peskas.zanzibar.data.pipeline
 Title: Functions to Implement the Zanzibar Small Scale Fisheries
     Data Pipeline
-Version: 1.0.0
+Version: 2.0.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",
@@ -14,7 +14,6 @@ Description: Implements the data processing and modelling
     pipelines underpining the Peskas system.
 License: GPL-3
 Imports:
-    remotes,
     config,
     dplyr,
     git2r,
@@ -32,7 +31,10 @@ Imports:
     httr2,
     readr,
     googlesheets4,
-    digest
+    digest,
+    furrr,
+    future,
+    mongolite
 Suggests: 
     covr,
     pkgdown,
