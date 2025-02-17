@@ -14,6 +14,8 @@ env:
   WF_SURVEYS_PSSW: ${{ secrets.WF_SURVEYS_PSSW }}
   GCP_SA_KEY: ${{ secrets.PESKAS_DATAINGESTION_GCS_KEY }}
   GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+  PDS_TOKEN: ${{ secrets.PDS_TOKEN }}
+  PDS_SECRET: ${{ secrets.PDS_SECRET }}
 
 jobs:
   build-container:
@@ -49,8 +51,8 @@ jobs:
       - name: Call ingest_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
 
-  ingest-pds-trips:
-    name: Ingest GPS trips
+  ingest-pds-data:
+    name: Ingest GPS data
     needs: build-container
     runs-on: ubuntu-20.04
     container:
@@ -61,23 +63,9 @@ jobs:
     steps:
       - name: Set env to production
         if: endsWith(github.ref, '/main')
-        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV  
       - name: Call ingest_pds_trips()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_pds_trips()'
-
-  ingest-pds-tracks:
-    name: Ingest GPS tracks
-    needs: ingest-pds-trips
-    runs-on: ubuntu-20.04
-    container:
-      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Set env to production
-        if: endsWith(github.ref, '/main')
-        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_pds_tracks()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_pds_tracks()'
 
@@ -101,7 +89,7 @@ jobs:
 
   preprocess-pds-tracks:
     name: Preprocess GPS tracks
-    needs: [ingest-pds-trips, ingest-pds-tracks]
+    needs: ingest-pds-data
     runs-on: ubuntu-20.04
     container:
       image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
