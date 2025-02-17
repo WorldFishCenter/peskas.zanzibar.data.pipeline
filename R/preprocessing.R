@@ -105,9 +105,6 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     ~ dplyr::full_join(.x, .y, by = "survey_id")
   )
 
-  unique(group_surveys$survey_trip$gear) |>
-    sort()
-
   preprocessed_filename <- pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix %>%
     add_version(extension = "parquet")
 
