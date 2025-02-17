@@ -13,6 +13,7 @@ env:
   WF_SURVEYS_UNAME: ${{ secrets.WF_SURVEYS_UNAME }}
   WF_SURVEYS_PSSW: ${{ secrets.WF_SURVEYS_PSSW }}
   GCP_SA_KEY: ${{ secrets.PESKAS_DATAINGESTION_GCS_KEY }}
+  GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
 
 jobs:
   build-container:
