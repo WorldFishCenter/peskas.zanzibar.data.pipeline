@@ -697,6 +697,7 @@ expand_taxa <- function(data = NULL) {
 #'
 #' @return None (invisible). Creates and uploads preprocessed files.
 #'
+#' @keywords workflow preprocessing
 #' @export
 preprocess_pds_tracks <- function(log_threshold = logger::DEBUG, grid_size = 500) {
   logger::log_threshold(log_threshold)
@@ -849,6 +850,8 @@ preprocess_pds_tracks <- function(log_threshold = logger::DEBUG, grid_size = 500
 #' based on 1 degree ≈ 111km at the equator. Time spent is calculated using the time
 #' differences between consecutive points.
 #'
+#' @keywords preprocessing
+#'
 #' @examples
 #' \dontrun{
 #' # Process tracks with 500m grid (default)
@@ -861,6 +864,7 @@ preprocess_pds_tracks <- function(log_threshold = logger::DEBUG, grid_size = 500
 #' result_1km <- preprocess_track_data(tracks_data, grid_size = 1000)
 #' }
 #'
+#' @keywords preprocessing
 #' @export
 preprocess_track_data <- function(data, grid_size = 500) {
   # Define grid size in meters to degrees (approximately)

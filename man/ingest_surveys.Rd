@@ -79,3 +79,5 @@ ingest_surveys(logger::INFO)
 \item \code{\link[=upload_cloud_file]{upload_cloud_file()}} for details on the cloud upload process
 }
 }
+\keyword{ingestion}
+\keyword{workflow}

@@ -5,6 +5,7 @@
 #'
 #' @param preprocessed_surveys A preprocessed survey dataframe containing trip information
 #' @return A dataframe with trip-level information
+#' @keywords validation
 #' @export
 extract_trips_info <- function(preprocessed_surveys) {
   preprocessed_surveys %>%
@@ -37,6 +38,7 @@ extract_trips_info <- function(preprocessed_surveys) {
 #' @param preprocessed_surveys A preprocessed survey dataframe
 #' @param trips_info Trip information dataframe from extract_trips_info
 #' @return A dataframe containing processed catch data
+#' @keywords validation
 #' @export
 process_catch_data <- function(preprocessed_surveys, trips_info) {
   preprocessed_surveys |>
@@ -71,6 +73,7 @@ process_catch_data <- function(preprocessed_surveys, trips_info) {
 #'
 #' @param catch_data Processed catch data
 #' @return A dataframe with validation flags added
+#' @keywords validation
 #' @export
 add_validation_flags <- function(catch_data) {
   catch_data |>
@@ -99,6 +102,7 @@ add_validation_flags <- function(catch_data) {
 #'
 #' @param catch_data Processed catch data
 #' @return A dataframe of validated catches
+#' @keywords validation
 #' @export
 validate_catches <- function(catch_data) {
   flags_df <- add_validation_flags(catch_data)
@@ -122,6 +126,7 @@ validate_catches <- function(catch_data) {
 #'
 #' @param preprocessed_data Preprocessed survey data containing market information
 #' @return A dataframe with validated market prices
+#' @keywords validation
 #' @export
 validate_prices <- function(preprocessed_data) {
   preprocessed_data |>
@@ -164,6 +169,7 @@ validate_prices <- function(preprocessed_data) {
 #'   - Adjusted catch weights
 #'   - Calculated revenue in TZS
 #' @keywords economics fisheries
+#' @keywords validation
 #' @export
 calculate_catch_revenue <- function(validated, market_table) {
   validated |>
@@ -219,7 +225,7 @@ calculate_catch_revenue <- function(validated, market_table) {
 #'   - Total catches and revenue
 #'   - Effort-based metrics (CPUE, RPUE)
 #'   - Nested catch composition data
-#' @keywords fisheries metrics
+#' @keywords validation
 #' @export
 aggregate_survey_data <- function(catch_price_table, trips_info) {
   validated_price_catch <-
@@ -263,6 +269,7 @@ aggregate_survey_data <- function(catch_price_table, trips_info) {
 #'
 #' @param preprocessed_data Preprocessed survey data containing market information
 #' @return A dataframe with validated market prices
+#' @keywords validation
 #' @export
 validate_prices <- function(preprocessed_data) {
   preprocessed_data |>
@@ -293,10 +300,10 @@ validate_prices <- function(preprocessed_data) {
 #' 3. Calculates upper bounds on log scale and exponentiates results
 #'
 #' @param data A dataframe containing survey data with columns for gear, catch_taxon, and catch_kg
-#' @param k_param Numeric parameter for the LocScaleB outlier detection (default: NULL). 
+#' @param k_param Numeric parameter for the LocScaleB outlier detection (default: NULL).
 #'               Higher values are more conservative in outlier detection.
 #' @return A dataframe containing upper catch bounds for each gear and catch taxon combination
-#' @keywords statistics outliers fisheries
+#' @keywords validation
 #' @export
 get_catch_bounds <- function(data = NULL, k_param = NULL) {
   # 1) Filter out non-valid fish categories
@@ -332,7 +339,7 @@ get_catch_bounds <- function(data = NULL, k_param = NULL) {
 #' @param k_param Numeric parameter for the LocScaleB outlier detection (default: NULL).
 #'               Higher values are more conservative in outlier detection.
 #' @return A dataframe containing upper length bounds for each gear and catch taxon combination
-#' @keywords statistics outliers fisheries
+#' @keywords validation
 #' @export
 get_length_bounds <- function(data = NULL, k_param = NULL) {
   data %>%

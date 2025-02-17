@@ -68,6 +68,5 @@ export_data(logger::INFO)
 \item \code{\link[=expand_taxa]{expand_taxa()}} for details on taxa classification
 }
 }
-\keyword{database}
 \keyword{export}
-\keyword{metrics}
+\keyword{workflow}

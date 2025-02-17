@@ -16,3 +16,4 @@ A dataframe of validated catches
 Applies validation flags and filters out problematic catches based on quality checks.
 Propagates flags to survey level to ensure consistency.
 }
+\keyword{validation}

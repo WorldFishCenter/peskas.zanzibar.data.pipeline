@@ -31,6 +31,5 @@ The validation includes:
 \item Market price validations (valid price ranges per kg)
 }
 }
-\keyword{fisheries}
 \keyword{validation}
 \keyword{workflow}

@@ -18,3 +18,4 @@ A dataframe containing processed catch data
 Processes and structures catch data from surveys, including catch numbers
 and associated vessel/gear information.
 }
+\keyword{validation}

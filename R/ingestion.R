@@ -63,6 +63,7 @@
 #' * [retrieve_surveys()] for details on the survey retrieval process
 #' * [upload_cloud_file()] for details on the cloud upload process
 #'
+#' @keywords workflow ingestion
 #' @export
 ingest_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
@@ -305,7 +306,7 @@ rename_child <- function(x, i, p) {
 #' * [get_metadata()] for details on the device metadata retrieval
 #' * [upload_cloud_file()] for details on the cloud upload process
 #'
-#' @keywords ingestion
+#' @keywords workflow ingestion
 #' @export
 ingest_pds_trips <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
@@ -350,6 +351,7 @@ ingest_pds_trips <- function(log_threshold = logger::DEBUG) {
 #'
 #' @return None (invisible). The function performs its operations for side effects.
 #'
+#' @keywords workflow ingestion
 #' @export
 ingest_pds_tracks <- function(log_threshold = logger::DEBUG, batch_size = NULL) {
   logger::log_threshold(log_threshold)

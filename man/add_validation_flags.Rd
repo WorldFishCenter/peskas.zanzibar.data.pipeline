@@ -25,3 +25,4 @@ Flag descriptions:
 8: Individual weight > 250kg
 9: Number of fishers is too high (>70) for non-ring nets
 }
+\keyword{validation}

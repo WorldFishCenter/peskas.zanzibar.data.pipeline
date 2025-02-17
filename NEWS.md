@@ -1,5 +1,29 @@
 # peskas.zanzibar.data.pipeline 2.0.0
 
+#### Major Changes
+- Complete overhaul of the data pipeline architecture
+- Added PDS (Pelagic Data Systems) integration:
+  - New trip ingestion and preprocessing functionality
+  - GPS track data processing capabilities
+- Implemented MongoDB export and storage functions
+- Removed renv dependency management for improved reliability
+- Updated Docker configuration for more robust builds
+
+#### New Features
+- Enhanced validation system for survey data
+- Added new data processing steps:
+  - GPS track preprocessing
+  - Catch data validation
+  - Length measurements validation
+  - Market data validation
+- Flexible data export capabilities
+- Improved GitHub Actions workflow with additional processing steps
+
+#### Infrastructure Updates
+- Streamlined package dependencies
+- Updated build and deployment processes
+- Enhanced data storage and retrieval mechanisms
+
 # peskas.zanzibar.data.pipeline 1.0.0
 
 #### Improvements

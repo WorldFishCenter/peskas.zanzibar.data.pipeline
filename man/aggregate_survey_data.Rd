@@ -38,5 +38,4 @@ Calculated metrics include:
 \item RPUE (Revenue Per Unit Effort): TZS/fisher/day
 }
 }
-\keyword{fisheries}
-\keyword{metrics}
+\keyword{validation}

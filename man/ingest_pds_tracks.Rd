@@ -19,3 +19,5 @@ This function handles the automated ingestion of GPS boat track data from Pelagi
 It downloads and stores only new tracks that haven't been previously uploaded to Google Cloud Storage.
 Uses parallel processing for improved performance.
 }
+\keyword{ingestion}
+\keyword{workflow}

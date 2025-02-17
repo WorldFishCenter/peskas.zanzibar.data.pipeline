@@ -64,3 +64,4 @@ result_1km <- preprocess_track_data(tracks_data, grid_size = 1000)
 }
 
 }
+\keyword{preprocessing}

@@ -25,6 +25,4 @@ The function:
 \item Calculates upper bounds on log scale and exponentiates results
 }
 }
-\keyword{fisheries}
-\keyword{outliers}
-\keyword{statistics}
+\keyword{validation}

@@ -39,6 +39,5 @@ Alert flag descriptions:
 \item 4: Catch weight or length exceeds calculated bounds
 }
 }
-\keyword{fisheries}
 \keyword{validation}
 \keyword{workflow}

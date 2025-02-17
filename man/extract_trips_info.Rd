@@ -16,3 +16,4 @@ A dataframe with trip-level information
 Extracts relevant trip-level information from the preprocessed survey data,
 including location, vessel, and fishing effort details.
 }
+\keyword{validation}

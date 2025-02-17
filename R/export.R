@@ -47,7 +47,7 @@
 #' * [mdb_collection_push()] for details on the MongoDB upload process
 #' * [expand_taxa()] for details on taxa classification
 #'
-#' @keywords database export metrics
+#' @keywords workflow export
 #' @export
 export_data <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
