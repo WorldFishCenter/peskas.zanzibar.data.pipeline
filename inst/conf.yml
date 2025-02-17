@@ -132,6 +132,7 @@ local:
         service_account_key: !expr readLines("auth/gcp-sa-peskas_ingestion-key.json")
     mongodb:
       connection_string: !expr readLines("auth/mongodb_connection_string")
+      database_name: zanzibar-prod
   pds_storage:
     google:
       options:
