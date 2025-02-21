@@ -1,3 +1,96 @@
+#' #' Download Parquet File from Cloud Storage
+#'
+#' This function handles the process of downloading a parquet file from cloud storage
+#' and reading it into memory.
+#'
+#' @param prefix The file prefix path in cloud storage
+#' @param provider The cloud storage provider key
+#' @param options Cloud storage provider options
+#'
+#' @return A tibble containing the data from the parquet file
+#'
+#' @examples
+#' \dontrun{
+#' raw_data <- download_parquet_from_cloud(
+#'   prefix = conf$ingestion$koboform$catch$legacy$raw,
+#'   provider = conf$storage$google$key,
+#'   options = conf$storage$google$options
+#' )
+#' }
+#'
+#' @keywords storage
+#' @export
+download_parquet_from_cloud <- function(prefix, provider, options) {
+  # Generate cloud object name
+  parquet_file <- cloud_object_name(
+    prefix = prefix,
+    provider = provider,
+    extension = "parquet",
+    options = options
+  )
+
+  # Log and download file
+  logger::log_info("Retrieving {parquet_file}")
+  download_cloud_file(
+    name = parquet_file,
+    provider = provider,
+    options = options
+  )
+
+  # Read parquet file
+  arrow::read_parquet(file = parquet_file)
+}
+
+#' Upload Processed Data to Cloud Storage
+#'
+#' This function handles the process of writing data to a parquet file and
+#' uploading it to cloud storage.
+#'
+#' @param data The data frame or tibble to upload
+#' @param prefix The file prefix path in cloud storage
+#' @param provider The cloud storage provider key
+#' @param options Cloud storage provider options
+#' @param compression Compression algorithm to use (default: "lz4")
+#' @param compression_level Compression level (default: 12)
+#'
+#' @return Invisible NULL
+#'
+#' @keywords storage
+#' @examples
+#' \dontrun{
+#' upload_parquet_to_cloud(
+#'   data = processed_data,
+#'   prefix = conf$ingestion$koboform$catch$legacy$preprocessed,
+#'   provider = conf$storage$google$key,
+#'   options = conf$storage$google$options
+#' )
+#' }
+#' @export
+upload_parquet_to_cloud <- function(data, prefix, provider, options,
+                                    compression = "lz4", compression_level = 12) {
+  # Generate filename with version
+  preprocessed_filename <- prefix %>%
+    add_version(extension = "parquet")
+
+  # Write parquet file
+  arrow::write_parquet(
+    x = data,
+    sink = preprocessed_filename,
+    compression = compression,
+    compression_level = compression_level
+  )
+
+  # Log and upload file
+  logger::log_info("Uploading {preprocessed_filename} to cloud storage")
+  upload_cloud_file(
+    file = preprocessed_filename,
+    provider = provider,
+    options = options
+  )
+
+  invisible(NULL)
+}
+#' 
 #' Authenticate to a Cloud Storage Provider
 #'
 #' This function is primarily used internally by other functions to establish authentication

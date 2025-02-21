@@ -1,3 +1,14 @@
+# peskas.zanzibar.data.pipeline 2.1.0
+
+#### Major Changes
+- Enhanced taxonomic and catch data processing capabilities:
+  - Added comprehensive functions for species and catch data processing
+  - Implemented length-weight coefficient retrieval from FishBase and SeaLifeBase
+  - Created functions for calculating catch weights using multiple methods
+  - Added new data reshaping utilities for species and catch information
+- Extended Wild Fishing (WF) survey validation with detailed quality checks
+- Updated cloud storage and data download/upload functions
+
 # peskas.zanzibar.data.pipeline 2.0.0
 
 #### Major Changes
@@ -8,6 +19,7 @@
 - Implemented MongoDB export and storage functions
 - Removed renv dependency management for improved reliability
 - Updated Docker configuration for more robust builds
+
 
 #### New Features
 - Enhanced validation system for survey data
@@ -56,5 +68,11 @@ Drop parent repository code (peskas.timor.pipeline), add infrastructure to downl
 
 - The ingestion of WCS Zanzibar surveys is implemented in `ingest_wcs_surveys()`. 
 - The functions `retrieve_wcs_surveys()` downloads  WCS Zanzibar surveys data 
+
+#### Changes
+- Updated configuration management:
+  - Moved configuration settings to inst/conf.yml
+  - Improved configuration structure and organization
+  - Enhanced configuration flexibility
 
 

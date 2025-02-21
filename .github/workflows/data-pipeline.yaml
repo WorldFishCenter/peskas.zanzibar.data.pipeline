@@ -87,6 +87,9 @@ jobs:
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
       - name: Call preprocess_ba_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_ba_surveys()'
+      - name: Call preprocess_wf_surveys()
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wf_surveys()'
+        
 
   preprocess-pds-tracks:
     name: Preprocess GPS tracks
@@ -121,6 +124,9 @@ jobs:
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
       - name: Call validate_ba_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_ba_surveys()'
+      - name: Call validate_wf_surveys()
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wf_surveys()'
+        
 
   export-wcs-surveys:
     name: Export aggregated data

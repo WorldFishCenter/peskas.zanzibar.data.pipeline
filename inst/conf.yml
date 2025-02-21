@@ -36,10 +36,8 @@ default:
         file_prefix: wf-surveys-validated
         version: latest
       validation:
-        K_nb_elements_max: 2
-        K_weight_max: 2
-        K_length_max: 2
-        K_price_max: 2
+        flags:
+          file_prefix: wf-flags
     ba_surveys:
       asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
       username: !expr Sys.getenv('BA_SURVEYS_UNAME')

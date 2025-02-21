@@ -58,6 +58,167 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   )
 }
 
+
+#' Validate Wild Fishing Survey Data
+#'
+#' @description
+#' Validates survey data from wild fishing activities by applying quality control checks
+#' and flagging potential data issues. The function filters out submissions that don't
+#' meet validation criteria and processes catch data.
+#'
+#' @details
+#' The function applies the following validation checks:
+#' 1. Bucket weight validation (max 50 kg per bucket)
+#' 2. Number of buckets validation (max 300 buckets)
+#' 3. Number of individuals validation (max 100 individuals)
+#' 4. Form completeness check for catch details
+#' 5. Catch information completeness check
+#'
+#' Alert codes:
+#' - 5: Bucket weight exceeds maximum
+#' - 6: Number of buckets exceeds maximum
+#' - 7: Number of individuals exceeds maximum
+#' - 8: Incomplete catch form
+#' - 9: Incomplete catch information
+#'
+#' @param log_threshold The logging level threshold for the logger package (e.g., DEBUG, INFO)
+#' @return
+#' The function processes and uploads two datasets to cloud storage:
+#' 1. Validation flags for each submission
+#' 2. Validated survey data with invalid submissions removed
+#'
+#' @note
+#' - Requires configuration parameters to be set up in config file
+#' - Automatically downloads preprocessed survey data from cloud storage
+#' - Removes submissions that fail validation checks
+#' - Sets catch_kg to 0 when catch_outcome is 0
+#'
+#' @section Data Processing Steps:
+#' 1. Downloads preprocessed survey data
+#' 2. Applies validation checks and generates alert flags
+#' 3. Filters out submissions with validation alerts
+#' 4. Processes catch data and adjusts catch weights
+#' 5. Uploads validation flags and validated data to cloud storage
+#'
+#' @importFrom logger log_threshold
+#' @importFrom dplyr filter select mutate group_by ungroup left_join
+#' @importFrom stringr str_remove_all
+#'
+#' @keywords workflow validation
+#' @export
+validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+  pars <- read_config()
+
+  # 1. Load and preprocess survey data
+  preprocessed_surveys <-
+    download_parquet_from_cloud(
+      prefix = pars$surveys$wf_surveys$preprocessed_surveys$file_prefix,
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options
+    )
+
+  max_bucket_weight_kg <- 50
+  max_n_buckets <- 300
+  max_n_individuals <- 100
+  price_kg_max <- 81420 # 30 eur
+
+  catch_df <-
+    preprocessed_surveys |>
+    dplyr::filter(.data$survey_activity == "1" & .data$collect_data_today == "1") |>
+    dplyr::select(
+      "submission_id", "n_catch",
+      # dplyr::ends_with("fishers"),
+      "catch_outcome",
+      "catch_taxon", "length", "individuals", "n_buckets", "weight_bucket", "catch_kg"
+    )
+  # dplyr::mutate(n_fishers = rowSums(across(c("no_men_fishers", "no_women_fishers", "no_child_fishers")),
+  #                                 na.rm = TRUE)) |>
+  # dplyr::select(-c("no_men_fishers", "no_women_fishers", "no_child_fishers")) |>
+  # dplyr::relocate("n_fishers", .after = "has_boat")
+
+  catch_flags <-
+    catch_df |>
+    dplyr::mutate(
+      alert_bucket_weight = dplyr::case_when(
+        !is.na(.data$weight_bucket) & .data$weight_bucket > max_bucket_weight_kg ~ "5",
+        TRUE ~ NA_character_
+      ),
+      alert_n_buckets = dplyr::case_when(
+        !is.na(.data$n_buckets) & .data$n_buckets > max_n_buckets ~ "6",
+        TRUE ~ NA_character_
+      ),
+      alert_n_individuals = dplyr::case_when(
+        !is.na(.data$individuals) & .data$individuals > max_n_individuals ~ "7",
+        TRUE ~ NA_character_
+      ),
+      alert_form_incomplete = dplyr::case_when(
+        .data$catch_outcome == "1" & is.na(.data$catch_taxon) ~ "8",
+        TRUE ~ NA_character_
+      ),
+      alert_catch_info_incomplete = dplyr::case_when(
+        !is.na(.data$catch_taxon) & is.na(.data$n_buckets) & is.na(.data$individuals) ~ "9",
+        TRUE ~ NA_character_
+      )
+    )
+
+  flags_id <-
+    catch_flags |>
+    dplyr::select("submission_id", "n_catch", dplyr::contains("alert_")) |>
+    dplyr::mutate(
+      alert_flag = paste(
+        .data$alert_bucket_weight,
+        .data$alert_n_buckets,
+        .data$alert_n_individuals,
+        .data$alert_form_incomplete,
+        .data$alert_catch_info_incomplete,
+        sep = ","
+      ) |>
+        stringr::str_remove_all("NA,") |>
+        stringr::str_remove_all(",NA") |>
+        stringr::str_remove_all("^NA$")
+    ) |>
+    dplyr::mutate(alert_flag = ifelse(.data$alert_flag == "", NA_character_, .data$alert_flag)) |>
+    dplyr::select("submission_id", "n_catch", "alert_flag")
+
+  catch_df_validated <-
+    catch_df |>
+    dplyr::left_join(flags_id, by = c("submission_id", "n_catch")) |>
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::mutate(
+      submission_alerts = paste(unique(.data$alert_flag[!is.na(.data$alert_flag)]), collapse = ",")
+    ) |>
+    dplyr::mutate(
+      submission_alerts = ifelse(.data$submission_alerts == "", NA_character_, .data$submission_alerts)
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::filter(is.na(.data$submission_alerts)) |>
+    dplyr::select(-c("alert_flag", "submission_alerts")) |>
+    # if catch outcome is 0 catch kg must be set to 0
+    dplyr::mutate(catch_kg = ifelse(.data$catch_outcome == "0", 0, .data$catch_kg))
+  
+  validated_data <- 
+    preprocessed_surveys |> 
+    dplyr::left_join(catch_df_validated)
+  
+    upload_parquet_to_cloud(
+      data = flags_id,
+      prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options
+    )
+  
+    upload_parquet_to_cloud(
+      data = validated_data,
+      prefix = pars$surveys$wf_surveys$validated_surveys$file_prefix,
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options
+    )
+  
+
+}
+
+
 #' Validate Blue Alliance (BA) Surveys Data
 #'
 #' Validates Blue Alliance survey data by performing quality checks and calculating catch metrics.

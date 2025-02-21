@@ -33,10 +33,10 @@ reference:
   - has_keyword("ingestion")
 
 - title: Preprocessing
-  desc: Functions dedicated to the preprocessing module and general data processing
+  desc: Functions dedicated to the preprocessing module and general data processing and mining
   contents:
   - has_keyword("preprocessing")
-  - expand_taxa
+  - has_keyword("mining")
 
 - title: Validation
   desc: Functions dedicated to the validation module

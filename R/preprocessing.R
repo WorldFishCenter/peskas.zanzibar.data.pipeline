@@ -37,28 +37,13 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   pars <- read_config()
 
-  wcs_surveys_parquet <- cloud_object_name(
-    prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
-    provider = pars$storage$google$key,
-    extension = "parquet",
-    version = pars$surveys$wcs_surveys$version$preprocess,
-    options = pars$storage$google$options
-  )
-
-  logger::log_info("Retrieving {wcs_surveys_parquet}")
-  download_cloud_file(
-    name = wcs_surveys_parquet,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
-  )
-
   catch_surveys_raw <-
-    arrow::read_parquet(
-      file = wcs_surveys_parquet
+    download_parquet_from_cloud(
+      prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options
     ) |>
-    # filter for real surveys
     dplyr::filter(.data$survey_real == "real")
-
 
   other_info <-
     catch_surveys_raw %>%
@@ -105,19 +90,9 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     ~ dplyr::full_join(.x, .y, by = "survey_id")
   )
 
-  preprocessed_filename <- pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix %>%
-    add_version(extension = "parquet")
-
-  arrow::write_parquet(
-    x = wcs_surveys_nested,
-    sink = preprocessed_filename,
-    compression = "lz4",
-    compression_level = 12
-  )
-
-  logger::log_info("Uploading {preprocessed_filename} to cloud storage")
-  upload_cloud_file(
-    file = preprocessed_filename,
+  upload_parquet_to_cloud(
+    data = wcs_surveys_nested,
+    prefix = pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
@@ -160,39 +135,57 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
 
   pars <- read_config()
-  metadata <- get_metadata()
-
-  wf_surveys_parquet <- cloud_object_name(
-    prefix = pars$surveys$wf_surveys$raw_surveys$file_prefix,
+  asfis <- download_parquet_from_cloud(
+    prefix = "asfis",
     provider = pars$storage$google$key,
-    extension = "parquet",
-    version = pars$surveys$wf_surveys$version$preprocess,
-    options = pars$storage$google$options
-  )
+    options = pars$storage$google$options)
+  
+  #metadata <- get_metadata()
 
-  logger::log_info("Retrieving {wf_surveys_parquet}")
-  download_cloud_file(
-    name = wf_surveys_parquet,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
-  )
-
-  catch_surveys_raw <- arrow::read_parquet(
-    file = wf_surveys_parquet
-  )
+  catch_surveys_raw <-
+    download_parquet_from_cloud(
+      prefix = pars$surveys$wf_surveys$raw_surveys$file_prefix,
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options
+    ) |>
+    dplyr::select(-dplyr::starts_with("_att")) |>
+    dplyr::rename(submission_id = "_id")
 
   general_info <-
     catch_surveys_raw %>%
     dplyr::rename_with(~ stringr::str_remove(., "group_general/")) %>%
+    dplyr::rename_with(~ stringr::str_remove(., "group_trip/")) %>%
+    dplyr::rename_with(~ stringr::str_remove(., "no_fishers/")) %>%
+    dplyr::rename_with(~ stringr::str_remove(., "group_conservation_trading/")) %>%
     dplyr::select(
-      "submission_id" = "_id",
+      "submission_id",
+      submission_date = "today",
       "landing_date",
-      "landing_site",
+      district = "District",
+      dplyr::contains("landing_site"),
+      "collect_data_today",
       "survey_activity",
-      "survey_activity_whynot",
+      "has_boat",
+      "vessel_type",
+      "propulsion_gear",
+      "fuel_L",
+      "has_PDS",
+      "habitat",
+      "fishing_ground",
+      "gear",
+      "mesh_size",
+      "trip_duration",
+      dplyr::ends_with("_fishers"),
       "catch_outcome",
-      submission_date = "today"
+      "conservation",
+      "catch_use",
+      "trader",
+      "catch_price",
+      "happiness_rating"
     ) %>%
+    dplyr::mutate(landing_site = dplyr::coalesce(!!!dplyr::select(., dplyr::contains("landing_site")))) |>
+    dplyr::select(-dplyr::contains("landing_site"), "landing_site") |>
+    dplyr::relocate("landing_site", .after = "district") |>
     # dplyr::mutate(landing_code = dplyr::coalesce(.data$landing_site_palma, .data$landing_site_mocimboa)) %>%
     # tidyr::separate(.data$gps,
     #  into = c("lat", "lon", "drop1", "drop2"),
@@ -200,58 +193,58 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     # ) %>%
     # dplyr::relocate("landing_code", .after = "district") %>%
     dplyr::mutate(
-      landing_date = lubridate::as_datetime(.data$landing_date),
-      submission_date = lubridate::as_datetime(.data$submission_date)
-    ) %>%
-    # dplyr::left_join(metadata$landing_site, by = c("district", "landing_code")) %>%
-    dplyr::relocate("submission_date", .after = "landing_date")
-
-  trip_info <-
-    catch_surveys_raw %>%
-    dplyr::rename_with(~ stringr::str_remove(., "group_trip/")) %>%
-    dplyr::select(
-      "submission_id" = "_id",
-      "has_boat",
-      # "boat_reg_no",
-      "has_PDS",
-      tracker_imei = "PDS_IMEI",
-      "vessel_type",
-      "propulsion_gear",
-      "trip_duration",
-      "habitat",
-      male_fishers = "no_fishers/no_men_fishers",
-      female_fishers = "no_fishers/no_women_fishers",
-      child_fishers = "no_fishers/no_child_fishers",
-      "gear",
-      "mesh_size",
-      "hook_size"
-    ) %>%
-    dplyr::mutate(dplyr::across(dplyr::ends_with("fishers"), ~ stringr::str_remove(.x, "_")), # Remove the suffix but need to be fixed
-      dplyr::across(c("trip_duration", "mesh_size", "hook_size", dplyr::ends_with("fishers")), as.numeric),
-      tot_fishers = rowSums(dplyr::across(dplyr::ends_with("fishers")), na.rm = TRUE)
-    ) %>%
-    dplyr::relocate("habitat", .after = "tracker_imei") %>%
-    dplyr::relocate("vessel_type", .after = "habitat") %>%
-    dplyr::relocate("gear", .after = "vessel_type")
+      landing_date = lubridate::as_date(.data$landing_date),
+      submission_date = lubridate::as_date(.data$submission_date),
+      dplyr::across(c("trip_duration", dplyr::ends_with("_fishers")), ~ as.double(.x))
+    )
 
 
+  catch_info <-
+    catch_surveys_raw |>
+    dplyr::select("submission_id", dplyr::starts_with("species_group")) |>
+    reshape_catch_data() |>
+    dplyr::mutate(
+      count_method = dplyr::coalesce(.data$counting_method, .data$COUNTING_METHOD_USED_TO_RECORD),
+      count_method = dplyr::case_when(
+        !is.na(.data$count) ~ "1",
+        !is.na(.data$n_buckets) ~ "2",
+        TRUE ~ .data$count_method
+      )
+    ) |>
+    dplyr::select(-c("counting_method", "COUNTING_METHOD_USED_TO_RECORD")) |>
+    dplyr::mutate(length_range = dplyr::case_when(.data$length_range == "over100" ~ NA_character_, TRUE ~ .data$length_range)) |>
+    tidyr::separate_wider_delim(.data$length_range, delim = "_", names = c("min", "max")) |>
+    dplyr::mutate(
+      length = as.numeric(.data$min) + ((as.numeric(.data$max) - as.numeric(.data$min)) / 2),
+      length = dplyr::coalesce(.data$length, as.numeric(.data$length_over))
+    ) |>
+    dplyr::select("submission_id",
+      "n_catch",
+      "count_method",
+      catch_taxon = "species",
+      "n_buckets",
+      "weight_bucket",
+      individuals = "count",
+      "length"
+    ) |>
+    # fix fields
+    dplyr::mutate(
+      dplyr::across(c("n_buckets":"length"), ~ as.double(.x))
+    )
+  
+  lwcoeffs <- getLWCoeffs(taxa_list = unique(catch_info$catch_taxon), asfis_list = asfis)
+  catch_df <- calculate_catch(catch_data = catch_info, lwcoeffs = lwcoeffs)
 
-  preprocessed_filename <- pars$surveys$wf_surveys$preprocessed_surveys$file_prefix %>%
-    add_version(extension = "parquet")
+  preprocessed_data <-
+    dplyr::left_join(general_info, catch_df, by = "submission_id") |>
+    dplyr::arrange(.data$submission_id, .data$n_catch)
 
-  # arrow::write_parquet(
-  #  x = wf_surveys_nested,
-  #  sink = preprocessed_filename,
-  #  compression = "lz4",
-  #  compression_level = 12
-  # )
-
-  # logger::log_info("Uploading {preprocessed_filename} to cloud storage")
-  # upload_cloud_file(
-  #  file = preprocessed_filename,
-  #  provider = pars$storage$google$key,
-  #  options = pars$storage$google$options
-  # )
+  upload_parquet_to_cloud(
+    data = preprocessed_data,
+    prefix = pars$surveys$wf_surveys$preprocessed_surveys$file_prefix,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
 }
 
 #' Pre-process Blue Alliance Surveys
@@ -307,7 +300,7 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
     options = pars$storage$google$options
   )
 
-  catch_surveys_raw <-
+  catch_surveys_preprocessed <-
     readr::read_csv2(ba_surveys_csv, show_col_types = FALSE) |>
     dplyr::mutate(date = paste(.data$date, .data$year)) %>% # Combine date and year
     dplyr::mutate(date = lubridate::dmy(.data$date)) %>% # Convert to Date format
@@ -350,19 +343,9 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
       TRUE ~ .data$catch_taxon
     ))
 
-  preprocessed_filename <- pars$surveys$ba_surveys$preprocessed_surveys$file_prefix %>%
-    add_version(extension = "parquet")
-
-  arrow::write_parquet(
-    x = catch_surveys_raw,
-    sink = preprocessed_filename,
-    compression = "lz4",
-    compression_level = 12
-  )
-
-  logger::log_info("Uploading {preprocessed_filename} to cloud storage")
-  upload_cloud_file(
-    file = preprocessed_filename,
+  upload_parquet_to_cloud(
+    data = catch_surveys_preprocessed,
+    prefix = pars$surveys$ba_surveys$preprocessed_surveys$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
@@ -630,60 +613,6 @@ pt_nest_attachments <- function(x) {
 }
 
 
-#' Expand Taxonomic Vectors into a Data Frame
-#'
-#' Converts a vector of species identifiers into a detailed data frame containing taxonomic classification. Each identifier should follow the format 'family_genus_species', which is expanded to include comprehensive taxonomic details.
-#'
-#' @param data A vector of species identifiers formatted as 'family_genus_species'. If not provided, the function will return an error.
-#' @return A data frame where each row corresponds to a species, enriched with taxonomic classification information including family, genus, species, and additional taxonomic ranks.
-#' @keywords data transformation
-#' @export
-#' @examples
-#' \dontrun{
-#' species_vector <- c("lutjanidae_lutjanus_spp", "scaridae_spp", "acanthuridae_naso_hexacanthus")
-#' expanded_data <- expand_taxa(species_vector)
-#' }
-#' @details This function splits each species identifier into its constituent parts, replaces underscores with spaces for readability, and retrieves taxonomic classification from the GBIF database using the `taxize` package.
-#' @note Requires internet access to fetch data from the GBIF database. The accuracy of results depends on the correct formatting of input data and the availability of taxonomic data in the GBIF database.
-#'
-expand_taxa <- function(data = NULL) {
-  taxa_expanded <-
-    data %>%
-    dplyr::mutate(species_list = stringr::str_split(.data$species_catch, pattern = " ")) %>%
-    tidyr::unnest(.data$species_list) %>%
-    dplyr::mutate(
-      species_list = stringr::str_replace(.data$species_list, pattern = "_", replacement = " "),
-      species_list = stringr::str_replace(.data$species_list, pattern = "_", replacement = " "),
-      words = stringi::stri_count_words(.data$species_list),
-      genus_species = dplyr::case_when(
-        .data$words == 3 ~ stringr::str_extract(.data$species_list, "\\S+\\s+\\S+$"),
-        TRUE ~ NA_character_
-      ),
-      species_list = ifelse(.data$words == 3, NA_character_, .data$species_list),
-      catch_group = dplyr::coalesce(.data$species_list, .data$genus_species),
-      catch_group = stringr::str_replace(.data$catch_group, pattern = " spp.", replacement = ""),
-      catch_group = stringr::str_replace(.data$catch_group, pattern = " spp", replacement = ""),
-      catch_group = stringr::str_replace(.data$catch_group, pattern = "_spp", replacement = ""),
-      catch_group = ifelse(.data$catch_group == "acanthocybium solandiri", "acanthocybium solandri", .data$catch_group),
-      catch_group = ifelse(.data$catch_group == "panaeidae", "penaeidae", .data$catch_group),
-      catch_group = ifelse(.data$catch_group == "mulidae", "mullidae", .data$catch_group),
-      catch_group = ifelse(.data$catch_group == "casio xanthonotus", "caesio xanthonotus", .data$catch_group),
-    ) %>%
-    dplyr::select(-c(.data$species_list, .data$genus_species, .data$words))
-
-  groups_rank <-
-    taxize::classification(unique(taxa_expanded$catch_group), db = "gbif", rows = 1) %>%
-    purrr::imap(~ .x %>%
-      dplyr::as_tibble() %>%
-      dplyr::mutate(catch_group = .y)) %>%
-    dplyr::bind_rows() %>%
-    tidyr::pivot_wider(id_cols = .data$catch_group, names_from = .data$rank, values_from = .data$name) %>%
-    dplyr::select(dplyr::everything(), -dplyr::any_of(c("class", "NA")))
-
-  dplyr::left_join(taxa_expanded, groups_rank, by = "catch_group") |>
-    dplyr::select(-c("kingdom", "phylum", "order"))
-}
-
 #' Preprocess Pelagic Data Systems (PDS) Track Data
 #'
 #' @description
@@ -920,4 +849,189 @@ preprocess_track_data <- function(data, grid_size = 500) {
     dplyr::arrange(.data$first_seen) %>%
     dplyr::filter(!(dplyr::row_number() %in% c(1, 2, dplyr::n() - 1, dplyr::n()))) %>%
     dplyr::ungroup()
+}
+
+#' Reshape Species Groups from Wide to Long Format
+#'
+#' This function converts a data frame containing repeated species group columns
+#' (species_group.0, species_group.1, etc.) into a long format where each species group
+#' is represented as a separate row, with a column indicating which group it belongs to.
+#'
+#' @param df A data frame containing species group data in wide format
+#'
+#' @return A data frame in long format with each row representing a single species group record
+#' @export
+#'
+#' @details
+#' The function identifies columns that follow the pattern "species_group.X" and restructures
+#' the data so that each species group from a submission is represented as a separate row.
+#' It removes the position prefix from column names and adds an n_catch column to track
+#' the group number (1-based indexing). Rows that contain only NA values are filtered out.
+#'
+#' @keywords preprocessing
+#'
+#' @examples
+#' \dontrun{
+#' long_species_data <- reshape_species_groups(catch_info)
+#' }
+#'
+reshape_species_groups <- function(df = NULL) {
+  # Get all column names that have the pattern species_group.X
+  species_columns <- names(df)[grep("species_group\\.[0-9]+", names(df))]
+
+  # Find unique position indicators (0, 1, 2, etc.)
+  positions <- unique(stringr::str_extract(species_columns, "species_group\\.[0-9]+"))
+
+  # Create a list to store each position's data
+  position_dfs <- list()
+
+  # For each position, extract its columns and create a data frame
+  for (pos in positions) {
+    # Get columns for this position
+    pos_cols <- c("submission_id", names(df)[grep(paste0(pos, "\\."), names(df))])
+
+    # Skip if there are no columns for this position
+    if (length(pos_cols) <= 1) next
+
+    # Create data frame for this position
+    pos_df <- df[, pos_cols, drop = FALSE]
+
+    # Rename columns to remove the position prefix
+    new_names <- names(pos_df)
+    new_names[-1] <- stringr::str_replace(new_names[-1], paste0(pos, "\\."), "")
+    names(pos_df) <- new_names
+
+    # Add position identifier column
+    pos_num <- as.numeric(stringr::str_extract(pos, "[0-9]+"))
+    pos_df$n_catch <- pos_num + 1 # Adding 1 to make it 1-based instead of 0-based
+
+    # Add to list
+    position_dfs[[length(position_dfs) + 1]] <- pos_df
+  }
+
+  # Bind all position data frames
+  result <- dplyr::bind_rows(position_dfs)
+
+  # Remove rows where all species group columns are NA
+  # (These are empty species group entries)
+  species_detail_cols <- names(result)[!names(result) %in% c("submission_id", "n_catch")]
+  result <- result %>%
+    dplyr::filter(rowSums(is.na(.[species_detail_cols])) != length(species_detail_cols))
+
+  # Sort by submission_id and n_catch
+  result <- result %>%
+    dplyr::arrange(.data$submission_id, .data$n_catch) |>
+    dplyr::rename_with(~ stringr::str_remove(., "species_group/"))
+
+  return(result)
+}
+
+
+#' Reshape Catch Data with Length Groupings
+#'
+#' This function takes a data frame with species catch information and reshapes it into a
+#' long format while properly handling nested length group information.
+#'
+#' @param df A data frame containing catch data with species groups and length information
+#'
+#' @return A data frame in long format with each row representing a species at a specific
+#'         length range, or just species data if no length information is available
+#' @export
+#'
+#' @details
+#' The function first calls `reshape_species_groups()` to convert the species data to long format,
+#' then handles the length group information. For length data, it creates separate rows for each
+#' length category while preserving the original structure for catches without length measurements.
+#' Special handling is provided for fish over 100cm, where the actual length is moved to a separate column.
+#'
+#' The function preserves all rows, even those without length data, by creating consistent column
+#' structure across all rows.
+#'
+#' @keywords preprocessing
+#'
+#' @examples
+#' \dontrun{
+#' final_data <- reshape_catch_data(catch_info)
+#'
+#' # Analyze counts by length range
+#' final_data |>
+#'   filter(!is.na(count)) |>
+#'   group_by(species, length_range) |>
+#'   summarize(total_count = sum(as.numeric(count), na.rm = TRUE))
+#' }
+reshape_catch_data <- function(df = NULL) {
+  # First, reshape species groups
+  species_long <- reshape_species_groups(df)
+
+  # Extract length group columns
+  length_cols <- names(species_long)[grep("no_fish_by_length_group/", names(species_long))]
+
+  # Create a base dataset without length columns
+  base_data <- species_long %>%
+    dplyr::select(-dplyr::any_of(length_cols))
+
+  # If there are no length columns, just return the base data
+  if (length(length_cols) == 0) {
+    return(base_data)
+  }
+
+  # Check if there are any non-NA values in length columns
+  has_length_data <- species_long %>%
+    dplyr::select(dplyr::all_of(length_cols)) %>%
+    dplyr::mutate(has_data = rowSums(!is.na(.)) > 0) %>%
+    dplyr::pull(.data$has_data)
+
+  # Split the data into rows with and without length data
+  rows_with_length <- which(has_length_data)
+
+  # If no rows have length data, return the base data
+  if (length(rows_with_length) == 0) {
+    return(base_data)
+  }
+
+  # Process rows with length data
+  length_data <- species_long[rows_with_length, ] %>%
+    tidyr::pivot_longer(
+      cols = dplyr::all_of(length_cols),
+      names_to = "length_category",
+      values_to = "count",
+      values_drop_na = TRUE
+    ) %>%
+    # Clean up length_category column
+    dplyr::mutate(
+      length_category = stringr::str_remove(.data$length_category, "no_fish_by_length_group/"),
+      # Extract actual length ranges or special categories
+      length_range = dplyr::case_when(
+        stringr::str_detect(.data$length_category, "no_individuals_") ~
+          stringr::str_replace(.data$length_category, "no_individuals_", ""),
+        length_category == "fish_length_over100" ~ "over100",
+        TRUE ~ .data$length_category
+      ),
+      # For over100 entries, move the value to length_over and set count to 1
+      length_over = dplyr::if_else(.data$length_category == "fish_length_over100", .data$count, NA_character_),
+      count = dplyr::if_else(.data$length_category == "fish_length_over100", "1", .data$count)
+    ) %>%
+    # Remove the original length_category column and length columns
+    dplyr::select(-"length_category", -dplyr::any_of(length_cols))
+
+  # Process rows without length data
+  if (length(rows_with_length) < nrow(species_long)) {
+    rows_without_length <- which(!has_length_data)
+    no_length_data <- species_long[rows_without_length, ] %>%
+      dplyr::select(-dplyr::any_of(length_cols)) %>%
+      # Add empty length columns to match length_data structure
+      dplyr::mutate(
+        count = NA_character_,
+        length_range = NA_character_,
+        length_over = NA_character_
+      )
+
+    # Combine both datasets
+    result <- dplyr::bind_rows(length_data, no_length_data) %>%
+      dplyr::arrange(.data$submission_id, .data$n_catch)
+  } else {
+    result <- length_data
+  }
+
+  return(result)
 }
