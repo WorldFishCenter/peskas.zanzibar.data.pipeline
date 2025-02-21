@@ -182,7 +182,7 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
   # Get fish distributions and LW relationships from FishBase
   fish_distribution <- NULL
   if (nrow(fish_species) > 0) {
-    fish_distribution <- rfishbase::distribution(
+    fish_distribution <- rfishbase::faoareas(
       unique(fish_species$species),
       fields = c("AreaCode")
     ) |>
@@ -195,7 +195,7 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
   # Get non-fish distributions and LW relationships from SeaLifeBase
   nonfish_distribution <- NULL
   if (nrow(nonfish_species) > 0) {
-    nonfish_distribution <- rfishbase::distribution(
+    nonfish_distribution <- rfishbase::faoareas(
       unique(nonfish_species$species),
       # fields = c("AreaCode"),
       server = "sealifebase"
