@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,6 +61,12 @@
         <dd>Download Object from Cloud Storage</dd>
       </dl><dl><dt>
 
+          <code><a href="download_parquet_from_cloud.html">download_parquet_from_cloud()</a></code>
+
+        </dt>
+        <dd>#' Download Parquet File from Cloud Storage</dd>
+      </dl><dl><dt>
+
           <code><a href="get_metadata.html">get_metadata()</a></code>
 
         </dt>
@@ -95,6 +101,12 @@
 
         </dt>
         <dd>Upload File to Cloud Storage</dd>
+      </dl><dl><dt>
+
+          <code><a href="upload_parquet_to_cloud.html">upload_parquet_to_cloud()</a></code>
+
+        </dt>
+        <dd>Upload Processed Data to Cloud Storage</dd>
       </dl></div><div class="section level2">
       <h2 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a></h2>
 
@@ -166,6 +178,12 @@
 
         </dt>
         <dd>Validate WCS Surveys Data</dd>
+      </dl><dl><dt>
+
+          <code><a href="validate_wf_surveys.html">validate_wf_surveys()</a></code>
+
+        </dt>
+        <dd>Validate Wild Fishing Survey Data</dd>
       </dl></div><div class="section level2">
       <h2 id="ingestion">Ingestion<a class="anchor" aria-label="anchor" href="#ingestion"></a></h2>
 
@@ -216,7 +234,7 @@
       </dl></div><div class="section level2">
       <h2 id="preprocessing">Preprocessing<a class="anchor" aria-label="anchor" href="#preprocessing"></a></h2>
 
-      <div class="section-desc"><p>Functions dedicated to the preprocessing module and general data processing</p></div>
+      <div class="section-desc"><p>Functions dedicated to the preprocessing module and general data processing and mining</p></div>
 
 
     </div><div class="section level2">
@@ -225,6 +243,48 @@
 
 
       <dl><dt>
+
+          <code><a href="calculate_catch.html">calculate_catch()</a></code>
+
+        </dt>
+        <dd>Calculate Catch Weight from Length-Weight Relationships or Bucket Measurements</dd>
+      </dl><dl><dt>
+
+          <code><a href="getLWCoeffs.html">getLWCoeffs()</a></code>
+
+        </dt>
+        <dd>Get Length-Weight Coefficients for Species</dd>
+      </dl><dl><dt>
+
+          <code><a href="get_fao_groups.html">get_fao_groups()</a></code>
+
+        </dt>
+        <dd>Extract and Format FAO Taxonomic Groups</dd>
+      </dl><dl><dt>
+
+          <code><a href="get_length_weight_batch.html">get_length_weight_batch()</a></code>
+
+        </dt>
+        <dd>Get Length-Weight Parameters for Species (Batch Version)</dd>
+      </dl><dl><dt>
+
+          <code><a href="get_species_areas_batch.html">get_species_areas_batch()</a></code>
+
+        </dt>
+        <dd>Get FAO Areas for Species (Batch Version)</dd>
+      </dl><dl><dt>
+
+          <code><a href="load_taxa_databases.html">load_taxa_databases()</a></code>
+
+        </dt>
+        <dd>Load Taxa Data from FishBase and SeaLifeBase</dd>
+      </dl><dl><dt>
+
+          <code><a href="match_species_from_taxa.html">match_species_from_taxa()</a></code>
+
+        </dt>
+        <dd>Match Species from Taxa Databases</dd>
+      </dl><dl><dt>
 
           <code><a href="preprocess_ba_surveys.html">preprocess_ba_surveys()</a></code>
 
@@ -254,6 +314,24 @@
 
         </dt>
         <dd>Pre-process WorldFish Surveys</dd>
+      </dl><dl><dt>
+
+          <code><a href="process_species_list.html">process_species_list()</a></code>
+
+        </dt>
+        <dd>Process Species List with Taxonomic Information</dd>
+      </dl><dl><dt>
+
+          <code><a href="reshape_catch_data.html">reshape_catch_data()</a></code>
+
+        </dt>
+        <dd>Reshape Catch Data with Length Groupings</dd>
+      </dl><dl><dt>
+
+          <code><a href="reshape_species_groups.html">reshape_species_groups()</a></code>
+
+        </dt>
+        <dd>Reshape Species Groups from Wide to Long Format</dd>
       </dl><dl><dt>
 
           <code><a href="expand_taxa.html">expand_taxa()</a></code>
@@ -337,6 +415,12 @@
 
         </dt>
         <dd>Validate WCS Surveys Data</dd>
+      </dl><dl><dt>
+
+          <code><a href="validate_wf_surveys.html">validate_wf_surveys()</a></code>
+
+        </dt>
+        <dd>Validate Wild Fishing Survey Data</dd>
       </dl></div><div class="section level2">
       <h2 id="helper-functions">Helper functions<a class="anchor" aria-label="anchor" href="#helper-functions"></a></h2>
 

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,69 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.2.0" id="peskaszanzibardatapipeline-220">peskas.zanzibar.data.pipeline 2.2.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-220"></a></h2>
+<div class="section level4">
+<h4 id="major-changes-2-2-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-2-2-0"></a></h4>
+<ul><li>Completely restructured taxonomic data processing:
+<ul><li>Introduced new modular functions for taxa handling in model-taxa.R</li>
+<li>Added efficient batch processing for species matching</li>
+<li>Implemented optimized FAO area retrieval system</li>
+<li>Streamlined length-weight coefficient calculations</li>
+<li>Enhanced integration with FishBase and SeaLifeBase</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="new-features-2-2-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-2-2-0"></a></h4>
+<ul><li>New taxonomic processing functions:
+<ul><li>
+<code><a href="../reference/load_taxa_databases.html">load_taxa_databases()</a></code>: Unified database loading from FishBase and SeaLifeBase</li>
+<li>
+<code><a href="../reference/process_species_list.html">process_species_list()</a></code>: Enhanced species list processing with taxonomic ranks</li>
+<li>
+<code><a href="../reference/match_species_from_taxa.html">match_species_from_taxa()</a></code>: Improved species matching across databases</li>
+<li>
+<code><a href="../reference/get_species_areas_batch.html">get_species_areas_batch()</a></code>: Efficient FAO area retrieval</li>
+<li>
+<code><a href="../reference/get_length_weight_batch.html">get_length_weight_batch()</a></code>: Optimized length-weight parameter retrieval</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="improvements-2-2-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-2-2-0"></a></h4>
+<ul><li>Enhanced performance through batch processing</li>
+<li>Reduced API calls to external databases</li>
+<li>Better error handling and input validation</li>
+<li>More comprehensive documentation</li>
+<li>Improved code organization and modularity</li>
+</ul></div>
+<div class="section level4">
+<h4 id="deprecations-2-2-0">Deprecations<a class="anchor" aria-label="anchor" href="#deprecations-2-2-0"></a></h4>
+<ul><li>Removed legacy taxonomic processing functions</li>
+<li>Deprecated redundant species matching methods</li>
+<li>Removed outdated data transformation utilities</li>
+</ul></div>
+<div class="section level4">
+<h4 id="documentation-2-2-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-2-2-0"></a></h4>
+<ul><li>Added detailed function documentation</li>
+<li>Updated vignettes with new workflows</li>
+<li>Improved code examples</li>
+<li>Enhanced README with new features</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.1.0" id="peskaszanzibardatapipeline-210">peskas.zanzibar.data.pipeline 2.1.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-210"></a></h2>
+<div class="section level5">
+<h5 id="major-changes-2-1-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-2-1-0"></a></h5>
+<ul><li>Enhanced taxonomic and catch data processing capabilities:
+<ul><li>Added comprehensive functions for species and catch data processing</li>
+<li>Implemented length-weight coefficient retrieval from FishBase and SeaLifeBase</li>
+<li>Created functions for calculating catch weights using multiple methods</li>
+<li>Added new data reshaping utilities for species and catch information</li>
+</ul></li>
+<li>Extended Wild Fishing (WF) survey validation with detailed quality checks</li>
+<li>Updated cloud storage and data download/upload functions</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.0.0" id="peskaszanzibardatapipeline-200">peskas.zanzibar.data.pipeline 2.0.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-200"></a></h2>
 <div class="section level5">
@@ -95,7 +158,15 @@
 <h4 id="new-features-0-1-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-0"></a></h4>
 <ul><li>The ingestion of WCS Zanzibar surveys is implemented in <code>ingest_wcs_surveys()</code>.</li>
 <li>The functions <code>retrieve_wcs_surveys()</code> downloads WCS Zanzibar surveys data</li>
+</ul><div class="section level5">
+<h5 id="changes-0-1-0">Changes<a class="anchor" aria-label="anchor" href="#changes-0-1-0"></a></h5>
+<ul><li>Updated configuration management:
+<ul><li>Moved configuration settings to inst/conf.yml</li>
+<li>Improved configuration structure and organization</li>
+<li>Enhanced configuration flexibility</li>
+</ul></li>
 </ul></div>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
