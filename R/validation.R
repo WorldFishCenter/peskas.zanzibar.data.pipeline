@@ -196,26 +196,24 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::select(-c("alert_flag", "submission_alerts")) |>
     # if catch outcome is 0 catch kg must be set to 0
     dplyr::mutate(catch_kg = ifelse(.data$catch_outcome == "0", 0, .data$catch_kg))
-  
-  validated_data <- 
-    preprocessed_surveys |> 
-    dplyr::left_join(catch_df_validated)
-  
-    upload_parquet_to_cloud(
-      data = flags_id,
-      prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options
-    )
-  
-    upload_parquet_to_cloud(
-      data = validated_data,
-      prefix = pars$surveys$wf_surveys$validated_surveys$file_prefix,
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options
-    )
-  
 
+  validated_data <-
+    preprocessed_surveys |>
+    dplyr::left_join(catch_df_validated)
+
+  upload_parquet_to_cloud(
+    data = flags_id,
+    prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+
+  upload_parquet_to_cloud(
+    data = validated_data,
+    prefix = pars$surveys$wf_surveys$validated_surveys$file_prefix,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
 }
 
 

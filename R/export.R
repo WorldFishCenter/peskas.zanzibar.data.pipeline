@@ -55,47 +55,68 @@ export_data <- function(log_threshold = logger::DEBUG) {
 
   validated_surveys <- get_validated_surveys(pars)
 
+  # Get unique landing sites first for nesting
+  landing_sites <- validated_surveys %>%
+    dplyr::pull(.data$landing_site) %>%
+    unique()
 
   monthly_metrics <-
     validated_surveys |>
     dplyr::mutate(date = lubridate::floor_date(.data$landing_date, "month")) |>
     dplyr::group_by(.data$date, .data$landing_site) |>
     dplyr::summarise(
-      median_cpue = stats::median(.data$cpue, na.rm = T),
-      median_rpue = stats::median(.data$rpue, na.rm = T),
-      n = dplyr::n()
+      median_cpue = stats::median(.data$cpue, na.rm = TRUE),
+      median_rpue = stats::median(.data$rpue, na.rm = TRUE),
+      n = dplyr::n(),
+      .groups = "drop"
     ) |>
     dplyr::ungroup() |>
-    tidyr::complete(date, tidyr::nesting(landing_site),
+    tidyr::complete(
+      date,
+      landing_site = landing_sites,
       fill = list(median_cpue = NA_real_, median_rpue = NA_real_, n = 0)
     )
 
   sites_selected <-
     monthly_metrics %>%
     dplyr::group_by(.data$landing_site) %>%
-    dplyr::summarise(missing_cpue = mean(is.na(.data$median_cpue)) * 100) %>%
+    dplyr::summarise(
+      missing_cpue = mean(is.na(.data$median_cpue)) * 100,
+      .groups = "drop"
+    ) %>%
     dplyr::arrange(dplyr::desc(.data$missing_cpue)) %>%
     dplyr::filter(.data$missing_cpue < 75) %>%
-    dplyr::pull("landing_site")
+    dplyr::pull(.data$landing_site)
 
   monthly_metrics_tidy <-
     monthly_metrics |>
     dplyr::filter(.data$landing_site %in% sites_selected) |>
     dplyr::mutate(date = lubridate::as_datetime(.data$date)) |>
-    tidyr::pivot_longer(-c("date", "landing_site", "n"), names_to = "metric", values_to = "value")
-
+    tidyr::pivot_longer(
+      -c("date", "landing_site", "n"), 
+      names_to = "metric", 
+      values_to = "value"
+    )
 
   gear_metrics_tidy <-
     validated_surveys |>
     dplyr::group_by(.data$landing_site, .data$habitat, .data$gear) |>
-    dplyr::filter(!is.na(.data$gear), !stringr::str_detect(.data$gear, " "), !.data$gear == "other") |>
-    dplyr::summarise(
-      median_cpue = stats::median(.data$cpue, na.rm = T),
-      median_rpue = stats::median(.data$rpue, na.rm = T),
-      n = dplyr::n()
+    dplyr::filter(
+      !is.na(.data$gear), 
+      !stringr::str_detect(.data$gear, " "), 
+      !.data$gear == "other"
     ) |>
-    dplyr::ungroup() |>
-    tidyr::pivot_longer(-c("landing_site", "habitat", "gear", "n"), names_to = "metric", values_to = "value")
+    dplyr::summarise(
+      median_cpue = stats::median(.data$cpue, na.rm = TRUE),
+      median_rpue = stats::median(.data$rpue, na.rm = TRUE),
+      n = dplyr::n(),
+      .groups = "drop"
+    ) |>
+    tidyr::pivot_longer(
+      -c("landing_site", "habitat", "gear", "n"), 
+      names_to = "metric", 
+      values_to = "value"
+    )
 
   taxa_proportion <-
     validated_surveys |>
@@ -110,7 +131,10 @@ export_data <- function(log_threshold = logger::DEBUG) {
     dplyr::mutate(taxa_catch_kg = .data$catch_kg / .data$n_catches) |>
     dplyr::select(-c("catch_kg", "n_catches")) |>
     dplyr::group_by(.data$landing_site, .data$family) |>
-    dplyr::summarise(total_catch_kg = sum(.data$taxa_catch_kg)) |>
+    dplyr::summarise(
+      total_catch_kg = sum(.data$taxa_catch_kg),
+      .groups = "drop"
+    ) |>
     dplyr::filter(!is.na(.data$family)) |>
     dplyr::group_by(.data$landing_site) |>
     dplyr::mutate(
@@ -119,13 +143,18 @@ export_data <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::ungroup() |>
     dplyr::select(-c("total_catch_kg", "overall_catch")) |>
-    tidyr::complete(.data$landing_site, .data$family, fill = list(catch_prop = 0)) |>
+    tidyr::complete(
+      landing_site = unique(.data$landing_site),
+      family = unique(.data$family),
+      fill = list(catch_prop = 0)
+    ) |>
     dplyr::group_by(.data$landing_site) |>
     dplyr::mutate(family = ifelse(.data$catch_prop < 5, "Others", .data$family)) |>
     dplyr::group_by(.data$landing_site, .data$family) |>
-    dplyr::summarise(catch_prop = sum(.data$catch_prop)) |>
-    dplyr::ungroup()
-
+    dplyr::summarise(
+      catch_prop = sum(.data$catch_prop),
+      .groups = "drop"
+    )
 
   # Dataframes to upload
   dataframes_to_upload <- list(
@@ -133,6 +162,7 @@ export_data <- function(log_threshold = logger::DEBUG) {
     gear_metrics_tidy = gear_metrics_tidy,
     taxa_proportion = taxa_proportion
   )
+  
   # Collection names
   collection_names <- list(
     monthly_metrics_tidy = pars$storage$mongodb$export$collection$monthly_metrics,
@@ -140,7 +170,7 @@ export_data <- function(log_threshold = logger::DEBUG) {
     taxa_proportion = pars$storage$mongodb$export$collection$taxa
   )
 
-  # Iterate over the dataframes and upload them
+  # Upload data
   purrr::walk2(
     .x = dataframes_to_upload,
     .y = collection_names,

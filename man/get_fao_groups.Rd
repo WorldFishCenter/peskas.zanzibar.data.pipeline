@@ -66,3 +66,4 @@ fao_taxa <- get_fao_groups(c("TUN", "RAG"), asfis)
 
 }
 \keyword{mining}
+\keyword{preprocessing}

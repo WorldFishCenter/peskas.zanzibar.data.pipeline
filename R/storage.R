@@ -90,7 +90,7 @@ upload_parquet_to_cloud <- function(data, prefix, provider, options,
 
   invisible(NULL)
 }
-#' 
+#'
 #' Authenticate to a Cloud Storage Provider
 #'
 #' This function is primarily used internally by other functions to establish authentication

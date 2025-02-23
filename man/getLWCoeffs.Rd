@@ -2,72 +2,27 @@
 % Please edit documentation in R/model-taxa.R
 \name{getLWCoeffs}
 \alias{getLWCoeffs}
-\title{Get Length-Weight Coefficients for FAO Taxa}
+\title{Get Length-Weight Coefficients for Species}
 \usage{
 getLWCoeffs(taxa_list = NULL, asfis_list = NULL)
 }
 \arguments{
-\item{taxa_list}{A character vector of FAO 3-alpha codes}
+\item{taxa_list}{Character vector of FAO 3-alpha codes}
 
-\item{asfis_list}{A data frame containing the FAO ASFIS list (see details)}
+\item{asfis_list}{ASFIS list data frame}
 }
 \value{
-A tibble with the following columns:
+A data frame with columns:
 \itemize{
 \item catch_taxon - FAO 3-alpha code
-\item n - Number of length-weight relationships found
+\item n - Number of measurements
 \item a_75 - 75th percentile of parameter 'a'
 \item b_75 - 75th percentile of parameter 'b'
 }
 }
 \description{
-Retrieves and summarizes length-weight relationship coefficients for FAO taxonomic groups
-from both FishBase and SeaLifeBase databases. The function calculates 75th percentile
-for the 'a' and 'b' parameters of the length-weight relationship (W = aL^b).
-}
-\details{
-The function processes fish and non-fish species differently:
-
-For fish species (FishBase):
-\enumerate{
-\item Filters for species present in FAO Area 51
-\item Retrieves length-weight relationships from FishBase
-\item Filters for total length (TL) measurements
-\item Excludes quality-checked relationships (EsQ = "yes")
-}
-
-For non-fish species (SeaLifeBase):
-\enumerate{
-\item Retrieves species distribution data
-\item Retrieves length-weight relationships from SeaLifeBase
-\item Excludes quality-checked relationships (EsQ = "yes")
-}
-
-The 75th percentile is used instead of median as it provides more biologically
-reasonable estimates of weights, possibly accounting for specimens in good condition
-while avoiding extreme values.
-}
-\note{
-\itemize{
-\item Requires rfishbase package
-\item Internet connection needed for FishBase and SeaLifeBase queries
-\item Only includes non-quality-checked relationships
-\item Area 51 filtering applied only to fish species
-\item Uses 75th percentile of coefficients for more realistic weight estimates
-\item Automatically selects appropriate database based on FAO code
-}
-}
-\examples{
-\dontrun{
-# Get coefficients for both fish and non-fish groups
-lw_coeffs <- getLWCoeffs(
-  taxa_list = c("TUN", "BEN", "IAX", "OCZ"),
-  asfis_list = asfis_data
-)
-}
-
-}
-\seealso{
-\code{\link{get_fao_groups}}, \code{\link{get_fishbase_species}}
+Retrieves and summarizes length-weight relationship coefficients by handling both
+FishBase and SeaLifeBase data in a single workflow.
 }
 \keyword{mining}
+\keyword{preprocessing}

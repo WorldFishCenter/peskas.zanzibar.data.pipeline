@@ -66,9 +66,7 @@
 #' - All weights are returned in kilograms
 #' - NA values are returned when neither calculation method is possible
 #'
-#' @importFrom dplyr left_join mutate case_when coalesce select
-#'
-#' @keywords mining
+#' @keywords mining preprocessing
 #' @export
 calculate_catch <- function(catch_data = NULL, lwcoeffs = NULL) {
   catch_data |>
@@ -98,168 +96,64 @@ calculate_catch <- function(catch_data = NULL, lwcoeffs = NULL) {
     )
 }
 
-#' Get Length-Weight Coefficients for FAO Taxa
+#' Get Length-Weight Coefficients for Species
 #'
 #' @description
-#' Retrieves and summarizes length-weight relationship coefficients for FAO taxonomic groups
-#' from both FishBase and SeaLifeBase databases. The function calculates 75th percentile
-#' for the 'a' and 'b' parameters of the length-weight relationship (W = aL^b).
+#' Retrieves and summarizes length-weight relationship coefficients by handling both
+#' FishBase and SeaLifeBase data in a single workflow.
 #'
-#' @param taxa_list A character vector of FAO 3-alpha codes
-#' @param asfis_list A data frame containing the FAO ASFIS list (see details)
-#'
-#' @return A tibble with the following columns:
+#' @param taxa_list Character vector of FAO 3-alpha codes
+#' @param asfis_list ASFIS list data frame
+#' @return A data frame with columns:
 #'   \itemize{
 #'     \item catch_taxon - FAO 3-alpha code
-#'     \item n - Number of length-weight relationships found
+#'     \item n - Number of measurements
 #'     \item a_75 - 75th percentile of parameter 'a'
 #'     \item b_75 - 75th percentile of parameter 'b'
 #'   }
-#'
-#' @details
-#' The function processes fish and non-fish species differently:
-#'
-#' For fish species (FishBase):
-#' 1. Filters for species present in FAO Area 51
-#' 2. Retrieves length-weight relationships from FishBase
-#' 3. Filters for total length (TL) measurements
-#' 4. Excludes quality-checked relationships (EsQ = "yes")
-#'
-#' For non-fish species (SeaLifeBase):
-#' 1. Retrieves species distribution data
-#' 2. Retrieves length-weight relationships from SeaLifeBase
-#' 3. Excludes quality-checked relationships (EsQ = "yes")
-#'
-#' The 75th percentile is used instead of median as it provides more biologically
-#' reasonable estimates of weights, possibly accounting for specimens in good condition
-#' while avoiding extreme values.
-#'
-#' @examples
-#' \dontrun{
-#' # Get coefficients for both fish and non-fish groups
-#' lw_coeffs <- getLWCoeffs(
-#'   taxa_list = c("TUN", "BEN", "IAX", "OCZ"),
-#'   asfis_list = asfis_data
-#' )
-#' }
-#'
-#' @note
-#' - Requires rfishbase package
-#' - Internet connection needed for FishBase and SeaLifeBase queries
-#' - Only includes non-quality-checked relationships
-#' - Area 51 filtering applied only to fish species
-#' - Uses 75th percentile of coefficients for more realistic weight estimates
-#' - Automatically selects appropriate database based on FAO code
-#'
-#' @seealso
-#' \code{\link{get_fao_groups}}, \code{\link{get_fishbase_species}}
-#'
-#' @importFrom rfishbase length_weight distribution
-#' @importFrom dplyr filter select mutate group_by summarise left_join right_join full_join bind_rows
-#' @importFrom stats quantile
-#'
-#' @keywords mining
+#' @keywords mining preprocessing
 #' @export
+#'
 getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
-  # Define non-fish FAO codes
-  nonfish_codes <- c("IAX", "OCZ", "PEZ", "SLV", "CRA", "COZ") # cuttlefish, octopus, shrimp, lobster, crab, cockles
-
-  species_list <-
-    get_fao_groups(fao_codes = taxa_list, asfis_list = asfis_list) |>
-    get_all_species() |>
-    purrr::map(~ as.character(.)) |>
-    purrr::map(~ dplyr::as_tibble(.)) |>
-    dplyr::bind_rows(.id = "catch_taxon") |>
-    dplyr::rename(species = "value")
-
-  # Split species into fish and non-fish
-  fish_species <- species_list |>
-    dplyr::filter(!.data$catch_taxon %in% nonfish_codes)
-
-  nonfish_species <- species_list |>
-    dplyr::filter(.data$catch_taxon %in% nonfish_codes)
-
-  # Get fish distributions and LW relationships from FishBase
-  fish_distribution <- NULL
-  if (nrow(fish_species) > 0) {
-    fish_distribution <- rfishbase::faoareas(
-      unique(fish_species$species),
-      fields = c("AreaCode")
-    ) |>
-      dplyr::filter(.data$AreaCode == 51) |>
-      dplyr::rename(species = "Species") |>
-      dplyr::left_join(fish_species, by = "species") |>
-      dplyr::select("catch_taxon", "SpecCode", "species")
-  }
-
-  # Get non-fish distributions and LW relationships from SeaLifeBase
-  nonfish_distribution <- NULL
-  if (nrow(nonfish_species) > 0) {
-    nonfish_distribution <- rfishbase::faoareas(
-      unique(nonfish_species$species),
-      # fields = c("AreaCode"),
-      server = "sealifebase"
-    ) |>
-      # dplyr::filter(.data$AreaCode == 51) |>
-      dplyr::rename(species = "Species") |>
-      dplyr::left_join(nonfish_species, by = "species") |>
-      dplyr::select("catch_taxon", "SpecCode", "species")
-  }
-
-
-  # Process fish LW relationships
-  fish_coeffs <- NULL
-  if (!is.null(fish_distribution) && nrow(fish_distribution) > 0) {
-    fish_coeffs <- rfishbase::length_weight(
-      fish_distribution$species,
-      fields = c("Species", "SpecCode", "Type", "EsQ", "a", "b")
-    ) |>
-      dplyr::mutate(EsQ = tolower(.data$EsQ)) |>
-      dplyr::filter(.data$Type == "TL", is.na(.data$EsQ) | .data$EsQ != "yes") |>
-      dplyr::rename(species = "Species") |>
-      dplyr::full_join(fish_distribution, by = c("species", "SpecCode")) |>
-      dplyr::select("catch_taxon", "SpecCode", "species", "a", "b") |>
-      dplyr::group_by(.data$catch_taxon) |>
-      dplyr::summarise(
-        n = dplyr::n(),
-        a_75 = stats::quantile(.data$a, 0.75, na.rm = T),
-        b_75 = stats::quantile(.data$b, 0.75, na.rm = T)
-      )
-  }
-
-  # Process non-fish LW relationships
-  nonfish_coeffs <- NULL
-  if (!is.null(nonfish_distribution) && nrow(nonfish_distribution) > 0) {
-    nonfish_coeffs <- rfishbase::length_weight(
-      nonfish_distribution$species,
-      fields = c("Species", "Type", "EsQ", "a", "b"),
-      server = "sealifebase"
-    ) |>
-      dplyr::mutate(EsQ = tolower(.data$EsQ)) |>
-      dplyr::filter(is.na(.data$EsQ) | .data$EsQ != "yes") |>
-      dplyr::rename(species = "Species") |>
-      dplyr::full_join(nonfish_distribution, by = c("species")) |>
-      dplyr::select("catch_taxon", "species", "a", "b") |>
-      dplyr::group_by(.data$catch_taxon) |>
-      dplyr::summarise(
-        n = dplyr::n(),
-        a_75 = stats::quantile(.data$a, 0.75, na.rm = T),
-        b_75 = stats::quantile(.data$b, 0.75, na.rm = T)
-      )
-  }
-
-  # Combine results
-  lw_coeffs <- dplyr::bind_rows(fish_coeffs, nonfish_coeffs) |>
+  # 1. Load both databases
+  taxa_data <- list(
+    fishbase = rfishbase::load_taxa(server = "fishbase"),
+    sealifebase = rfishbase::load_taxa(server = "sealifebase")
+  )
+  
+  # 2. Process species list
+  species_list <- process_species_list(
+    fao_codes = taxa_list, 
+    asfis_list = asfis_list
+  )
+  
+  # 3. Match species in databases
+  matched_species <- match_species_from_taxa(species_list, taxa_data)
+  
+  # 4. Get FAO areas and filter for area 51
+  species_areas <- get_species_areas_batch(matched_species)
+  species_areas_filtered <- species_areas %>%
+    dplyr::filter(.data$area_code == 51)
+  
+  # 5. Get length-weight parameters
+  lw_data <- get_length_weight_batch(species_areas_filtered)
+  
+  # 6. Format output
+  lw_data %>%
+    dplyr::group_by(.data$a3_code) %>%
+    dplyr::summarise(
+      n = dplyr::n(),
+      a_75 = stats::quantile(.data$a, 0.75, na.rm = TRUE),
+      b_75 = stats::quantile(.data$b, 0.75, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
     dplyr::select(
-      "catch_taxon",
+      catch_taxon = "a3_code",
       "n",
       "a_75",
       "b_75"
     )
-
-  return(lw_coeffs)
 }
-
 
 #' Extract and Format FAO Taxonomic Groups
 #'
@@ -314,7 +208,7 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
 #' - MZZ (Miscellaneous marine fishes) and UNKN (Unknown) are automatically excluded
 #' - Column names are standardized for consistency with other functions
 #'
-#' @keywords mining
+#' @keywords mining preprocessing
 #'
 #' @export
 get_fao_groups <- function(fao_codes = NULL, asfis_list = NULL) {
@@ -331,298 +225,268 @@ get_fao_groups <- function(fao_codes = NULL, asfis_list = NULL) {
     dplyr::filter(!.data$a3_code %in% c("MZZ", "UNKN"))
 }
 
-#' Get FishBase Species for FAO 3-Alpha Codes
+
+#' Load Taxa Data from FishBase and SeaLifeBase
 #'
 #' @description
-#' Retrieves all FishBase species associated with FAO 3-alpha codes.
-#' The function processes each taxonomic level (species, genus, family, order) and returns
-#' a complete list of associated species for each FAO code.
+#' Retrieves taxonomic data from both FishBase and SeaLifeBase databases in a single function call.
+#' This is typically the first step in species identification and classification.
 #'
-#' @param fao_data A data frame containing FAO 3-alpha codes and taxonomic information with columns:
+#' @return A list with two elements:
 #'   \itemize{
-#'     \item a3_code - FAO 3-alpha code
-#'     \item scientific_name - Scientific name (can include "spp" or "nei" suffixes)
-#'     \item family - Family name (can be NA)
-#'     \item order - Order name (can be NA)
+#'     \item fishbase: Data frame containing FishBase taxonomic data
+#'     \item sealifebase: Data frame containing SeaLifeBase taxonomic data
 #'   }
-#' @param database_server A character string specifying which database to use ("fishbase" or "sealifebase")
-#'
-#' @return A named list where:
-#'   \itemize{
-#'     \item Names are FAO 3-alpha codes
-#'     \item Values are vectors of FishBase species
-#'     \item Empty vectors (integer(0)) indicate no matches found
-#'   }
-#'
-#' @details
-#' The function implements a hierarchical search strategy:
-#' 1. Tries exact species match if scientific name contains two words
-#' 2. Tries genus level match
-#' 3. Tries family level match if family name is available
-#' 4. Tries order level match if order name is available
-#'
-#' Performance optimizations include:
-#' \itemize{
-#'   \item Caching of API results to avoid redundant calls
-#'   \item Requesting only Species field to minimize data transfer
-#'   \item Batch processing of species lookups
-#' }
-#'
-#' @examples
-#' # Example data frame
-#' fao_data <- data.frame(
-#'   a3_code = c("TUN", "RAG"),
-#'   scientific_name = c("Thunnini", "Rastrelliger kanagurta"),
-#'   family = c("SCOMBRIDAE", "SCOMBRIDAE"),
-#'   order = c("PERCIFORMES", "PERCIFORMES")
-#' )
-#'
-#' # Get species
-#' speccodes <- get_fishbase_species(fao_data)
-#'
-#' # Check number of species for each code
-#' sapply(speccodes, length)
-#'
-#' @note
-#' - Requires the rfishbase package
-#' - Internet connection needed for FishBase API queries
-#' - Performance depends on API response times and number of species in each group
-#'
-#' @seealso
-#' \code{\link[rfishbase]{species}}, \code{\link[rfishbase]{species_list}}
-#'
-#' @importFrom rfishbase species species_list
-#' @importFrom stats setNames
-#'
-#' @keywords mining
-#' @export
-get_fishbase_species <- function(fao_data = NULL, database_server = "fishbase") {
-  # Initialize empty list to store results
-  result_list <- list()
-
-  # Cache lookup results to avoid repeated API calls
-  species_cache <- list()
-  genus_cache <- list()
-  family_cache <- list()
-  order_cache <- list()
-
-  # Process each FAO code
-  for (i in 1:nrow(fao_data)) {
-    code <- fao_data$a3_code[i]
-    sci_name <- fao_data$scientific_name[i]
-    family_name <- fao_data$family[i]
-    order_name <- fao_data$order[i]
-
-    # Clean name
-    clean_name <- gsub(" spp$| nei$", "", sci_name)
-
-    # Try species lookup for exact matches
-    if (grepl(" ", clean_name)) {
-      # Check cache first
-      if (!is.null(species_cache[[clean_name]])) {
-        species_data <- species_cache[[clean_name]]
-      } else {
-        species_data <- tryCatch(
-          rfishbase::species(clean_name, fields = "Species", server = database_server),
-          error = function(e) NULL
-        )
-        # Cache the result
-        species_cache[[clean_name]] <- species_data
-      }
-
-      if (!is.null(species_data) && nrow(species_data) > 0) {
-        result_list[[code]] <- species_data$Species
-        next
-      }
-    }
-
-    # Try genus lookup
-    genus <- ifelse(grepl(" ", clean_name),
-      sub(" .*$", "", clean_name),
-      clean_name
-    )
-
-    # Check genus cache
-    if (!is.null(genus_cache[[genus]])) {
-      genus_data <- genus_cache[[genus]]
-    } else {
-      genus_data <- tryCatch(
-        rfishbase::species_list(Genus = genus, server = database_server),
-        error = function(e) NULL
-      )
-      # Cache the result
-      genus_cache[[genus]] <- genus_data
-    }
-
-    if (!is.null(genus_data) && length(genus_data) > 0) {
-      if (is.character(genus_data)) {
-        # Use cached species data where possible
-        all_speccodes <- c()
-        # Get SpecCodes for all species in genus at once
-        species_data <- tryCatch(
-          rfishbase::species(genus_data, fields = "Species", server = database_server),
-          error = function(e) NULL
-        )
-        if (!is.null(species_data) && nrow(species_data) > 0) {
-          result_list[[code]] <- species_data$Species
-          next
-        }
-      } else if (is.data.frame(genus_data) && nrow(genus_data) > 0) {
-        result_list[[code]] <- genus_data$Species
-        next
-      }
-    }
-
-    # Try family lookup
-    if (!is.na(family_name) && family_name != "") {
-      family_proper <- gsub("^([A-Z])([A-Z]+)$", "\\1\\L\\2", family_name, perl = TRUE)
-
-      if (!is.null(family_cache[[family_proper]])) {
-        family_data <- family_cache[[family_proper]]
-      } else {
-        family_data <- tryCatch(
-          rfishbase::species_list(Family = family_proper, server = database_server),
-          error = function(e) NULL
-        )
-        family_cache[[family_proper]] <- family_data
-      }
-
-      if (!is.null(family_data) && length(family_data) > 0) {
-        if (is.character(family_data)) {
-          # Get SpecCodes for all species in family at once
-          species_data <- tryCatch(
-            rfishbase::species(family_data, fields = "Species", server = database_server),
-            error = function(e) NULL
-          )
-          if (!is.null(species_data) && nrow(species_data) > 0) {
-            result_list[[code]] <- species_data$Species
-            next
-          }
-        } else if (is.data.frame(family_data) && nrow(family_data) > 0) {
-          result_list[[code]] <- family_data$Species
-          next
-        }
-      }
-    }
-
-    # Try order lookup
-    if (!is.na(order_name) && order_name != "") {
-      order_proper <- gsub("^([A-Z])([A-Z]+)$", "\\1\\L\\2", order_name, perl = TRUE)
-
-      if (!is.null(order_cache[[order_proper]])) {
-        order_data <- order_cache[[order_proper]]
-      } else {
-        order_data <- tryCatch(
-          rfishbase::species_list(Order = order_proper, server = database_server),
-          error = function(e) NULL
-        )
-        order_cache[[order_proper]] <- order_data
-      }
-
-      if (!is.null(order_data) && length(order_data) > 0) {
-        if (is.character(order_data)) {
-          # Get SpecCodes for all species in order at once
-          species_data <- tryCatch(
-            rfishbase::species(order_data, fields = "Species", server = database_server),
-            error = function(e) NULL
-          )
-          if (!is.null(species_data) && nrow(species_data) > 0) {
-            result_list[[code]] <- species_data$Species
-            next
-          }
-        } else if (is.data.frame(order_data) && nrow(order_data) > 0) {
-          result_list[[code]] <- order_data$Species
-          next
-        }
-      }
-    }
-
-    # If no match found, add empty vector
-    result_list[[code]] <- integer(0)
-  }
-
-  return(result_list)
-}
-
-#' Get Species from Both FishBase and SeaLifeBase Databases
-#'
-#' @description
-#' Splits FAO taxa between fish and non-fish groups based on ISSCAAP codes and retrieves
-#' species information from the appropriate database (FishBase or SeaLifeBase).
-#'
-#' @param fao_data A data frame containing FAO taxonomic information with columns:
-#'   \itemize{
-#'     \item a3_code - FAO 3-alpha code
-#'     \item scientific_name - Scientific name
-#'     \item family - Family name
-#'     \item order - Order name
-#'     \item taxon_group - ISSCAAP group number
-#'   }
-#'
-#' @return A named list where:
-#'   \itemize{
-#'     \item Names are FAO 3-alpha codes
-#'     \item Values are vectors of species names from either FishBase or SeaLifeBase
-#'     \item Empty vectors (integer(0)) indicate no matches found
-#'   }
-#'
-#' @details
-#' The function uses ISSCAAP groups to determine the appropriate database:
-#' - Group 57: Cephalopods (SeaLifeBase)
-#' - Group 45: Shrimps (SeaLifeBase)
-#' - Group 43: Lobsters (SeaLifeBase)
-#' - Group 42: Crabs (SeaLifeBase)
-#' - Group 56: Molluscs (SeaLifeBase)
-#' - Others: FishBase
-#'
 #' @examples
 #' \dontrun{
-#' # Example data frame with both fish and non-fish taxa
-#' fao_data <- data.frame(
-#'   a3_code = c("TUN", "IAX"),
-#'   scientific_name = c("Thunnini", "Sepia spp"),
-#'   family = c("SCOMBRIDAE", "SEPIIDAE"),
-#'   order = c("PERCIFORMES", "SEPIIDA"),
-#'   taxon_group = c(36, 57)
-#' )
-#'
-#' # Get species from both databases
-#' species_list <- get_all_species(fao_data)
+#' taxa_data <- load_taxa_databases()
+#' fishbase_taxa <- taxa_data$fishbase
+#' sealifebase_taxa <- taxa_data$sealifebase
 #' }
-#'
-#' @note
-#' - Requires rfishbase package
-#' - Internet connection needed for database queries
-#' - Uses caching to improve performance
-#' - Automatically switches between databases based on taxonomic group
-#'
-#' @seealso
-#' \code{\link{get_fishbase_species}}, \code{\link{get_fao_groups}}
-#'
-#' @importFrom dplyr filter
-#'
-#' @keywords mining
+#' @keywords mining preprocessing
 #' @export
-get_all_species <- function(fao_data = NULL) {
-  # Split data based on ISSCAAP groups
-  sealifebase_groups <- c(57, 45, 43, 42, 56) # cephalopods, shrimps, lobsters, crabs, molluscs
+load_taxa_databases <- function() {
+  list(
+    fishbase = rfishbase::load_taxa(server = "fishbase"),
+    sealifebase = rfishbase::load_taxa(server = "sealifebase")
+  )
+}
 
-  fish_data <- fao_data %>%
-    dplyr::filter(!.data$taxon_group %in% sealifebase_groups)
+#' Process Species List with Taxonomic Information
+#'
+#' @description
+#' Processes a list of species by assigning database sources and taxonomic ranks.
+#' Determines whether species should be looked up in FishBase or SeaLifeBase based
+#' on their ISSCAAP group.
+#'
+#' @param fao_codes Vector of FAO 3-alpha codes
+#' @param asfis_list ASFIS list data frame containing taxonomic information
+#' @return A data frame with columns:
+#'   \itemize{
+#'     \item a3_code: FAO 3-alpha code
+#'     \item scientific_name: Scientific name (cleaned)
+#'     \item database: "fishbase" or "sealifebase"
+#'     \item rank: Taxonomic rank ("Genus", "Family", "Order", "Species")
+#'     \item ... (other taxonomic fields)
+#'   }
+#' @note
+#' ISSCAAP groups 57, 45, 43, 42, 56 are assigned to SeaLifeBase;
+#' all others to FishBase
+#' @examples
+#' \dontrun{
+#' species_list <- process_species_list(c("TUN", "PEZ"), asfis_data)
+#' }
+#' @keywords mining preprocessing
+#' @export
+process_species_list <- function(fao_codes, asfis_list) {
+  get_fao_groups(fao_codes = fao_codes, asfis_list = asfis_list) %>% 
+    dplyr::mutate(
+      database = dplyr::case_when(
+        .data$taxon_group %in% c(57, 45, 43, 42, 56) ~ "sealifebase",
+        TRUE ~ "fishbase"
+      ),
+      rank = dplyr::case_when(
+        grepl(" spp$", .data$scientific_name) ~ "Genus",
+        grepl("idae$", .data$scientific_name) ~ "Family",
+        grepl("formes$", .data$scientific_name) ~ "Order",
+        grepl(" ", .data$scientific_name) & !grepl(" spp$|nei$", .data$scientific_name) ~ "Species",
+        TRUE ~ NA_character_
+      ),
+      scientific_name = gsub(" spp$", "", .data$scientific_name)
+    )
+}
 
-  nonfish_data <- fao_data %>%
-    dplyr::filter(.data$taxon_group %in% sealifebase_groups)
+#' Match Species from Taxa Databases
+#'
+#' @description
+#' Matches species between FAO codes and database records, handling different taxonomic
+#' levels (species, genus, family, order) appropriately.
+#'
+#' @param species_list Processed species list from process_species_list()
+#' @param taxa_data Taxa data from load_taxa_databases()
+#' @return A data frame with columns:
+#'   \itemize{
+#'     \item a3_code: FAO 3-alpha code
+#'     \item species: Scientific name
+#'     \item database: Source database
+#'   }
+#' @examples
+#' \dontrun{
+#' taxa_data <- load_taxa_databases()
+#' species_list <- process_species_list(fao_codes, asfis)
+#' matches <- match_species_from_taxa(species_list, taxa_data)
+#' }
+#' @keywords mining preprocessing
+#' @export
+match_species_from_taxa <- function(species_list, taxa_data) {
+  matches <- list()
+  
+  for(i in 1:nrow(species_list)) {
+    row <- species_list[i,]
+    taxa <- taxa_data[[row$database]]
+    
+    matched_species <- switch(
+      row$rank,
+      "Genus" = taxa %>% dplyr::filter(.data$Genus == row$scientific_name),
+      "Family" = taxa %>% dplyr::filter(.data$Family == row$scientific_name),
+      "Order" = taxa %>% dplyr::filter(.data$Order == row$scientific_name),
+      "Species" = taxa %>% dplyr::filter(.data$Species == row$scientific_name),
+      NULL
+    )
+    
+    if(!is.null(matched_species) && nrow(matched_species) > 0) {
+      matches[[i]] <- matched_species %>%
+        dplyr::mutate(
+          a3_code = row$a3_code,
+          original_rank = row$rank,
+          original_name = row$scientific_name,
+          database = row$database
+        )
+    }
+  }
+  
+  dplyr::bind_rows(matches) %>%
+    dplyr::select(
+      "a3_code",
+      species = "Species",
+      "database"
+      #original_rank,
+      #original_name
+    ) %>%
+    dplyr::distinct()
+}
 
-  # Get fish species from FishBase
-  fish_species <- get_fishbase_species(fish_data, database_server = "fishbase")
 
-  # Get non-fish species from SeaLifeBase
-  nonfish_species <- get_fishbase_species(nonfish_data, database_server = "sealifebase") # reuse same function as it works for both
+#' Get FAO Areas for Species (Batch Version)
+#'
+#' @description
+#' Efficiently retrieves FAO areas for multiple species by processing them in batches
+#' by database source, reducing API calls and processing time.
+#'
+#' @param matched_species Data frame from match_species_from_taxa()
+#' @return A data frame with columns:
+#'   \itemize{
+#'     \item a3_code: FAO 3-alpha code
+#'     \item species: Scientific name
+#'     \item area_code: FAO area code
+#'     \item database: Source database
+#'   }
+#' @examples
+#' \dontrun{
+#' species_areas <- get_species_areas_batch(matched_species)
+#' # Filter for specific FAO area
+#' area_51_species <- species_areas %>% 
+#'   dplyr::filter(area_code == 51)
+#' }
+#' @keywords mining preprocessing
+#' @export
+get_species_areas_batch <- function(matched_species) {
+  fishbase_species <- matched_species %>% 
+    dplyr::filter(.data$database == "fishbase") %>% 
+    dplyr::pull(.data$species)
+  
+  sealifebase_species <- matched_species %>% 
+    dplyr::filter(.data$database == "sealifebase") %>% 
+    dplyr::pull(.data$species)
+  
+  areas_fishbase <- if(length(fishbase_species) > 0) {
+    rfishbase::faoareas(fishbase_species, fields = "AreaCode", server = "fishbase") %>%
+      dplyr::mutate(database = "fishbase")
+  }
+  
+  areas_sealifebase <- if(length(sealifebase_species) > 0) {
+    rfishbase::faoareas(sealifebase_species, fields = "AreaCode", server = "sealifebase") %>%
+      dplyr::mutate(database = "sealifebase")
+  }
+  
+  dplyr::bind_rows(areas_fishbase, areas_sealifebase) %>%
+    dplyr::left_join(
+      matched_species,
+      by = c("Species" = "species", "database")
+    ) %>%
+    dplyr::select(
+      .data$a3_code,
+      species = "Species",
+      area_code = "AreaCode",
+      .data$database
+    ) %>%
+    dplyr::distinct()
+}
 
-  # Combine results maintaining list structure
-  result_list <- c(fish_species, nonfish_species)
 
-  return(result_list)
+#' Get Length-Weight Parameters for Species (Batch Version)
+#'
+#' @description
+#' Retrieves length-weight relationship parameters for multiple species efficiently
+#' by processing them in batches. Handles both fish and non-fish species appropriately.
+#'
+#' @param species_areas_filtered Data frame with filtered species
+#' @return A data frame with columns:
+#'   \itemize{
+#'     \item a3_code: FAO 3-alpha code
+#'     \item species: Scientific name
+#'     \item area_code: FAO area code
+#'     \item database: Source database
+#'     \item type: Measurement type (e.g., "TL" for total length)
+#'     \item a: Length-weight parameter a
+#'     \item b: Length-weight parameter b
+#'   }
+#' @note
+#' - For FishBase species, only total length (TL) measurements are used
+#' - Questionable estimates (EsQ = "yes") are excluded
+#' @examples
+#' \dontrun{
+#' lw_data <- get_length_weight_batch(species_areas_filtered)
+#' }
+#' @keywords mining preprocessing
+#' @export
+get_length_weight_batch <- function(species_areas_filtered) {
+  fishbase_species <- species_areas_filtered %>% 
+    dplyr::filter(.data$database == "fishbase") %>% 
+    dplyr::pull(.data$species)
+  
+  sealifebase_species <- species_areas_filtered %>% 
+    dplyr::filter(.data$database == "sealifebase") %>% 
+    dplyr::pull(.data$species)
+  
+  lw_fishbase <- if(length(fishbase_species) > 0) {
+    rfishbase::length_weight(
+      fishbase_species, 
+      fields = c("Species", "SpecCode", "Type", "EsQ", "a", "b"), 
+      server = "fishbase"
+    ) %>%
+      dplyr::mutate(database = "fishbase")
+  }
+  
+  lw_sealifebase <- if(length(sealifebase_species) > 0) {
+    rfishbase::length_weight(
+      sealifebase_species, 
+      fields = c("Species", "SpecCode", "Type", "EsQ", "a", "b"), 
+      server = "sealifebase"
+    ) %>%
+      dplyr::mutate(database = "sealifebase")
+  }
+  
+  dplyr::bind_rows(lw_fishbase, lw_sealifebase) %>%
+    dplyr::left_join(
+      species_areas_filtered,
+      by = c("Species" = "species", "database")
+    ) %>%
+    dplyr::filter(
+      (.data$database == "fishbase" & .data$Type == "TL") |
+        .data$database == "sealifebase",
+      is.na(.data$EsQ) | tolower(.data$EsQ) != "yes"
+    ) %>%
+    dplyr::select(
+      .data$a3_code,
+      species = "Species",
+      .data$area_code,
+      .data$database,
+      type = "Type",
+      .data$a, 
+      .data$b
+    ) %>%
+    dplyr::distinct()
 }
 
 #' Expand Taxonomic Vectors into a Data Frame
@@ -678,3 +542,4 @@ expand_taxa <- function(data = NULL) {
   dplyr::left_join(taxa_expanded, groups_rank, by = "catch_group") |>
     dplyr::select(-c("kingdom", "phylum", "order"))
 }
+

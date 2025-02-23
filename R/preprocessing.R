@@ -138,9 +138,10 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
   asfis <- download_parquet_from_cloud(
     prefix = "asfis",
     provider = pars$storage$google$key,
-    options = pars$storage$google$options)
-  
-  #metadata <- get_metadata()
+    options = pars$storage$google$options
+  )
+
+  # metadata <- get_metadata()
 
   catch_surveys_raw <-
     download_parquet_from_cloud(
@@ -231,7 +232,7 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::mutate(
       dplyr::across(c("n_buckets":"length"), ~ as.double(.x))
     )
-  
+
   lwcoeffs <- getLWCoeffs(taxa_list = unique(catch_info$catch_taxon), asfis_list = asfis)
   catch_df <- calculate_catch(catch_data = catch_info, lwcoeffs = lwcoeffs)
 

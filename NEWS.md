@@ -1,3 +1,39 @@
+# peskas.zanzibar.data.pipeline 2.2.0
+
+### Major Changes
+- Completely restructured taxonomic data processing:
+  - Introduced new modular functions for taxa handling in model-taxa.R
+  - Added efficient batch processing for species matching
+  - Implemented optimized FAO area retrieval system
+  - Streamlined length-weight coefficient calculations
+  - Enhanced integration with FishBase and SeaLifeBase
+
+### New Features
+- New taxonomic processing functions:
+  - `load_taxa_databases()`: Unified database loading from FishBase and SeaLifeBase
+  - `process_species_list()`: Enhanced species list processing with taxonomic ranks
+  - `match_species_from_taxa()`: Improved species matching across databases
+  - `get_species_areas_batch()`: Efficient FAO area retrieval
+  - `get_length_weight_batch()`: Optimized length-weight parameter retrieval
+
+### Improvements
+- Enhanced performance through batch processing
+- Reduced API calls to external databases
+- Better error handling and input validation
+- More comprehensive documentation
+- Improved code organization and modularity
+
+### Deprecations
+- Removed legacy taxonomic processing functions
+- Deprecated redundant species matching methods
+- Removed outdated data transformation utilities
+
+### Documentation
+- Added detailed function documentation
+- Updated vignettes with new workflows
+- Improved code examples
+- Enhanced README with new features
+
 # peskas.zanzibar.data.pipeline 2.1.0
 
 #### Major Changes
