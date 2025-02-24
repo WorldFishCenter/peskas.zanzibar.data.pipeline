@@ -239,9 +239,9 @@ aggregate_survey_data <- function(catch_price_table, trips_info) {
       total_catch_kg = sum(.data$catch_kg),
       total_revenue_TZS = sum(.data$revenue_TZS),
       catch_taxa = list(tibble::tibble(
-        group_catch = .data$group_catch,
-        species_catch = .data$species_catch,
-        catch_kg = .data$catch_kg
+        group_catch = `group_catch`,
+        species_catch = `species_catch`,
+        catch_kg = `catch_kg`
       )),
       .groups = "drop"
     ) |>
