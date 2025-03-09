@@ -24,6 +24,7 @@ default:
       asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
       version:
         preprocess: latest
       raw_surveys:
@@ -122,6 +123,7 @@ local:
       asset_id: !expr readLines('auth/wf_surveys_ID')
       username: !expr readLines('auth/wf_surveys_USNAME')
       password: !expr readLines('auth/wf_surveys_PSSW')
+      token: !expr readLines('auth/wf_surveys_TOKEN')
   pds:
     token: !expr readLines('auth/pds-token')
     secret: !expr readLines('auth/pds-secret')

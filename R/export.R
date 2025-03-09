@@ -93,8 +93,8 @@ export_data <- function(log_threshold = logger::DEBUG) {
     dplyr::filter(.data$landing_site %in% sites_selected) |>
     dplyr::mutate(date = lubridate::as_datetime(.data$date)) |>
     tidyr::pivot_longer(
-      -c("date", "landing_site", "n"), 
-      names_to = "metric", 
+      -c("date", "landing_site", "n"),
+      names_to = "metric",
       values_to = "value"
     )
 
@@ -102,8 +102,8 @@ export_data <- function(log_threshold = logger::DEBUG) {
     validated_surveys |>
     dplyr::group_by(.data$landing_site, .data$habitat, .data$gear) |>
     dplyr::filter(
-      !is.na(.data$gear), 
-      !stringr::str_detect(.data$gear, " "), 
+      !is.na(.data$gear),
+      !stringr::str_detect(.data$gear, " "),
       !.data$gear == "other"
     ) |>
     dplyr::summarise(
@@ -113,8 +113,8 @@ export_data <- function(log_threshold = logger::DEBUG) {
       .groups = "drop"
     ) |>
     tidyr::pivot_longer(
-      -c("landing_site", "habitat", "gear", "n"), 
-      names_to = "metric", 
+      -c("landing_site", "habitat", "gear", "n"),
+      names_to = "metric",
       values_to = "value"
     )
 
@@ -162,7 +162,7 @@ export_data <- function(log_threshold = logger::DEBUG) {
     gear_metrics_tidy = gear_metrics_tidy,
     taxa_proportion = taxa_proportion
   )
-  
+
   # Collection names
   collection_names <- list(
     monthly_metrics_tidy = pars$storage$mongodb$export$collection$monthly_metrics,

@@ -120,24 +120,24 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
     fishbase = rfishbase::load_taxa(server = "fishbase"),
     sealifebase = rfishbase::load_taxa(server = "sealifebase")
   )
-  
+
   # 2. Process species list
   species_list <- process_species_list(
-    fao_codes = taxa_list, 
+    fao_codes = taxa_list,
     asfis_list = asfis_list
   )
-  
+
   # 3. Match species in databases
   matched_species <- match_species_from_taxa(species_list, taxa_data)
-  
+
   # 4. Get FAO areas and filter for area 51
   species_areas <- get_species_areas_batch(matched_species)
   species_areas_filtered <- species_areas %>%
     dplyr::filter(.data$area_code == 51)
-  
+
   # 5. Get length-weight parameters
   lw_data <- get_length_weight_batch(species_areas_filtered)
-  
+
   # 6. Format output
   lw_data %>%
     dplyr::group_by(.data$a3_code) %>%
@@ -279,7 +279,7 @@ load_taxa_databases <- function() {
 #' @keywords mining preprocessing
 #' @export
 process_species_list <- function(fao_codes, asfis_list) {
-  get_fao_groups(fao_codes = fao_codes, asfis_list = asfis_list) %>% 
+  get_fao_groups(fao_codes = fao_codes, asfis_list = asfis_list) %>%
     dplyr::mutate(
       database = dplyr::case_when(
         .data$taxon_group %in% c(57, 45, 43, 42, 56) ~ "sealifebase",
@@ -320,21 +320,20 @@ process_species_list <- function(fao_codes, asfis_list) {
 #' @export
 match_species_from_taxa <- function(species_list, taxa_data) {
   matches <- list()
-  
-  for(i in 1:nrow(species_list)) {
-    row <- species_list[i,]
+
+  for (i in 1:nrow(species_list)) {
+    row <- species_list[i, ]
     taxa <- taxa_data[[row$database]]
-    
-    matched_species <- switch(
-      row$rank,
+
+    matched_species <- switch(row$rank,
       "Genus" = taxa %>% dplyr::filter(.data$Genus == row$scientific_name),
       "Family" = taxa %>% dplyr::filter(.data$Family == row$scientific_name),
       "Order" = taxa %>% dplyr::filter(.data$Order == row$scientific_name),
       "Species" = taxa %>% dplyr::filter(.data$Species == row$scientific_name),
       NULL
     )
-    
-    if(!is.null(matched_species) && nrow(matched_species) > 0) {
+
+    if (!is.null(matched_species) && nrow(matched_species) > 0) {
       matches[[i]] <- matched_species %>%
         dplyr::mutate(
           a3_code = row$a3_code,
@@ -344,14 +343,14 @@ match_species_from_taxa <- function(species_list, taxa_data) {
         )
     }
   }
-  
+
   dplyr::bind_rows(matches) %>%
     dplyr::select(
       "a3_code",
       species = "Species",
       "database"
-      #original_rank,
-      #original_name
+      # original_rank,
+      # original_name
     ) %>%
     dplyr::distinct()
 }
@@ -375,30 +374,30 @@ match_species_from_taxa <- function(species_list, taxa_data) {
 #' \dontrun{
 #' species_areas <- get_species_areas_batch(matched_species)
 #' # Filter for specific FAO area
-#' area_51_species <- species_areas %>% 
+#' area_51_species <- species_areas %>%
 #'   dplyr::filter(area_code == 51)
 #' }
 #' @keywords mining preprocessing
 #' @export
 get_species_areas_batch <- function(matched_species) {
-  fishbase_species <- matched_species %>% 
-    dplyr::filter(.data$database == "fishbase") %>% 
+  fishbase_species <- matched_species %>%
+    dplyr::filter(.data$database == "fishbase") %>%
     dplyr::pull(.data$species)
-  
-  sealifebase_species <- matched_species %>% 
-    dplyr::filter(.data$database == "sealifebase") %>% 
+
+  sealifebase_species <- matched_species %>%
+    dplyr::filter(.data$database == "sealifebase") %>%
     dplyr::pull(.data$species)
-  
-  areas_fishbase <- if(length(fishbase_species) > 0) {
+
+  areas_fishbase <- if (length(fishbase_species) > 0) {
     rfishbase::faoareas(fishbase_species, fields = "AreaCode", server = "fishbase") %>%
       dplyr::mutate(database = "fishbase")
   }
-  
-  areas_sealifebase <- if(length(sealifebase_species) > 0) {
+
+  areas_sealifebase <- if (length(sealifebase_species) > 0) {
     rfishbase::faoareas(sealifebase_species, fields = "AreaCode", server = "sealifebase") %>%
       dplyr::mutate(database = "sealifebase")
   }
-  
+
   dplyr::bind_rows(areas_fishbase, areas_sealifebase) %>%
     dplyr::left_join(
       matched_species,
@@ -441,32 +440,32 @@ get_species_areas_batch <- function(matched_species) {
 #' @keywords mining preprocessing
 #' @export
 get_length_weight_batch <- function(species_areas_filtered) {
-  fishbase_species <- species_areas_filtered %>% 
-    dplyr::filter(.data$database == "fishbase") %>% 
+  fishbase_species <- species_areas_filtered %>%
+    dplyr::filter(.data$database == "fishbase") %>%
     dplyr::pull(.data$species)
-  
-  sealifebase_species <- species_areas_filtered %>% 
-    dplyr::filter(.data$database == "sealifebase") %>% 
+
+  sealifebase_species <- species_areas_filtered %>%
+    dplyr::filter(.data$database == "sealifebase") %>%
     dplyr::pull(.data$species)
-  
-  lw_fishbase <- if(length(fishbase_species) > 0) {
+
+  lw_fishbase <- if (length(fishbase_species) > 0) {
     rfishbase::length_weight(
-      fishbase_species, 
-      fields = c("Species", "SpecCode", "Type", "EsQ", "a", "b"), 
+      fishbase_species,
+      fields = c("Species", "SpecCode", "Type", "EsQ", "a", "b"),
       server = "fishbase"
     ) %>%
       dplyr::mutate(database = "fishbase")
   }
-  
-  lw_sealifebase <- if(length(sealifebase_species) > 0) {
+
+  lw_sealifebase <- if (length(sealifebase_species) > 0) {
     rfishbase::length_weight(
-      sealifebase_species, 
-      fields = c("Species", "SpecCode", "Type", "EsQ", "a", "b"), 
+      sealifebase_species,
+      fields = c("Species", "SpecCode", "Type", "EsQ", "a", "b"),
       server = "sealifebase"
     ) %>%
       dplyr::mutate(database = "sealifebase")
   }
-  
+
   dplyr::bind_rows(lw_fishbase, lw_sealifebase) %>%
     dplyr::left_join(
       species_areas_filtered,
@@ -483,7 +482,7 @@ get_length_weight_batch <- function(species_areas_filtered) {
       .data$area_code,
       .data$database,
       type = "Type",
-      .data$a, 
+      .data$a,
       .data$b
     ) %>%
     dplyr::distinct()
@@ -542,4 +541,3 @@ expand_taxa <- function(data = NULL) {
   dplyr::left_join(taxa_expanded, groups_rank, by = "catch_group") |>
     dplyr::select(-c("kingdom", "phylum", "order"))
 }
-

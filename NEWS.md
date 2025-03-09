@@ -1,3 +1,20 @@
+# peskas.zanzibar.data.pipeline 2.3.0
+
+### Major Changes
+- Enhanced KoboToolbox integration:
+  - Implemented new validation status retrieval from KoboToolbox API
+  - Updated validation workflow to incorporate submission validation status
+  - Improved data validation process through direct API integration
+
+### New Features
+- New KoboToolbox interaction functions:
+  - `get_validation_status()`: Retrieves submission validation status from KoboToolbox API
+  
+### Improvements
+- Modified configuration files to support new KoboToolbox API token
+- Added new environment variable for KoboToolbox API authentication
+- Enhanced validation workflow with integrated validation status checks
+
 # peskas.zanzibar.data.pipeline 2.2.0
 
 ### Major Changes

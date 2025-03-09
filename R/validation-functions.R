@@ -357,3 +357,109 @@ get_length_bounds <- function(data = NULL, k_param = NULL) {
     tidyr::separate(col = "gear_length", into = c("gear", "catch_taxon"), sep = "\\.") %>%
     dplyr::select(-c("lower.low", "upper.up"))
 }
+
+
+#' Get Validation Status from KoboToolbox
+#'
+#' Retrieves the validation status for a specific submission in KoboToolbox.
+#' The function handles NULL responses and returns a consistent tibble structure
+#' regardless of the API response.
+#'
+#' @param submission_id Character string. The ID of the submission to check.
+#' @param asset_id Character string. The asset ID from KoboToolbox.
+#' @param token Character string. The authorization token for KoboToolbox API.
+#' @param debug Logical. If TRUE, prints the request object. Default is FALSE.
+#'
+#' @return A tibble with one row containing:
+#'   \item{submission_id}{The ID of the checked submission}
+#'   \item{validation_status}{The validation status (e.g., "validation_status_approved" or "not_validated")}
+#'   \item{validated_at}{Timestamp of validation as POSIXct}
+#'   \item{validated_by}{Username of the validator}
+#'
+#' @keywords validation
+#' @examples
+#' \dontrun{
+#' # Single submission
+#' get_validation_status(
+#'   submission_id = "1234567",
+#'   asset_id = "your asset id",
+#'   token = "Token YOUR_TOKEN_HERE"
+#' )
+#'
+#' # Multiple submissions using purrr
+#' submission_ids <- c("1234567", "154267")
+#' submission_ids %>%
+#'   purrr::map_dfr(get_validation_status,
+#'     asset_id = "your asset id",
+#'     token = "Token YOUR_TOKEN_HERE"
+#'   )
+#' }
+#'
+#' @keywords workflow validation
+#' @export
+get_validation_status <- function(
+    submission_id = NULL,
+    asset_id = NULL,
+    token = NULL,
+    debug = FALSE) {
+  base_url <- paste0("https://kf.kobotoolbox.org/api/v2/assets/", asset_id, "/data/")
+  url <- paste0(base_url, submission_id, "/validation_status/")
+
+  req <- httr2::request(url) %>%
+    httr2::req_headers(
+      Authorization = token
+    ) %>%
+    httr2::req_method("GET")
+
+  if (debug) print(req)
+
+  tryCatch(
+    {
+      response <- httr2::req_perform(req)
+      if (httr2::resp_status(response) == 200) {
+        validation_data <- httr2::resp_body_json(response)
+
+        # Handle NULL validation data
+        timestamp <- if (!is.null(validation_data) && !is.null(validation_data$timestamp)) {
+          lubridate::as_datetime(validation_data$timestamp)
+        } else {
+          lubridate::as_datetime(NA)
+        }
+
+        status <- if (!is.null(validation_data) && !is.null(validation_data$uid)) {
+          validation_data$uid
+        } else {
+          "not_validated"
+        }
+
+        validator <- if (!is.null(validation_data) && !is.null(validation_data$by_whom)) {
+          validation_data$by_whom
+        } else {
+          NA_character_
+        }
+
+        dplyr::tibble(
+          submission_id = submission_id,
+          validation_status = status,
+          validated_at = timestamp,
+          validated_by = validator
+        )
+      } else {
+        dplyr::tibble(
+          submission_id = submission_id,
+          validation_status = "not_validated",
+          validated_at = lubridate::as_datetime(NA),
+          validated_by = NA_character_
+        )
+      }
+    },
+    error = function(e) {
+      dplyr::tibble(
+        submission_id = submission_id,
+        validation_status = "not_validated",
+        validated_at = lubridate::as_datetime(NA),
+        validated_by = NA_character_
+      )
+    }
+  )
+}

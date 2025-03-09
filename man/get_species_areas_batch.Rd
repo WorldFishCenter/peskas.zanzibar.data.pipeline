@@ -26,7 +26,7 @@ by database source, reducing API calls and processing time.
 \dontrun{
 species_areas <- get_species_areas_batch(matched_species)
 # Filter for specific FAO area
-area_51_species <- species_areas \%>\% 
+area_51_species <- species_areas \%>\%
   dplyr::filter(area_code == 51)
 }
 }

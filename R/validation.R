@@ -118,6 +118,16 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       options = pars$storage$google$options
     )
 
+  # match flags table and validation status
+  validation_table <-
+    unique(preprocessed_surveys$submission_id) %>%
+    purrr::map_dfr(get_validation_status,
+      asset_id = pars$surveys$wf_surveys$asset_id,
+      token = pars$surveys$wf_surveys$token
+    )
+  # dplyr::full_join(flags_table, by = c("submission_id")) %>%
+
+
   max_bucket_weight_kg <- 50
   max_n_buckets <- 300
   max_n_individuals <- 100
@@ -127,7 +137,9 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     preprocessed_surveys |>
     dplyr::filter(.data$survey_activity == "1" & .data$collect_data_today == "1") |>
     dplyr::select(
-      "submission_id", "n_catch",
+      "submission_id",
+      "n_catch",
+      "submission_date",
       # dplyr::ends_with("fishers"),
       "catch_outcome",
       "catch_taxon", "length", "individuals", "n_buckets", "weight_bucket", "catch_kg"
@@ -164,7 +176,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   flags_id <-
     catch_flags |>
-    dplyr::select("submission_id", "n_catch", dplyr::contains("alert_")) |>
+    dplyr::select("submission_id", "n_catch", "submission_date", dplyr::contains("alert_")) |>
     dplyr::mutate(
       alert_flag = paste(
         .data$alert_bucket_weight,
@@ -178,12 +190,29 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         stringr::str_remove_all(",NA") |>
         stringr::str_remove_all("^NA$")
     ) |>
-    dplyr::mutate(alert_flag = ifelse(.data$alert_flag == "", NA_character_, .data$alert_flag)) |>
-    dplyr::select("submission_id", "n_catch", "alert_flag")
+    dplyr::mutate(
+      alert_flag = ifelse(.data$alert_flag == "", NA_character_, .data$alert_flag),
+      submission_date = lubridate::as_datetime(.data$submission_date)
+    ) |>
+    dplyr::select("submission_id", "n_catch", "submission_date", "alert_flag") |>
+    dplyr::group_by(.data$submission_id) %>%
+    # Summarize to get values
+    dplyr::summarise(
+      submission_date = dplyr::first(.data$submission_date),
+      alert_flag = if (all(is.na(.data$alert_flag))) {
+        NA_character_
+      } else {
+        paste(.data$alert_flag[!is.na(.data$alert_flag)], collapse = ", ")
+      }
+    ) %>%
+    # Clean up empty strings
+    dplyr::mutate(
+      alert_flag = ifelse(.data$alert_flag == "", NA_character_, .data$alert_flag)
+    )
 
   catch_df_validated <-
     catch_df |>
-    dplyr::left_join(flags_id, by = c("submission_id", "n_catch")) |>
+    dplyr::left_join(flags_id, by = c("submission_id", "submission_date", "n_catch")) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::mutate(
       submission_alerts = paste(unique(.data$alert_flag[!is.na(.data$alert_flag)]), collapse = ",")
@@ -201,11 +230,11 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     preprocessed_surveys |>
     dplyr::left_join(catch_df_validated)
 
-  upload_parquet_to_cloud(
+  mdb_collection_push(
     data = flags_id,
-    prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    connection_string = pars$storage$mongodb$connection_string,
+    collection_name = pars$storage$mongodb$validation,
+    db_name = pars$storage$mongodb$database_name
   )
 
   upload_parquet_to_cloud(
