@@ -84,6 +84,7 @@ default:
           gear_metrics: gear_metrics
           taxa: taxa_proportions
           effort_map: effort_map
+      validation: surveys_flags
   pds_storage:
     google:
       key: gcs

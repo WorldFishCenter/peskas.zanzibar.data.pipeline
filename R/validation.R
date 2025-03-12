@@ -212,7 +212,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   catch_df_validated <-
     catch_df |>
-    dplyr::left_join(flags_id, by = c("submission_id", "submission_date", "n_catch")) |>
+    dplyr::left_join(flags_id, by = c("submission_id", "submission_date")) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::mutate(
       submission_alerts = paste(unique(.data$alert_flag[!is.na(.data$alert_flag)]), collapse = ",")
