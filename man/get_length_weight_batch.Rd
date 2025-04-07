@@ -2,15 +2,18 @@
 % Please edit documentation in R/model-taxa.R
 \name{get_length_weight_batch}
 \alias{get_length_weight_batch}
-\title{Get Length-Weight Parameters for Species (Batch Version)}
+\title{Get Length-Weight and Morphological Parameters for Species (Batch Version)}
 \usage{
-get_length_weight_batch(species_areas_filtered)
+get_length_weight_batch(species_areas_filtered, include_morphology = FALSE)
 }
 \arguments{
 \item{species_areas_filtered}{Data frame with filtered species}
+
+\item{include_morphology}{Logical, whether to include morphological data (Length,
+CommonLength, Weight). Default is FALSE.}
 }
 \value{
-A data frame with columns:
+If include_morphology is FALSE (default), a data frame with columns:
 \itemize{
 \item a3_code: FAO 3-alpha code
 \item species: Scientific name
@@ -20,10 +23,26 @@ A data frame with columns:
 \item a: Length-weight parameter a
 \item b: Length-weight parameter b
 }
+
+If include_morphology is TRUE, a list with two elements:
+\itemize{
+\item length_weight: Data frame as described above
+\item morphology: Data frame with columns:
+\itemize{
+\item a3_code: FAO 3-alpha code
+\item species: Scientific name
+\item area_code: FAO area code
+\item database: Source database
+\item Length: Maximum recorded length
+\item CommonLength: Common length
+\item Weight: Maximum weight
+}
+}
 }
 \description{
-Retrieves length-weight relationship parameters for multiple species efficiently
-by processing them in batches. Handles both fish and non-fish species appropriately.
+Retrieves length-weight relationship parameters and optional morphological data
+for multiple species efficiently by processing them in batches. Handles both
+fish and non-fish species appropriately.
 }
 \note{
 \itemize{
@@ -33,7 +52,13 @@ by processing them in batches. Handles both fish and non-fish species appropriat
 }
 \examples{
 \dontrun{
+# Get just length-weight parameters
 lw_data <- get_length_weight_batch(species_areas_filtered)
+
+# Get both length-weight and morphological data
+results <- get_length_weight_batch(species_areas_filtered, include_morphology = TRUE)
+lw_data <- results$length_weight
+morph_data <- results$morphology
 }
 }
 \keyword{mining}

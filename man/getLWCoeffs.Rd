@@ -2,7 +2,7 @@
 % Please edit documentation in R/model-taxa.R
 \name{getLWCoeffs}
 \alias{getLWCoeffs}
-\title{Get Length-Weight Coefficients for Species}
+\title{Get Length-Weight Coefficients and Morphological Data for Species}
 \usage{
 getLWCoeffs(taxa_list = NULL, asfis_list = NULL)
 }
@@ -12,17 +12,39 @@ getLWCoeffs(taxa_list = NULL, asfis_list = NULL)
 \item{asfis_list}{ASFIS list data frame}
 }
 \value{
-A data frame with columns:
+A list with two elements:
+\itemize{
+\item lw - A data frame with length-weight coefficients:
 \itemize{
 \item catch_taxon - FAO 3-alpha code
 \item n - Number of measurements
-\item a_75 - 75th percentile of parameter 'a'
-\item b_75 - 75th percentile of parameter 'b'
+\item a_6 - 60th percentile of parameter 'a'
+\item b_6 - 60th percentile of parameter 'b'
+}
+\item ml - A data frame with morphological data:
+\itemize{
+\item catch_taxon - FAO 3-alpha code
+\item n - Number of measurements
+\item max_length_75 - 75th percentile of maximum length
+\item max_weightkg_75 - 75th percentile of maximum weight in kg
+}
 }
 }
 \description{
-Retrieves and summarizes length-weight relationship coefficients by handling both
-FishBase and SeaLifeBase data in a single workflow.
+Retrieves and summarizes length-weight relationship coefficients and morphological data
+by handling both FishBase and SeaLifeBase data in a single workflow.
+}
+\examples{
+\dontrun{
+# Get coefficients and morphological data
+results <- getLWCoeffs(taxa_list, asfis_list)
+
+# Access length-weight coefficients
+lw_coeffs <- results$lw
+
+# Access morphological data
+morph_data <- results$ml
+}
 }
 \keyword{mining}
 \keyword{preprocessing}

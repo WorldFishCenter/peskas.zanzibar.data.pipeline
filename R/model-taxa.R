@@ -3,7 +3,9 @@
 #' @description
 #' Calculates total catch weight using either length-weight relationships or bucket measurements.
 #' The function prioritizes length-based calculations when available, falling back to bucket-based
-#' measurements when length data is missing.
+#' measurements when length data is missing. For Octopus (OCZ), the function converts total length (TL)
+#' to mantle length (ML) by dividing TL by 5.5 before applying the length-weight formula.
+#' This accounts for species-specific differences in body morphology.
 #'
 #' @param catch_data A data frame containing catch information with columns:
 #'   \itemize{
@@ -18,8 +20,8 @@
 #' @param lwcoeffs A data frame containing length-weight coefficients with columns:
 #'   \itemize{
 #'     \item catch_taxon - FAO 3-alpha code
-#'     \item a_75 - 75th percentile of parameter 'a'
-#'     \item b_75 - 75th percentile of parameter 'b'
+#'     \item a_6 - 60th percentile of parameter 'a'
+#'     \item b_6 - 60th percentile of parameter 'b'
 #'   }
 #'
 #' @return A tibble with the following columns:
@@ -74,17 +76,21 @@ calculate_catch <- function(catch_data = NULL, lwcoeffs = NULL) {
     dplyr::mutate(
       # Calculate weight in grams for records with length measurements
       catch_length_gr = dplyr::case_when(
-        # When we have length and coefficients
-        !is.na(.data$length) & !is.na(.data$a_75) & !is.na(.data$b_75) ~
-          .data$a_75 * (.data$length^.data$b_75),
+        # Specific case for Octopus cyanea (OCZ) - using length conversion
+        !is.na(.data$length) & !is.na(.data$a_6) & !is.na(.data$b_6) & .data$catch_taxon == "OCZ" ~
+          .data$a_6 * ((.data$length / 5.5)^.data$b_6),
+        # General case for other species - direct calculation
+        !is.na(.data$length) & !is.na(.data$a_6) & !is.na(.data$b_6) ~
+          .data$a_6 * (.data$length^.data$b_6),
         # Otherwise NA
         TRUE ~ NA_real_
       ),
+      # Convert to kilograms
       catch_length_kg = (.data$catch_length_gr * .data$individuals) / 1000,
+      # Calculate weight from bucket information if available
       catch_bucket_kg = dplyr::case_when(
-        # When we have bucket information
         !is.na(.data$n_buckets) & !is.na(.data$weight_bucket) ~
-          .data$n_buckets * (.data$weight_bucket),
+          .data$n_buckets * .data$weight_bucket,
         # Otherwise NA
         TRUE ~ NA_real_
       )
@@ -96,21 +102,42 @@ calculate_catch <- function(catch_data = NULL, lwcoeffs = NULL) {
     )
 }
 
-#' Get Length-Weight Coefficients for Species
+#' Get Length-Weight Coefficients and Morphological Data for Species
 #'
 #' @description
-#' Retrieves and summarizes length-weight relationship coefficients by handling both
-#' FishBase and SeaLifeBase data in a single workflow.
+#' Retrieves and summarizes length-weight relationship coefficients and morphological data
+#' by handling both FishBase and SeaLifeBase data in a single workflow.
 #'
 #' @param taxa_list Character vector of FAO 3-alpha codes
 #' @param asfis_list ASFIS list data frame
-#' @return A data frame with columns:
+#' @return A list with two elements:
 #'   \itemize{
-#'     \item catch_taxon - FAO 3-alpha code
-#'     \item n - Number of measurements
-#'     \item a_75 - 75th percentile of parameter 'a'
-#'     \item b_75 - 75th percentile of parameter 'b'
+#'     \item lw - A data frame with length-weight coefficients:
+#'       \itemize{
+#'         \item catch_taxon - FAO 3-alpha code
+#'         \item n - Number of measurements
+#'         \item a_6 - 60th percentile of parameter 'a'
+#'         \item b_6 - 60th percentile of parameter 'b'
+#'       }
+#'     \item ml - A data frame with morphological data:
+#'       \itemize{
+#'         \item catch_taxon - FAO 3-alpha code
+#'         \item n - Number of measurements
+#'         \item max_length_75 - 75th percentile of maximum length
+#'         \item max_weightkg_75 - 75th percentile of maximum weight in kg
+#'       }
 #'   }
+#' @examples
+#' \dontrun{
+#' # Get coefficients and morphological data
+#' results <- getLWCoeffs(taxa_list, asfis_list)
+#'
+#' # Access length-weight coefficients
+#' lw_coeffs <- results$lw
+#'
+#' # Access morphological data
+#' morph_data <- results$ml
+#' }
 #' @keywords mining preprocessing
 #' @export
 #'
@@ -136,23 +163,45 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
     dplyr::filter(.data$area_code == 51)
 
   # 5. Get length-weight parameters
-  lw_data <- get_length_weight_batch(species_areas_filtered)
+  lw_data <- get_length_weight_batch(species_areas_filtered, include_morphology = TRUE)
 
   # 6. Format output
-  lw_data %>%
+  lw <-
+    lw_data$length_weight %>%
+    dplyr::filter(!(.data$a3_code == "PEZ" & .data$type == "CL")) %>%
+    dplyr::filter(!(.data$a3_code == "OCZ" & !.data$type == "ML")) %>%
+    dplyr::filter(!(.data$a3_code == "IAX" & !.data$type == "TL")) %>%
     dplyr::group_by(.data$a3_code) %>%
     dplyr::summarise(
       n = dplyr::n(),
-      a_75 = stats::quantile(.data$a, 0.75, na.rm = TRUE),
-      b_75 = stats::quantile(.data$b, 0.75, na.rm = TRUE),
+      a_6 = stats::quantile(.data$a, 0.6, na.rm = TRUE),
+      b_6 = stats::quantile(.data$b, 0.6, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     dplyr::select(
       catch_taxon = "a3_code",
       "n",
-      "a_75",
-      "b_75"
+      "a_6",
+      "b_6"
     )
+
+  ml <-
+    lw_data$morphology %>%
+    dplyr::group_by(.data$a3_code) %>%
+    dplyr::summarise(
+      n = dplyr::n(),
+      max_length_75 = stats::quantile(.data$Length, 0.75, na.rm = TRUE),
+      max_weightkg_75 = stats::quantile(.data$Weight, 0.75, na.rm = TRUE) / 1000,
+      .groups = "drop"
+    ) %>%
+    dplyr::select(
+      catch_taxon = "a3_code",
+      "n",
+      "max_length_75",
+      "max_weightkg_75"
+    )
+
+  return(list(lw = lw, ml = ml))
 }
 
 #' Extract and Format FAO Taxonomic Groups
@@ -413,14 +462,17 @@ get_species_areas_batch <- function(matched_species) {
 }
 
 
-#' Get Length-Weight Parameters for Species (Batch Version)
+#' Get Length-Weight and Morphological Parameters for Species (Batch Version)
 #'
 #' @description
-#' Retrieves length-weight relationship parameters for multiple species efficiently
-#' by processing them in batches. Handles both fish and non-fish species appropriately.
+#' Retrieves length-weight relationship parameters and optional morphological data
+#' for multiple species efficiently by processing them in batches. Handles both
+#' fish and non-fish species appropriately.
 #'
 #' @param species_areas_filtered Data frame with filtered species
-#' @return A data frame with columns:
+#' @param include_morphology Logical, whether to include morphological data (Length,
+#'   CommonLength, Weight). Default is FALSE.
+#' @return If include_morphology is FALSE (default), a data frame with columns:
 #'   \itemize{
 #'     \item a3_code: FAO 3-alpha code
 #'     \item species: Scientific name
@@ -430,16 +482,39 @@ get_species_areas_batch <- function(matched_species) {
 #'     \item a: Length-weight parameter a
 #'     \item b: Length-weight parameter b
 #'   }
+#'
+#'   If include_morphology is TRUE, a list with two elements:
+#'   \itemize{
+#'     \item length_weight: Data frame as described above
+#'     \item morphology: Data frame with columns:
+#'       \itemize{
+#'         \item a3_code: FAO 3-alpha code
+#'         \item species: Scientific name
+#'         \item area_code: FAO area code
+#'         \item database: Source database
+#'         \item Length: Maximum recorded length
+#'         \item CommonLength: Common length
+#'         \item Weight: Maximum weight
+#'       }
+#'   }
+#'
 #' @note
 #' - For FishBase species, only total length (TL) measurements are used
 #' - Questionable estimates (EsQ = "yes") are excluded
 #' @examples
 #' \dontrun{
+#' # Get just length-weight parameters
 #' lw_data <- get_length_weight_batch(species_areas_filtered)
+#'
+#' # Get both length-weight and morphological data
+#' results <- get_length_weight_batch(species_areas_filtered, include_morphology = TRUE)
+#' lw_data <- results$length_weight
+#' morph_data <- results$morphology
 #' }
 #' @keywords mining preprocessing
 #' @export
-get_length_weight_batch <- function(species_areas_filtered) {
+#'
+get_length_weight_batch <- function(species_areas_filtered, include_morphology = FALSE) {
   fishbase_species <- species_areas_filtered %>%
     dplyr::filter(.data$database == "fishbase") %>%
     dplyr::pull(.data$species)
@@ -448,6 +523,7 @@ get_length_weight_batch <- function(species_areas_filtered) {
     dplyr::filter(.data$database == "sealifebase") %>%
     dplyr::pull(.data$species)
 
+  # Get length-weight parameters
   lw_fishbase <- if (length(fishbase_species) > 0) {
     rfishbase::length_weight(
       fishbase_species,
@@ -466,7 +542,7 @@ get_length_weight_batch <- function(species_areas_filtered) {
       dplyr::mutate(database = "sealifebase")
   }
 
-  dplyr::bind_rows(lw_fishbase, lw_sealifebase) %>%
+  lw_data <- dplyr::bind_rows(lw_fishbase, lw_sealifebase) %>%
     dplyr::left_join(
       species_areas_filtered,
       by = c("Species" = "species", "database")
@@ -486,8 +562,53 @@ get_length_weight_batch <- function(species_areas_filtered) {
       .data$b
     ) %>%
     dplyr::distinct()
-}
 
+  # Get morphological information if requested
+  if (include_morphology) {
+    morph_fishbase <- if (length(fishbase_species) > 0) {
+      rfishbase::species(
+        fishbase_species,
+        fields = c("Species", "SpecCode", "Length", "CommonLength", "Weight"),
+        server = "fishbase"
+      ) %>%
+        dplyr::mutate(database = "fishbase")
+    }
+
+    morph_sealifebase <- if (length(sealifebase_species) > 0) {
+      rfishbase::species(
+        sealifebase_species,
+        fields = c("Species", "SpecCode", "Length", "CommonLength", "Weight"),
+        server = "sealifebase"
+      ) %>%
+        dplyr::mutate(database = "sealifebase")
+    }
+
+    morph_data <- dplyr::bind_rows(morph_fishbase, morph_sealifebase) %>%
+      dplyr::left_join(
+        species_areas_filtered,
+        by = c("Species" = "species", "database")
+      ) %>%
+      dplyr::select(
+        .data$a3_code,
+        species = "Species",
+        .data$area_code,
+        .data$database,
+        .data$Length,
+        .data$CommonLength,
+        .data$Weight
+      ) %>%
+      dplyr::distinct()
+
+    # Return a list with both datasets
+    return(list(
+      length_weight = lw_data,
+      morphology = morph_data
+    ))
+  }
+
+  # Return only length-weight data if morphology not requested
+  return(lw_data)
+}
 #' Expand Taxonomic Vectors into a Data Frame
 #'
 #' Converts a vector of species identifiers into a detailed data frame containing taxonomic classification. Each identifier should follow the format 'family_genus_species', which is expanded to include comprehensive taxonomic details.

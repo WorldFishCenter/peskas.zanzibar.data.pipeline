@@ -142,7 +142,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       "submission_date",
       # dplyr::ends_with("fishers"),
       "catch_outcome",
-      "catch_taxon", "length", "individuals", "n_buckets", "weight_bucket", "catch_kg"
+      "catch_taxon", "length", "max_length_75", "individuals", "n_buckets", "weight_bucket", "catch_kg"
     )
   # dplyr::mutate(n_fishers = rowSums(across(c("no_men_fishers", "no_women_fishers", "no_child_fishers")),
   #                                 na.rm = TRUE)) |>
@@ -152,6 +152,10 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   catch_flags <-
     catch_df |>
     dplyr::mutate(
+      alert_length = dplyr::case_when(
+        .data$length > .data$max_length_75 ~ "4",
+        TRUE ~ NA_character_
+      ),
       alert_bucket_weight = dplyr::case_when(
         !is.na(.data$weight_bucket) & .data$weight_bucket > max_bucket_weight_kg ~ "5",
         TRUE ~ NA_character_
@@ -173,12 +177,14 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         TRUE ~ NA_character_
       )
     )
+  
 
   flags_id <-
     catch_flags |>
     dplyr::select("submission_id", "n_catch", "submission_date", dplyr::contains("alert_")) |>
     dplyr::mutate(
       alert_flag = paste(
+        .data$alert_length,
         .data$alert_bucket_weight,
         .data$alert_n_buckets,
         .data$alert_n_individuals,
@@ -222,7 +228,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::ungroup() |>
     dplyr::filter(is.na(.data$submission_alerts)) |>
-    dplyr::select(-c("alert_flag", "submission_alerts")) |>
+    dplyr::select(-c("alert_flag", "submission_alerts", "max_length_75")) |>
     # if catch outcome is 0 catch kg must be set to 0
     dplyr::mutate(catch_kg = ifelse(.data$catch_outcome == "0", 0, .data$catch_kg))
 

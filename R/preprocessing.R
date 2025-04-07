@@ -214,7 +214,7 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::select(-c("counting_method", "COUNTING_METHOD_USED_TO_RECORD")) |>
     dplyr::mutate(length_range = dplyr::case_when(.data$length_range == "over100" ~ NA_character_, TRUE ~ .data$length_range)) |>
-    tidyr::separate_wider_delim(.data$length_range, delim = "_", names = c("min", "max")) |>
+    tidyr::separate_wider_delim("length_range", delim = "_", names = c("min", "max")) |>
     dplyr::mutate(
       length = as.numeric(.data$min) + ((as.numeric(.data$max) - as.numeric(.data$min)) / 2),
       length = dplyr::coalesce(.data$length, as.numeric(.data$length_over))
@@ -234,8 +234,11 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     )
 
   lwcoeffs <- getLWCoeffs(taxa_list = unique(catch_info$catch_taxon), asfis_list = asfis)
-  catch_df <- calculate_catch(catch_data = catch_info, lwcoeffs = lwcoeffs)
-
+  catch_df <- 
+    calculate_catch(catch_data = catch_info, lwcoeffs = lwcoeffs$lw) |> 
+    dplyr::left_join(lwcoeffs$ml, by = "catch_taxon") |> 
+    dplyr::select(-"max_weightkg_75")
+  
   preprocessed_data <-
     dplyr::left_join(general_info, catch_df, by = "submission_id") |>
     dplyr::arrange(.data$submission_id, .data$n_catch)
