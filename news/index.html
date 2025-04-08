@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,39 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.4.0" id="peskaszanzibardatapipeline-240">peskas.zanzibar.data.pipeline 2.4.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-240"></a></h2>
+<div class="section level4">
+<h4 id="major-changes-2-4-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-2-4-0"></a></h4>
+<ul><li>Implemented support for multiple survey data sources:
+<ul><li>Refactored <code><a href="../reference/get_validated_surveys.html">get_validated_surveys()</a></code> to handle WCS, WF, and BA sources</li>
+<li>Added source parameter to specify which datasets to retrieve</li>
+<li>Improved handling of data sources with different column structures</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="new-features-2-4-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-2-4-0"></a></h4>
+<ul><li>Added <code><a href="../reference/export_wf_data.html">export_wf_data()</a></code> function for WorldFish-specific data export</li>
+<li>Enhanced validation with additional composite metrics:
+<ul><li>Price per kg validation</li>
+<li>CPUE (Catch Per Unit Effort) validation</li>
+<li>RPUE (Revenue Per Unit Effort) validation</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="improvements-2-4-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-2-4-0"></a></h4>
+<ul><li>Added min_length parameter for better length validation thresholds</li>
+<li>Updated LW coefficient filtering logic in model-taxa.R</li>
+<li>Enhanced alert flag handling with combined flags from different validation steps</li>
+<li>Improved catch price and catch weight handling for zero-catch outcomes</li>
+<li>Enhanced data preprocessing with better field type conversion</li>
+</ul></div>
+<div class="section level4">
+<h4 id="bug-fixes-2-4-0">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-2-4-0"></a></h4>
+<ul><li>Fixed issue with catch_price field type in WF survey preprocessing</li>
+<li>Corrected filter condition for taxa coefficients</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.3.0" id="peskaszanzibardatapipeline-230">peskas.zanzibar.data.pipeline 2.3.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-230"></a></h2>
 <div class="section level4">
