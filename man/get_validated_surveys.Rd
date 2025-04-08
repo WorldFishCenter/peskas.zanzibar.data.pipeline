@@ -2,24 +2,31 @@
 % Please edit documentation in R/storage.R
 \name{get_validated_surveys}
 \alias{get_validated_surveys}
-\title{Download WCS Validated Surveys}
+\title{Download Validated Surveys}
 \usage{
-get_validated_surveys(pars)
+get_validated_surveys(pars, sources = NULL)
 }
 \arguments{
 \item{pars}{A list representing the configuration settings, typically obtained from a YAML configuration file.}
+
+\item{sources}{Character vector specifying which survey sources to retrieve (e.g., "wcs", "wf", "ba").
+If NULL (default), retrieves data from all available sources.}
 }
 \value{
-A dataframe of validated survey landings, loaded from Parquet files.
+A dataframe of validated survey landings from all requested sources, loaded from Parquet files.
 }
 \description{
-Retrieves validated survey data from Google Cloud Storage, tailored for WCS (Wildlife Conservation Society) datasets. This function fetches data stored in Parquet format.
+Retrieves validated survey data from Google Cloud Storage for multiple survey sources.
+This function fetches data stored in Parquet format from sources defined in the configuration.
 }
 \examples{
 \dontrun{
 config <- peskas.zanzibar.pipeline::read_config()
-df_validated <- get_validated_surveys(config)
-#'
+# Get all available validated surveys
+all_validated <- get_validated_surveys(config)
+
+# Get only WCS and BA validated surveys
+some_validated <- get_validated_surveys(config, sources = c("wcs", "ba"))
 }
 
 }

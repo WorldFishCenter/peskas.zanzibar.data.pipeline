@@ -119,19 +119,24 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     )
 
   # match flags table and validation status
-  validation_table <-
-    unique(preprocessed_surveys$submission_id) %>%
-    purrr::map_dfr(get_validation_status,
-      asset_id = pars$surveys$wf_surveys$asset_id,
-      token = pars$surveys$wf_surveys$token
-    )
+  # validation_table <-
+  #  unique(preprocessed_surveys$submission_id) %>%
+  #  purrr::map_dfr(get_validation_status,
+  #    asset_id = pars$surveys$wf_surveys$asset_id,
+  #    token = pars$surveys$wf_surveys$token
+  #  )
+
+
   # dplyr::full_join(flags_table, by = c("submission_id")) %>%
 
 
   max_bucket_weight_kg <- 50
   max_n_buckets <- 300
-  max_n_individuals <- 100
+  max_n_individuals <- 80
   price_kg_max <- 81420 # 30 eur
+  cpue_max <- 30
+  rpue_max <- 81420
+
 
   catch_df <-
     preprocessed_surveys |>
@@ -142,7 +147,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       "submission_date",
       # dplyr::ends_with("fishers"),
       "catch_outcome",
-      "catch_taxon", "length", "max_length_75", "individuals", "n_buckets", "weight_bucket", "catch_kg"
+      "catch_price",
+      "catch_taxon", "length", "min_length", "max_length_75", "individuals", "n_buckets", "weight_bucket", "catch_kg"
     )
   # dplyr::mutate(n_fishers = rowSums(across(c("no_men_fishers", "no_women_fishers", "no_child_fishers")),
   #                                 na.rm = TRUE)) |>
@@ -152,7 +158,19 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   catch_flags <-
     catch_df |>
     dplyr::mutate(
-      alert_length = dplyr::case_when(
+      alert_form_incomplete = dplyr::case_when(
+        .data$catch_outcome == "1" & is.na(.data$catch_taxon) ~ "1",
+        TRUE ~ NA_character_
+      ),
+      alert_catch_info_incomplete = dplyr::case_when(
+        !is.na(.data$catch_taxon) & is.na(.data$n_buckets) & is.na(.data$individuals) ~ "2",
+        TRUE ~ NA_character_
+      ),
+      alert_min_length = dplyr::case_when(
+        .data$length < .data$min_length ~ "3",
+        TRUE ~ NA_character_
+      ),
+      alert_max_length = dplyr::case_when(
         .data$length > .data$max_length_75 ~ "4",
         TRUE ~ NA_character_
       ),
@@ -167,24 +185,17 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       alert_n_individuals = dplyr::case_when(
         !is.na(.data$individuals) & .data$individuals > max_n_individuals ~ "7",
         TRUE ~ NA_character_
-      ),
-      alert_form_incomplete = dplyr::case_when(
-        .data$catch_outcome == "1" & is.na(.data$catch_taxon) ~ "8",
-        TRUE ~ NA_character_
-      ),
-      alert_catch_info_incomplete = dplyr::case_when(
-        !is.na(.data$catch_taxon) & is.na(.data$n_buckets) & is.na(.data$individuals) ~ "9",
-        TRUE ~ NA_character_
       )
     )
-  
+
 
   flags_id <-
     catch_flags |>
     dplyr::select("submission_id", "n_catch", "submission_date", dplyr::contains("alert_")) |>
     dplyr::mutate(
       alert_flag = paste(
-        .data$alert_length,
+        .data$alert_min_length,
+        .data$alert_max_length,
         .data$alert_bucket_weight,
         .data$alert_n_buckets,
         .data$alert_n_individuals,
@@ -227,17 +238,106 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       submission_alerts = ifelse(.data$submission_alerts == "", NA_character_, .data$submission_alerts)
     ) |>
     dplyr::ungroup() |>
-    dplyr::filter(is.na(.data$submission_alerts)) |>
-    dplyr::select(-c("alert_flag", "submission_alerts", "max_length_75")) |>
-    # if catch outcome is 0 catch kg must be set to 0
-    dplyr::mutate(catch_kg = ifelse(.data$catch_outcome == "0", 0, .data$catch_kg))
+    dplyr::filter(is.na(.data$submission_alerts))
+
 
   validated_data <-
     preprocessed_surveys |>
-    dplyr::left_join(catch_df_validated)
+    dplyr::left_join(catch_df_validated) |>
+    dplyr::select(-c("alert_flag", "submission_alerts", "min_length", "max_length_75", "n")) |>
+    # if catch outcome is 0 catch kg must be set to 0
+    dplyr::mutate(
+      catch_kg = dplyr::if_else(.data$catch_outcome == "0", 0, .data$catch_kg),
+      catch_price = dplyr::if_else(.data$catch_outcome == "0", 0, .data$catch_price)
+    )
+
+
+  ### get flags for composite indicators ###
+
+  no_flag_ids <-
+    flags_id |>
+    dplyr::filter(is.na(.data$alert_flag)) |>
+    dplyr::select("submission_id") |>
+    dplyr::distinct()
+
+  indicators <-
+    validated_data |>
+    dplyr::filter(.data$submission_id %in% no_flag_ids$submission_id) |>
+    dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
+    dplyr::select(
+      "submission_id", "catch_outcome", "landing_date", "district", "landing_site", "gear", "trip_duration",
+      "vessel_type", "n_fishers", "catch_taxon", "catch_price", "catch_kg"
+    ) |>
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::summarise(
+      dplyr::across(.cols = c(
+        "catch_outcome", "landing_date", "district", "landing_site", "gear",
+        "trip_duration", "vessel_type", "n_fishers", "catch_price"
+      ), ~ dplyr::first(.x)),
+      catch_kg = sum(.data$catch_kg)
+    ) |>
+    dplyr::transmute(
+      submission_id = .data$submission_id,
+      catch_outcome = .data$catch_outcome,
+      price_kg = .data$catch_price / .data$catch_kg,
+      price_kg_USD = .data$price_kg * 0.00037,
+      cpue = .data$catch_kg / .data$n_fishers / .data$trip_duration,
+      rpue = .data$catch_price / .data$n_fishers / .data$trip_duration,
+      rpue_USD = .data$rpue * 0.00037
+    )
+
+  composite_flags <-
+    indicators |>
+    dplyr::mutate(
+      alert_price_kg = dplyr::case_when(
+        .data$price_kg > price_kg_max ~ "8",
+        TRUE ~ NA_character_
+      ),
+      alert_cpue = dplyr::case_when(
+        .data$cpue > cpue_max ~ "9",
+        TRUE ~ NA_character_
+      ),
+      alert_rpue = dplyr::case_when(
+        .data$rpue > rpue_max ~ "10",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate(
+      alert_flag_composite = paste(
+        .data$alert_price_kg,
+        .data$alert_cpue,
+        .data$alert_rpue,
+        sep = ","
+      ) |>
+        stringr::str_remove_all("NA,") |>
+        stringr::str_remove_all(",NA") |>
+        stringr::str_remove_all("^NA$")
+    ) |>
+    dplyr::mutate(
+      alert_flag_composite = ifelse(.data$alert_flag_composite == "", NA_character_, .data$alert_flag_composite)
+    ) |>
+    dplyr::select("submission_id", "alert_flag_composite")
+
+  # bind new flags to flags dataframe
+  flags_combined <- 
+    flags_id |>
+    dplyr::full_join(composite_flags, by = "submission_id") |>
+    dplyr::mutate(
+      alert_flag = dplyr::case_when(
+        # If both are non-NA, combine them
+        !is.na(.data$alert_flag) & !is.na(.data$alert_flag_composite) ~ paste(.data$alert_flag, .data$alert_flag_composite, sep = ", "),
+        # If only one is non-NA, use that one
+        is.na(.data$alert_flag) ~ .data$alert_flag_composite,
+        is.na(.data$alert_flag_composite) ~ .data$alert_flag,
+        # If both are NA, keep it NA
+        TRUE ~ NA_character_
+      )
+    ) |>
+    # Remove the now redundant alert_flag_composite column
+    dplyr::select(-"alert_flag_composite")
 
   mdb_collection_push(
-    data = flags_id,
+    data = flags_combined,
     connection_string = pars$storage$mongodb$connection_string,
     collection_name = pars$storage$mongodb$validation,
     db_name = pars$storage$mongodb$database_name

@@ -53,7 +53,7 @@ export_data <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
   pars <- read_config()
 
-  validated_surveys <- get_validated_surveys(pars)
+  validated_surveys <- get_validated_surveys(pars, sources = "wf")
 
   # Get unique landing sites first for nesting
   landing_sites <- validated_surveys %>%
@@ -184,4 +184,129 @@ export_data <- function(log_threshold = logger::DEBUG) {
       )
     }
   )
+}
+
+#' Export WorldFish Survey Data 
+#'
+#' @description
+#' Processes validated survey data from WorldFish sources, filtering out flagged submissions
+#' and generating two key datasets:
+#' 1. Indicators dataset with aggregated catch metrics
+#' 2. Taxa dataset with species-specific catch information
+#'
+#' @details
+#' The function performs the following operations:
+#' - Retrieves validated WF survey data
+#' - Pulls submission flags from MongoDB
+#' - Filters out submissions with alert flags
+#' - For the indicators dataset:
+#'   - Aggregates catch data by submission
+#'   - Calculates price per kg, CPUE, and RPUE metrics
+#' - For the taxa dataset:
+#'   - Preserves taxonomic information
+#'   - Calculates catch metrics by species
+#'
+#' The metrics calculated include:
+#' - Total catch weight per submission
+#' - Price per kg of catch
+#' - CPUE (Catch Per Unit Effort)
+#' - RPUE (Revenue Per Unit Effort)
+#'
+#' @param log_threshold The logging level threshold for the logger package (e.g., DEBUG, INFO)
+#'   See `logger::log_levels` for available options.
+#'
+#' @return Two data frames (invisible):
+#'   - indicators_df: Aggregated catch metrics by submission
+#'   - taxa_df: Species-specific catch information
+#'
+#' @examples
+#' \dontrun{
+#' # Export WF data with default debug logging
+#' export_wf_data()
+#'
+#' # Export with info-level logging only
+#' export_wf_data(logger::INFO)
+#' }
+#'
+#' @seealso
+#' * [get_validated_surveys()] for details on the input data format
+#' * [mdb_collection_pull()] for retrieving flag information
+#' * [export_data()] for the more comprehensive export function
+#'
+#' @keywords workflow export
+#' @export
+export_wf_data <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+  pars <- read_config()
+
+  validated_surveys <-
+    get_validated_surveys(pars, sources = "wf") |>
+    dplyr::select(-"source")
+
+  flags_id <-
+    mdb_collection_pull(
+      connection_string = pars$storage$mongodb$connection_string,
+      collection_name = pars$storage$mongodb$validation,
+      db_name = pars$storage$mongodb$database_name
+    ) |>
+    dplyr::as_tibble()
+
+  no_flag_ids <-
+    flags_id |>
+    dplyr::filter(is.na(.data$alert_flag)) |>
+    dplyr::select("submission_id") |>
+    dplyr::distinct()
+
+  clean_data <-
+    validated_surveys |>
+    dplyr::filter(.data$submission_id %in% no_flag_ids$submission_id)
+
+  indicators_df <-
+    clean_data |>
+    dplyr::filter(.data$collect_data_today == "1") |>
+    dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
+    dplyr::select(
+      "submission_id", "landing_date", "district", "landing_site",
+      "habitat", "gear", "vessel_type", "propulsion_gear", "fuel_L", "trip_duration",
+      "vessel_type", "n_fishers", "catch_price", "catch_kg"
+    ) |>
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::summarise(
+      dplyr::across(.cols = c(
+        "landing_date", "district", "landing_site", "habitat", "gear",
+        "vessel_type", "propulsion_gear", "fuel_L", "trip_duration", "vessel_type", "n_fishers", "catch_price"
+      ), ~ dplyr::first(.x)),
+      tot_catch_kg = sum(.data$catch_kg)
+    ) |>
+    dplyr::mutate(
+      catch_price = .data$catch_price,
+      price_kg = .data$catch_price / .data$tot_catch_kg,
+      cpue = .data$tot_catch_kg / .data$n_fishers / .data$trip_duration,
+      rpue = .data$catch_price / .data$n_fishers / .data$trip_duration
+    )
+
+  taxa_df <-
+    clean_data |>
+    dplyr::filter(.data$collect_data_today == "1") |>
+    dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
+    dplyr::select(
+      "submission_id", "landing_date", "district", "landing_site",
+      "habitat", "gear", "vessel_type", "propulsion_gear", "fuel_L", "trip_duration",
+      "vessel_type", "n_fishers", "catch_taxon", "catch_price", "catch_kg"
+    ) |>
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::mutate(
+      n_catch = dplyr::n(),
+      .groups = "drop"
+    ) |>
+    dplyr::group_by(.data$submission_id, .data$catch_taxon) |>
+    dplyr::summarise(
+      dplyr::across(.cols = c(
+        "n_catch", "landing_date", "district", "landing_site", "habitat", "gear",
+        "vessel_type", "propulsion_gear", "fuel_L", "trip_duration", "vessel_type", "n_fishers", "catch_price"
+      ), ~ dplyr::first(.x)),
+      tot_catch_kg = sum(.data$catch_kg),
+      .groups = "drop"
+    ) |>
+    dplyr::relocate("n_catch", .after = "submission_id")
 }

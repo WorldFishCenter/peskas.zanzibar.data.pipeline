@@ -168,7 +168,7 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
   # 6. Format output
   lw <-
     lw_data$length_weight %>%
-    dplyr::filter(!(.data$a3_code == "PEZ" & .data$type == "CL")) %>%
+    dplyr::filter(!(.data$a3_code == "PEZ" & .data$type != "TL")) %>%
     dplyr::filter(!(.data$a3_code == "OCZ" & !.data$type == "ML")) %>%
     dplyr::filter(!(.data$a3_code == "IAX" & !.data$type == "TL")) %>%
     dplyr::group_by(.data$a3_code) %>%
@@ -190,13 +190,25 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
     dplyr::group_by(.data$a3_code) %>%
     dplyr::summarise(
       n = dplyr::n(),
+      min_length = min(.data$CommonLength, na.rm = TRUE),
       max_length_75 = stats::quantile(.data$Length, 0.75, na.rm = TRUE),
       max_weightkg_75 = stats::quantile(.data$Weight, 0.75, na.rm = TRUE) / 1000,
       .groups = "drop"
     ) %>%
+    dplyr::mutate(
+      max_length_75 = dplyr::case_when(.data$a3_code == "IAX" ~ 100, TRUE ~ .data$max_length_75),
+      min_length = .data$min_length - 0.25 * .data$min_length,
+      min_length = dplyr::case_when(
+        .data$a3_code %in% c("OCZ", "IAX") ~ 15,
+        .data$a3_code == "PEZ" ~ 5,
+        .data$a3_code == "COZ" ~ 2,
+        TRUE ~ .data$min_length
+      )
+    ) |>
     dplyr::select(
       catch_taxon = "a3_code",
       "n",
+      "min_length",
       "max_length_75",
       "max_weightkg_75"
     )

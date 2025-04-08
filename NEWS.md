@@ -1,3 +1,29 @@
+# peskas.zanzibar.data.pipeline 2.4.0
+
+### Major Changes
+- Implemented support for multiple survey data sources:
+  - Refactored `get_validated_surveys()` to handle WCS, WF, and BA sources
+  - Added source parameter to specify which datasets to retrieve
+  - Improved handling of data sources with different column structures
+
+### New Features
+- Added `export_wf_data()` function for WorldFish-specific data export
+- Enhanced validation with additional composite metrics:
+  - Price per kg validation
+  - CPUE (Catch Per Unit Effort) validation
+  - RPUE (Revenue Per Unit Effort) validation
+
+### Improvements
+- Added min_length parameter for better length validation thresholds
+- Updated LW coefficient filtering logic in model-taxa.R
+- Enhanced alert flag handling with combined flags from different validation steps
+- Improved catch price and catch weight handling for zero-catch outcomes
+- Enhanced data preprocessing with better field type conversion
+
+### Bug Fixes
+- Fixed issue with catch_price field type in WF survey preprocessing
+- Corrected filter condition for taxa coefficients
+
 # peskas.zanzibar.data.pipeline 2.3.0
 
 ### Major Changes

@@ -160,6 +160,7 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::rename_with(~ stringr::str_remove(., "group_conservation_trading/")) %>%
     dplyr::select(
       "submission_id",
+      submitted_by = "_submitted_by",
       submission_date = "today",
       "landing_date",
       district = "District",
@@ -196,7 +197,7 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::mutate(
       landing_date = lubridate::as_date(.data$landing_date),
       submission_date = lubridate::as_date(.data$submission_date),
-      dplyr::across(c("trip_duration", dplyr::ends_with("_fishers")), ~ as.double(.x))
+      dplyr::across(c("trip_duration", "catch_price", dplyr::ends_with("_fishers")), ~ as.double(.x))
     )
 
 

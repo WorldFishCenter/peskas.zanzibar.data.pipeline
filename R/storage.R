@@ -439,42 +439,118 @@ get_preprocessed_surveys <- function(pars, prefix = NULL) {
 }
 
 
-#' Download WCS Validated Surveys
+#' Download Validated Surveys
 #'
-#' Retrieves validated survey data from Google Cloud Storage, tailored for WCS (Wildlife Conservation Society) datasets. This function fetches data stored in Parquet format.
+#' Retrieves validated survey data from Google Cloud Storage for multiple survey sources.
+#' This function fetches data stored in Parquet format from sources defined in the configuration.
 #'
 #' @param pars A list representing the configuration settings, typically obtained from a YAML configuration file.
+#' @param sources Character vector specifying which survey sources to retrieve (e.g., "wcs", "wf", "ba"). 
+#'                If NULL (default), retrieves data from all available sources.
 #'
-#' @return A dataframe of validated survey landings, loaded from Parquet files.
+#' @return A dataframe of validated survey landings from all requested sources, loaded from Parquet files.
 #' @keywords storage
 #' @export
 #' @examples
 #' \dontrun{
 #' config <- peskas.zanzibar.pipeline::read_config()
-#' df_validated <- get_validated_surveys(config)
-#' #'
+#' # Get all available validated surveys
+#' all_validated <- get_validated_surveys(config)
+#' 
+#' # Get only WCS and BA validated surveys
+#' some_validated <- get_validated_surveys(config, sources = c("wcs", "ba"))
 #' }
 #'
-get_validated_surveys <- function(pars) {
-  wcs_validated_surveys <-
-    cloud_object_name(
-      prefix = pars$surveys$wcs_surveys$validated_surveys$file_prefix,
+get_validated_surveys <- function(pars, sources = NULL) {
+  # Identify available survey sources from config
+  available_sources <- names(pars$surveys)
+  available_sources <- gsub("_surveys$", "", available_sources)
+  
+  # If no sources specified, use all available
+  if (is.null(sources)) {
+    sources <- available_sources
+  } else {
+    # Validate requested sources
+    invalid_sources <- setdiff(sources, available_sources)
+    if (length(invalid_sources) > 0) {
+      warning(sprintf("Invalid source(s): %s. Available sources: %s", 
+                     paste(invalid_sources, collapse = ", "),
+                     paste(available_sources, collapse = ", ")))
+      # Keep only valid sources
+      sources <- intersect(sources, available_sources)
+      if (length(sources) == 0) {
+        stop("No valid sources provided")
+      }
+    }
+  }
+  
+  # Initialize empty list to store dataframes
+  all_surveys <- list()
+  
+  # Loop through each source and retrieve data
+  for (source in sources) {
+    source_key <- paste0(source, "_surveys")
+    
+    # Skip if the source configuration doesn't exist
+    if (!source_key %in% names(pars$surveys)) {
+      logger::log_warn("Configuration for {source_key} not found, skipping")
+      next
+    }
+    
+    # Get validated surveys file name
+    validated_surveys_file <- cloud_object_name(
+      prefix = pars$surveys[[source_key]]$validated_surveys$file_prefix,
       provider = pars$storage$google$key,
       extension = "parquet",
-      version = pars$surveys$wcs_surveys$version$preprocess,
+      version = pars$surveys[[source_key]]$version$preprocess,
       options = pars$storage$google$options
     )
-
-  logger::log_info("Retrieving {wcs_validated_surveys}")
-  download_cloud_file(
-    name = wcs_validated_surveys,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
-  )
-
-  arrow::read_parquet(wcs_validated_surveys)
+    
+    logger::log_info("Retrieving {validated_surveys_file}")
+    
+    # Download the file
+    tryCatch({
+      download_cloud_file(
+        name = validated_surveys_file,
+        provider = pars$storage$google$key,
+        options = pars$storage$google$options
+      )
+      
+      # Read the parquet file
+      surveys_df <- arrow::read_parquet(validated_surveys_file)
+      
+      # Add source column if it doesn't exist
+      if (!"source" %in% names(surveys_df)) {
+        surveys_df$source <- source
+      }
+      
+      # Add to list
+      all_surveys[[source]] <- surveys_df
+      
+    }, error = function(e) {
+      logger::log_error("Failed to retrieve {validated_surveys_file}: {e$message}")
+    })
+  }
+  
+  # Combine all dataframes
+  if (length(all_surveys) == 0) {
+    warning("No survey data retrieved from any source")
+    return(data.frame())
+  } else if (length(all_surveys) == 1) {
+    return(all_surveys[[1]])
+  } else {
+    # Check for compatible column structures
+    cols <- lapply(all_surveys, names)
+    common_cols <- Reduce(intersect, cols)
+    
+    if (length(common_cols) < 3) {
+      logger::log_warn("Sources have very few common columns, binding may create sparse data")
+    }
+    
+    # Combine all dataframes, keeping all columns (dplyr bind_rows handles different column sets)
+    return(dplyr::bind_rows(all_surveys))
+  }
 }
-
 
 #' Get metadata tables
 #'
