@@ -186,7 +186,7 @@ export_data <- function(log_threshold = logger::DEBUG) {
   )
 }
 
-#' Export WorldFish Survey Data 
+#' Export WorldFish Survey Data
 #'
 #' @description
 #' Processes validated survey data from WorldFish sources, filtering out flagged submissions
@@ -243,23 +243,24 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     get_validated_surveys(pars, sources = "wf") |>
     dplyr::select(-"source")
 
-  flags_id <-
-    mdb_collection_pull(
-      connection_string = pars$storage$mongodb$connection_string,
-      collection_name = pars$storage$mongodb$validation,
-      db_name = pars$storage$mongodb$database_name
-    ) |>
-    dplyr::as_tibble()
+  # Choose a parallelization strategy - adjust the number of workers as needed
+  future::plan(strategy = future::multicore, workers = future::availableCores() - 2) # Use 4 parallel workers
 
-  no_flag_ids <-
-    flags_id |>
-    dplyr::filter(is.na(.data$alert_flag)) |>
-    dplyr::select("submission_id") |>
-    dplyr::distinct()
+  # get validation table
+  valid_ids <-
+    unique(validated_surveys$submission_id) %>%
+    furrr::future_map_dfr(get_validation_status,
+      asset_id = pars$surveys$wf_surveys$asset_id,
+      token = pars$surveys$wf_surveys$token,
+      .options = furrr::furrr_options(seed = TRUE)
+    ) |>
+    dplyr::filter(.data$validation_status == "validation_status_approved") |>
+    dplyr::pull(.data$submission_id) |>
+    unique()
 
   clean_data <-
     validated_surveys |>
-    dplyr::filter(.data$submission_id %in% no_flag_ids$submission_id)
+    dplyr::filter(.data$submission_id %in% valid_ids)
 
   indicators_df <-
     clean_data |>
@@ -268,7 +269,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     dplyr::select(
       "submission_id", "landing_date", "district", "landing_site",
       "habitat", "gear", "vessel_type", "propulsion_gear", "fuel_L", "trip_duration",
-      "vessel_type", "n_fishers", "catch_price", "catch_kg"
+      "vessel_type", "n_fishers", "catch_taxon", "catch_price", "catch_kg"
     ) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::summarise(
@@ -276,7 +277,8 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
         "landing_date", "district", "landing_site", "habitat", "gear",
         "vessel_type", "propulsion_gear", "fuel_L", "trip_duration", "vessel_type", "n_fishers", "catch_price"
       ), ~ dplyr::first(.x)),
-      tot_catch_kg = sum(.data$catch_kg)
+      tot_catch_kg = sum(.data$catch_kg),
+      catch_taxon = paste(unique(.data$catch_taxon), collapse = "-")
     ) |>
     dplyr::mutate(
       catch_price = .data$catch_price,
@@ -284,6 +286,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       cpue = .data$tot_catch_kg / .data$n_fishers / .data$trip_duration,
       rpue = .data$catch_price / .data$n_fishers / .data$trip_duration
     )
+
 
   taxa_df <-
     clean_data |>

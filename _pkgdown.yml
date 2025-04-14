@@ -13,43 +13,60 @@ template:
     code_font:
       google: Fira Mono
 
-
 reference:
-- title: Cloud Storage
-  desc: Functions that interact with cloud storage providers.
+- title: Data Pipeline Workflow
+  desc: >
+    Core functions that execute each step in the data pipeline, from data ingestion
+    to validation and export.
+  contents:
+  - has_keyword("workflow")
+
+- title: Data Ingestion
+  desc: >
+    Functions for pulling data from external sources (KoboToolbox, Pelagic Data Systems)
+    and transforming it into standardized formats.
+  contents:
+  - has_keyword("ingestion")
+
+- title: Cloud Storage Management
+  desc: >
+    Functions for interacting with cloud storage providers (Google Cloud Storage, MongoDB),
+    uploading, downloading, and managing data files in various formats.
   contents:
   - has_keyword("storage")
 
-- title: Workflow
+- title: Data Preprocessing
   desc: >
-    These are arguably the most important functions in the package. Each of
-    these functions executes a step in the data pipeline.
-- contents:
-  - has_keyword("workflow")
-
-- title: Ingestion
-  desc: Functions dedicated to data pulling and ingestion from servers
-- contents:
-  - has_keyword("ingestion")
-
-- title: Preprocessing
-  desc: Functions dedicated to the preprocessing module and general data processing and mining
+    Functions for cleaning, transforming, and structuring raw data into standardized
+    formats ready for analysis, including data nesting and reshaping.
   contents:
   - has_keyword("preprocessing")
+
+- title: Data Mining & Enrichment
+  desc: >
+    Functions for enriching fisheries data with scientific information, taxonomic
+    classification, and biological parameters (length-weight relationships).
+  contents:
   - has_keyword("mining")
 
-- title: Validation
-  desc: Functions dedicated to the validation module
+- title: Data Validation
+  desc: >
+    Functions for validating fisheries data through quality checks, statistical
+    outlier detection, and applying domain-specific validation rules.
   contents:
   - has_keyword("validation")
 
-- title: Helper functions
-  desc: Functions dedicated to data processing.
-  contents:
-  - has_keyword("helper")
-
-- title: Export
-  desc: Functions dedicated dissemination of processed and validated data and visualizations
+- title: Data Export & Visualization
+  desc: >
+    Functions for exporting processed data to various formats and creating
+    visualizations for reporting and analysis.
   contents:
   - has_keyword("export")
   - kepler_mapper
+
+- title: Helper Functions
+  desc: >
+    Utility functions that support the main pipeline operations, providing
+    common data manipulation and processing capabilities.
+  contents:
+  - has_keyword("helper")

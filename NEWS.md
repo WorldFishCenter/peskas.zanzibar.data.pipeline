@@ -1,3 +1,23 @@
+# peskas.zanzibar.data.pipeline 2.5.0
+
+### Major Changes
+- Enhanced validation workflow with KoboToolbox integration:
+  - Added `update_validation_status()` function to update submission status via API
+  - Added `sync_validation_submissions()` for parallel processing of validation flags
+  - Updated Kobo URL endpoint from kf.kobotoolbox.org to eu.kobotoolbox.org
+
+### New Features
+- Implemented parallel processing for validation operations using future/furrr packages
+- Added progress reporting during validation operations via progressr package
+- Enhanced validation status synchronization between local system and KoboToolbox
+
+### Improvements
+- Updated data preprocessing to handle flying fish estimates and taxa corrections (TUN→TUS, SKH→CVX)
+- Updated export workflow to use validation status instead of flags for data filtering
+- Added taxa information to catch export data
+- Added Zanzibar SSF report template with visualization examples
+- Improved package documentation structure with better categorization
+
 # peskas.zanzibar.data.pipeline 2.4.0
 
 ### Major Changes

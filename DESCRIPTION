@@ -1,7 +1,7 @@
 Package: peskas.zanzibar.data.pipeline
 Title: Functions to Implement the Zanzibar Small Scale Fisheries
     Data Pipeline
-Version: 2.4.0
+Version: 2.5.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",
@@ -35,7 +35,8 @@ Imports:
     furrr,
     future,
     mongolite,
-    rfishbase
+    rfishbase,
+    progressr
 Suggests: 
     covr,
     pkgdown,

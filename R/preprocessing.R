@@ -232,14 +232,24 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     # fix fields
     dplyr::mutate(
       dplyr::across(c("n_buckets":"length"), ~ as.double(.x))
-    )
+    ) |>
+    # replace TUN with TUS and SKH to Carcharhiniformes as more pertinent
+    dplyr::mutate(catch_taxon = dplyr::case_when(
+      .data$catch_taxon == "TUN" ~ "TUS",
+      .data$catch_taxon == "SKH" ~ "CVX", TRUE ~ .data$catch_taxon
+    ))
 
   lwcoeffs <- getLWCoeffs(taxa_list = unique(catch_info$catch_taxon), asfis_list = asfis)
-  catch_df <- 
-    calculate_catch(catch_data = catch_info, lwcoeffs = lwcoeffs$lw) |> 
-    dplyr::left_join(lwcoeffs$ml, by = "catch_taxon") |> 
+
+  # add flyng fish estimates
+  fly_lwcoeffs <- dplyr::tibble(catch_taxon = "FLY", n = 0, a_6 = 0.00631, b_6 = 3.05)
+  lwcoeffs$lw <- dplyr::bind_rows(lwcoeffs$lw, fly_lwcoeffs)
+
+  catch_df <-
+    calculate_catch(catch_data = catch_info, lwcoeffs = lwcoeffs$lw) |>
+    dplyr::left_join(lwcoeffs$ml, by = "catch_taxon") |>
     dplyr::select(-"max_weightkg_75")
-  
+
   preprocessed_data <-
     dplyr::left_join(general_info, catch_df, by = "submission_id") |>
     dplyr::arrange(.data$submission_id, .data$n_catch)
@@ -966,6 +976,7 @@ reshape_species_groups <- function(df = NULL) {
 #' }
 reshape_catch_data <- function(df = NULL) {
   # First, reshape species groups
+
   species_long <- reshape_species_groups(df)
 
   # Extract length group columns
@@ -1016,8 +1027,11 @@ reshape_catch_data <- function(df = NULL) {
       length_over = dplyr::if_else(.data$length_category == "fish_length_over100", .data$count, NA_character_),
       count = dplyr::if_else(.data$length_category == "fish_length_over100", "1", .data$count)
     ) %>%
+    dplyr::ungroup() |>
     # Remove the original length_category column and length columns
-    dplyr::select(-"length_category", -dplyr::any_of(length_cols))
+    dplyr::select(-"length_category", -dplyr::any_of(length_cols)) |>
+    dplyr::filter(!(.data$length_range == "over100" & is.na(.data$length_over)))
+
 
   # Process rows without length data
   if (length(rows_with_length) < nrow(species_long)) {

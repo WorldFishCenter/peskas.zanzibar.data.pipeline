@@ -402,8 +402,13 @@ get_validation_status <- function(
     asset_id = NULL,
     token = NULL,
     debug = FALSE) {
-  base_url <- paste0("https://kf.kobotoolbox.org/api/v2/assets/", asset_id, "/data/")
+  base_url <- paste0("https://eu.kobotoolbox.org/api/v2/assets/", asset_id, "/data/")
   url <- paste0(base_url, submission_id, "/validation_status/")
+
+  # Remove "Token " prefix if it exists
+  if (grepl("^Token ", token)) {
+    token <- gsub("^Token ", "", token)
+  }
 
   req <- httr2::request(url) %>%
     httr2::req_headers(
@@ -454,11 +459,155 @@ get_validation_status <- function(
       }
     },
     error = function(e) {
+      if (debug) {
+        cat("Error:", as.character(e), "\n")
+      }
+
       dplyr::tibble(
         submission_id = submission_id,
         validation_status = "not_validated",
         validated_at = lubridate::as_datetime(NA),
         validated_by = NA_character_
+      )
+    }
+  )
+}
+#' Update Validation Status in KoboToolbox
+#'
+#' Updates the validation status for a specific submission in KoboToolbox.
+#' The function allows setting the status to approved, not approved, or on hold.
+#'
+#' @param submission_id Character string. The ID of the submission to update.
+#' @param asset_id Character string. The asset ID from KoboToolbox.
+#' @param token Character string. The authorization token for KoboToolbox API.
+#' @param status Character string. The validation status to set. Must be one of:
+#'        "validation_status_approved", "validation_status_not_approved", or
+#'        "validation_status_on_hold".
+#' @param debug Logical. If TRUE, prints the request object and response. Default is FALSE.
+#'
+#' @return A tibble with one row containing:
+#'   \item{submission_id}{The ID of the updated submission}
+#'   \item{validation_status}{The new validation status}
+#'   \item{validated_at}{Timestamp of validation as POSIXct}
+#'   \item{validated_by}{Username of the validator}
+#'   \item{update_success}{Logical indicating if the update was successful}
+#'
+#' @keywords validation
+#' @examples
+#' \dontrun{
+#' # Update a single submission
+#' update_validation_status(
+#'   submission_id = "1234567",
+#'   asset_id = "your asset id",
+#'   token = "Token YOUR_TOKEN_HERE",
+#'   status = "validation_status_approved"
+#' )
+#'
+#' # Update multiple submissions using purrr
+#' submission_ids <- c("1234567", "154267")
+#' submission_ids %>%
+#'   purrr::map_dfr(update_validation_status,
+#'     asset_id = "your asset id",
+#'     token = "Token YOUR_TOKEN_HERE",
+#'     status = "validation_status_approved"
+#'   )
+#' }
+#'
+#' @keywords workflow validation
+#' @export
+update_validation_status <- function(
+    submission_id = NULL,
+    asset_id = NULL,
+    token = NULL,
+    status = "validation_status_approved",
+    debug = FALSE) {
+  # Validate status
+  valid_statuses <- c(
+    "validation_status_approved",
+    "validation_status_not_approved",
+    "validation_status_on_hold"
+  )
+
+  if (!status %in% valid_statuses) {
+    stop("Status must be one of: ", paste(valid_statuses, collapse = ", "))
+  }
+
+  # Construct the URL
+  base_url <- paste0("https://eu.kobotoolbox.org/api/v2/assets/", asset_id, "/data/")
+  url <- paste0(base_url, submission_id, "/validation_status/")
+
+  # Set up request body
+  body <- list(
+    "validation_status.uid" = status
+  )
+
+  # Add "Token " prefix to token if it doesn't already have it
+  if (!grepl("^Token ", token)) {
+    token <- paste("Token", token)
+  }
+
+  # Set up request
+  req <- httr2::request(url) %>%
+    httr2::req_headers(
+      Authorization = token,
+      "Content-Type" = "application/json"
+    ) %>%
+    httr2::req_method("PATCH") %>%
+    httr2::req_body_json(body)
+
+  if (debug) {
+    print(req)
+    print(body)
+  }
+
+  tryCatch(
+    {
+      response <- httr2::req_perform(req)
+
+      if (debug) {
+        cat("Response status:", httr2::resp_status(response), "\n")
+        cat("Response body:", httr2::resp_body_string(response), "\n")
+      }
+
+      if (httr2::resp_status(response) %in% c(200, 201, 204)) {
+        # If update was successful, get the current validation status
+        # Make sure to add the Token prefix for get_validation_status too
+        original_token <- token
+        if (grepl("^Token ", token)) {
+          token <- gsub("^Token ", "", token)
+        }
+
+        updated_data <- get_validation_status(
+          submission_id = submission_id,
+          asset_id = asset_id,
+          token = token,
+          debug = debug
+        )
+
+        # Add success indicator
+        updated_data %>%
+          dplyr::mutate(update_success = TRUE)
+      } else {
+        dplyr::tibble(
+          submission_id = submission_id,
+          validation_status = NA_character_,
+          validated_at = lubridate::as_datetime(NA),
+          validated_by = NA_character_,
+          update_success = FALSE
+        )
+      }
+    },
+    error = function(e) {
+      if (debug) {
+        cat("Error:", as.character(e), "\n")
+      }
+
+      dplyr::tibble(
+        submission_id = submission_id,
+        validation_status = NA_character_,
+        validated_at = lubridate::as_datetime(NA),
+        validated_by = NA_character_,
+        update_success = FALSE
       )
     }
   )

@@ -117,18 +117,28 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
+  
+  # Choose a parallelization strategy - adjust the number of workers as needed
+  future::plan(strategy = future::multicore, workers = future::availableCores() - 2) # Use 4 parallel workers
 
-  # match flags table and validation status
-  # validation_table <-
-  #  unique(preprocessed_surveys$submission_id) %>%
-  #  purrr::map_dfr(get_validation_status,
-  #    asset_id = pars$surveys$wf_surveys$asset_id,
-  #    token = pars$surveys$wf_surveys$token
-  #  )
-
+  # get validation table and set on hold for submissions not yet validated
+  unique(preprocessed_surveys$submission_id) %>%
+    furrr::future_map_dfr(get_validation_status,
+      asset_id = pars$surveys$wf_surveys$asset_id,
+      token = pars$surveys$wf_surveys$token,
+      .options = furrr::furrr_options(seed = TRUE)
+    ) |>
+    dplyr::filter(.data$validation_status == "not_validated") |>
+    dplyr::pull(.data$submission_id) |>
+    unique() |>
+    furrr::future_walk(update_validation_status,
+      asset_id = pars$surveys$wf_surveys$asset_id,
+      token = pars$surveys$wf_surveys$token,
+      status = "validation_status_on_hold",
+      .options = furrr::furrr_options(seed = TRUE)
+    )
 
   # dplyr::full_join(flags_table, by = c("submission_id")) %>%
-
 
   max_bucket_weight_kg <- 50
   max_n_buckets <- 300
@@ -137,10 +147,9 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   cpue_max <- 30
   rpue_max <- 81420
 
-
   catch_df <-
     preprocessed_surveys |>
-    dplyr::filter(.data$survey_activity == "1" & .data$collect_data_today == "1") |>
+    dplyr::filter(.data$survey_activity == "1" & .data$collect_data_today == "1" | .data$collect_data_today == "yes") |>
     dplyr::select(
       "submission_id",
       "n_catch",
@@ -251,9 +260,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       catch_price = dplyr::if_else(.data$catch_outcome == "0", 0, .data$catch_price)
     )
 
-
   ### get flags for composite indicators ###
-
   no_flag_ids <-
     flags_id |>
     dplyr::filter(is.na(.data$alert_flag)) |>
@@ -319,7 +326,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::select("submission_id", "alert_flag_composite")
 
   # bind new flags to flags dataframe
-  flags_combined <- 
+  flags_combined <-
     flags_id |>
     dplyr::full_join(composite_flags, by = "submission_id") |>
     dplyr::mutate(
@@ -334,13 +341,16 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       )
     ) |>
     # Remove the now redundant alert_flag_composite column
-    dplyr::select(-"alert_flag_composite")
+    dplyr::select(-"alert_flag_composite") |>
+    dplyr::left_join(validated_data |> dplyr::select("submission_id", "submitted_by") |> dplyr::distinct(), by = "submission_id") |>
+    dplyr::relocate("submitted_by", .after = "submission_id") |> 
+    dplyr::distinct()
 
-  mdb_collection_push(
+  upload_parquet_to_cloud(
     data = flags_combined,
-    connection_string = pars$storage$mongodb$connection_string,
-    collection_name = pars$storage$mongodb$validation,
-    db_name = pars$storage$mongodb$database_name
+    prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
   )
 
   upload_parquet_to_cloud(
@@ -469,4 +479,130 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
+}
+
+#' Synchronize Validation Statuses with KoboToolbox
+#'
+#' @description
+#' Synchronizes validation statuses between the local system and KoboToolbox by processing
+#' validation flags and updating submission statuses accordingly. This function handles
+#' both flagged (not approved) and clean (approved) submissions in parallel.
+#'
+#' @details
+#' The function follows these steps:
+#' 1. Downloads the current validation flags from cloud storage
+#' 2. Sets up parallel processing using the future package
+#' 3. Processes submissions with alert flags (marking them as not approved in KoboToolbox)
+#' 4. Processes submissions without alert flags (marking them as approved in KoboToolbox)
+#' 5. Pushes all validation flags to MongoDB for record-keeping
+#'
+#' Progress reporting is enabled to track the status of submissions being processed.
+#'
+#' @param log_threshold The logging level threshold for the logger package (e.g., DEBUG, INFO).
+#'        Default is logger::DEBUG.
+#'
+#' @return None. The function performs status updates and database operations as side effects.
+#'
+#' @section Parallel Processing:
+#' The function uses the future and furrr packages for parallel processing, with the number
+#' of workers set to system cores minus 2 to prevent resource exhaustion.
+#'
+#' @note
+#' This function requires proper configuration in the config file, including:
+#' - MongoDB connection parameters
+#' - KoboToolbox asset ID and token
+#' - Google cloud storage parameters
+#'
+#' @examples
+#' \dontrun{
+#' # Run with default DEBUG logging
+#' sync_validation_submissions()
+#'
+#' # Run with INFO level logging
+#' sync_validation_submissions(log_threshold = logger::INFO)
+#' }
+#'
+#' @importFrom logger log_threshold log_info
+#' @importFrom dplyr filter pull
+#' @importFrom future plan multicore availableCores
+#' @importFrom progressr handlers handler_progress with_progress progressor
+#' @importFrom furrr future_walk
+#'
+#' @keywords workflow validation
+#' @export
+sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+
+  pars <- read_config()
+
+  validation_flags <-
+    download_parquet_from_cloud(
+      prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options
+    )
+
+  # Set up parallel processing
+  future::plan(strategy = future::multicore, workers = future::availableCores() - 2)
+
+  # Enable progress reporting globally
+  progressr::handlers(progressr::handler_progress(
+    format = "[:bar] :current/:total (:percent) eta: :eta"
+  ))
+
+  # 1. First handle submissions with alert flags (mark as not approved)
+  flagged_submissions <- validation_flags %>%
+    dplyr::filter(!is.na(.data$alert_flag)) %>%
+    dplyr::pull(.data$submission_id) %>%
+    unique()
+
+  logger::log_info("Processing {} submissions with alert flags", length(flagged_submissions))
+
+  progressr::with_progress({
+    p_flagged <- progressr::progressor(along = flagged_submissions)
+
+    flagged_submissions %>%
+      furrr::future_walk(function(id) {
+        update_validation_status(
+          submission_id = id,
+          asset_id = pars$surveys$wf_surveys$asset_id,
+          token = pars$surveys$wf_surveys$token,
+          status = "validation_status_not_approved"
+        )
+        p_flagged(message = paste("Marked not approved:", id))
+      }, .options = furrr::furrr_options(seed = TRUE))
+  })
+
+  # 2. Now handle submissions without alert flags (mark as approved)
+  clean_submissions <- validation_flags %>%
+    dplyr::filter(is.na(.data$alert_flag)) %>%
+    dplyr::pull(.data$submission_id) %>%
+    unique()
+
+  logger::log_info("Processing {} submissions without alert flags", length(clean_submissions))
+
+  progressr::with_progress({
+    p_clean <- progressr::progressor(along = clean_submissions)
+
+    clean_submissions %>%
+      furrr::future_walk(function(id) {
+        update_validation_status(
+          submission_id = id,
+          asset_id = pars$surveys$wf_surveys$asset_id,
+          token = pars$surveys$wf_surveys$token,
+          status = "validation_status_approved"
+        )
+        p_clean(message = paste("Marked approved:", id))
+      }, .options = furrr::furrr_options(seed = TRUE))
+  })
+
+  # Finally, push the validation flags to MongoDB
+  mdb_collection_push(
+    data = validation_flags,
+    connection_string = pars$storage$mongodb$connection_string,
+    collection_name = pars$storage$mongodb$validation,
+    db_name = pars$storage$mongodb$database_name
+  )
+
+  logger::log_info("Validation synchronization completed successfully")
 }
