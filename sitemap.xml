@@ -63,7 +63,9 @@
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_catch_data.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_species_groups.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/retrieve_surveys.html</loc></url>
+<url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/tidyeval.html</loc></url>
+<url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/update_validation_status.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/upload_cloud_file.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/upload_parquet_to_cloud.html</loc></url>
 <url><loc>https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_ba_surveys.html</loc></url>
