@@ -34,11 +34,42 @@ library(patchwork)
 
 This report presents preliminary analyses of Zanzibar's small-scale fisheries, including gear usage, vessel types, fishing effort, catch rates, and revenue across different districts.
 
-
 ```{r data-import_constants}
 path <- "inst/reports/zanizbarSSF_clean__20250414093746_da3c69d__.parquet"
 dat <- rio::import("zanizbarSSF_clean__20250414093746_da3c69d__.parquet") |>
   dplyr::as_tibble()
+stats <- rio::import("fishery_stats__20250417160421_07d4dba__.parquet") |>
+  dplyr::as_tibble()
+
+we <- 
+  validated_surveys |> 
+  dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
+  dplyr::select(submission_id, district, trip_duration, gear, vessel_type, n_fishers) |> 
+  dplyr::group_by(submission_id) |> 
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ dplyr::first(.x))) |> 
+  dplyr::mutate(gear = dplyr::case_when(
+    .data$gear == "HL" ~ "Hand line",
+    .data$gear == "BS" ~ "Beach Seine",
+    .data$gear == "CS" ~ "Cast Net",
+    .data$gear == "GN" ~ "Gill Net",
+    .data$gear == "LL" ~ "Long line",
+    .data$gear == "SP" ~ "Spear gun",
+    .data$gear == "SR" ~ "Stick Rod",
+    .data$gear == "PS" ~ "Purse Seine",
+    .data$gear == "RN" ~ "Ring Net",
+    .data$gear == "SN" ~ "Shark Net",
+    .data$gear == "TR" ~ "Trap",
+    TRUE ~ .data$gear  # Keep original value if no match
+  ),
+  vessel_type = dplyr::case_when(
+    .data$vessel_type == "1" ~ "Fibre Boat",
+    .data$vessel_type == "2" ~ "Dhow",
+    .data$vessel_type == "3" ~ "Dugout canoe",
+    .data$vessel_type == "4" ~ "Outrigger canoe",
+    .data$vessel_type == "5" ~ "Planked Boat",
+    .data$vessel_type == "6" ~ "Wooden Boat",
+    TRUE ~ .data$vessel_type  # Keep original value if no match
+  ))
 
 district_colors <- c(
   "urban" = "#1E88E5",    # Blue
@@ -107,7 +138,7 @@ theme_modern <- function() {
 ```{r characterization, fig.height=10, fig.width=10}
 
 gear_viz_grouped <- 
-  dat %>%
+  stats %>%
   dplyr::group_by(district, gear) |> 
   dplyr::count() |> 
   dplyr::group_by(district) |> 
@@ -172,7 +203,7 @@ ggplot(gear_viz_grouped, aes(x = prc, y = reorder_within(gear, prc, district))) 
 ```{r vessels, fig.height=10, fig.width=10}
 
 gear_viz_grouped <- 
-  dat %>%
+  stats %>%
   dplyr::mutate(vessel_type = dplyr::if_else(is.na(vessel_type), "Unknown", vessel_type)) |> 
   dplyr::group_by(district, vessel_type) |> 
   dplyr::count() |> 
@@ -240,7 +271,7 @@ ggplot(gear_viz_grouped, aes(x = prc, y = reorder_within(vessel_type, prc, distr
 
 ```{r duration, fig.height=10, fig.width=10}
 
-fisher_data <- dat  # Assuming your data is in a variable
+fisher_data <- stats  
 
 # Calculate summary statistics by district
 district_summary <- fisher_data %>%
@@ -283,7 +314,7 @@ p2 <- ggplot(district_summary, aes(x = reorder(district, mean_duration), y = mea
   geom_text(aes(label = sprintf("n=%d", n_trips), y = 0.5), 
             vjust = 0, hjust = 0, angle = 90, size = 3, color = "white") +
   labs(
-    title = "Average Trip Duration by District",
+    title = "Average Fishing Trip Duration by District",
     subtitle = sprintf("Based on %d fishing trips", sum(district_summary$n_trips)),
     x = "",
     y = "Average Trip Duration (hours)"
