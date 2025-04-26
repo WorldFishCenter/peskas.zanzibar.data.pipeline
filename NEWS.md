@@ -1,3 +1,13 @@
+# peskas.zanzibar.data.pipeline 2.6.0
+
+### New Features
+- Added new `sync-validation` job to GitHub Actions workflow for synchronizing survey validation submissions
+
+### Improvements
+- Implemented error handling in `getLWCoeffs` to fallback on local data if Rfishbase retrieval fails
+- Enhanced code readability by restructuring functions and adding line breaks
+- Updated documentation for `get_preprocessed_surveys` and `get_validated_surveys` functions
+
 # peskas.zanzibar.data.pipeline 2.5.0
 
 ### Major Changes

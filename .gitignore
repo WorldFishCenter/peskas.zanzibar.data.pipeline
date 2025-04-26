@@ -40,6 +40,7 @@ docs
 
 ## Data files
 *.rds
+!inst/length_weight_params.rds
 *.xlsx
 *.csv
 *.tsv
