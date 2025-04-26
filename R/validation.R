@@ -22,7 +22,8 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   pars <- read_config()
 
   # 1. Load and preprocess survey data
-  preprocessed_surveys <- get_preprocessed_surveys(pars,
+  preprocessed_surveys <- get_preprocessed_surveys(
+    pars,
     prefix = pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix
   ) |>
     dplyr::filter(!.data$trip_info == "no")
@@ -117,28 +118,24 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
-  
-  # Choose a parallelization strategy - adjust the number of workers as needed
-  future::plan(strategy = future::multicore, workers = future::availableCores() - 2) # Use 4 parallel workers
 
-  # get validation table and set on hold for submissions not yet validated
-  unique(preprocessed_surveys$submission_id) %>%
-    furrr::future_map_dfr(get_validation_status,
+  future::plan(
+    strategy = future::multisession,
+    workers = future::availableCores() - 2
+  )
+
+  # get validation table and store approved ids
+  approved_ids <-
+    unique(preprocessed_surveys$submission_id) %>%
+    furrr::future_map_dfr(
+      get_validation_status,
       asset_id = pars$surveys$wf_surveys$asset_id,
       token = pars$surveys$wf_surveys$token,
       .options = furrr::furrr_options(seed = TRUE)
     ) |>
-    dplyr::filter(.data$validation_status == "not_validated") |>
+    dplyr::filter(.data$validation_status == "validation_status_approved") |>
     dplyr::pull(.data$submission_id) |>
-    unique() |>
-    furrr::future_walk(update_validation_status,
-      asset_id = pars$surveys$wf_surveys$asset_id,
-      token = pars$surveys$wf_surveys$token,
-      status = "validation_status_on_hold",
-      .options = furrr::furrr_options(seed = TRUE)
-    )
-
-  # dplyr::full_join(flags_table, by = c("submission_id")) %>%
+    unique()
 
   max_bucket_weight_kg <- 50
   max_n_buckets <- 300
@@ -149,7 +146,11 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   catch_df <-
     preprocessed_surveys |>
-    dplyr::filter(.data$survey_activity == "1" & .data$collect_data_today == "1" | .data$collect_data_today == "yes") |>
+    dplyr::filter(
+      .data$survey_activity == "1" &
+        .data$collect_data_today == "1" |
+        .data$collect_data_today == "yes"
+    ) |>
     dplyr::select(
       "submission_id",
       "n_catch",
@@ -157,7 +158,14 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       # dplyr::ends_with("fishers"),
       "catch_outcome",
       "catch_price",
-      "catch_taxon", "length", "min_length", "max_length_75", "individuals", "n_buckets", "weight_bucket", "catch_kg"
+      "catch_taxon",
+      "length",
+      "min_length",
+      "max_length_75",
+      "individuals",
+      "n_buckets",
+      "weight_bucket",
+      "catch_kg"
     )
   # dplyr::mutate(n_fishers = rowSums(across(c("no_men_fishers", "no_women_fishers", "no_child_fishers")),
   #                                 na.rm = TRUE)) |>
@@ -172,7 +180,10 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         TRUE ~ NA_character_
       ),
       alert_catch_info_incomplete = dplyr::case_when(
-        !is.na(.data$catch_taxon) & is.na(.data$n_buckets) & is.na(.data$individuals) ~ "2",
+        !is.na(.data$catch_taxon) &
+          is.na(.data$n_buckets) &
+          is.na(.data$individuals) ~
+          "2",
         TRUE ~ NA_character_
       ),
       alert_min_length = dplyr::case_when(
@@ -184,7 +195,9 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         TRUE ~ NA_character_
       ),
       alert_bucket_weight = dplyr::case_when(
-        !is.na(.data$weight_bucket) & .data$weight_bucket > max_bucket_weight_kg ~ "5",
+        !is.na(.data$weight_bucket) &
+          .data$weight_bucket > max_bucket_weight_kg ~
+          "5",
         TRUE ~ NA_character_
       ),
       alert_n_buckets = dplyr::case_when(
@@ -197,10 +210,14 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       )
     )
 
-
   flags_id <-
     catch_flags |>
-    dplyr::select("submission_id", "n_catch", "submission_date", dplyr::contains("alert_")) |>
+    dplyr::select(
+      "submission_id",
+      "n_catch",
+      "submission_date",
+      dplyr::contains("alert_")
+    ) |>
     dplyr::mutate(
       alert_flag = paste(
         .data$alert_min_length,
@@ -217,10 +234,19 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         stringr::str_remove_all("^NA$")
     ) |>
     dplyr::mutate(
-      alert_flag = ifelse(.data$alert_flag == "", NA_character_, .data$alert_flag),
+      alert_flag = ifelse(
+        .data$alert_flag == "",
+        NA_character_,
+        .data$alert_flag
+      ),
       submission_date = lubridate::as_datetime(.data$submission_date)
     ) |>
-    dplyr::select("submission_id", "n_catch", "submission_date", "alert_flag") |>
+    dplyr::select(
+      "submission_id",
+      "n_catch",
+      "submission_date",
+      "alert_flag"
+    ) |>
     dplyr::group_by(.data$submission_id) %>%
     # Summarize to get values
     dplyr::summarise(
@@ -233,7 +259,11 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     ) %>%
     # Clean up empty strings
     dplyr::mutate(
-      alert_flag = ifelse(.data$alert_flag == "", NA_character_, .data$alert_flag)
+      alert_flag = ifelse(
+        .data$alert_flag == "",
+        NA_character_,
+        .data$alert_flag
+      )
     )
 
   catch_df_validated <-
@@ -241,23 +271,35 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::left_join(flags_id, by = c("submission_id", "submission_date")) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::mutate(
-      submission_alerts = paste(unique(.data$alert_flag[!is.na(.data$alert_flag)]), collapse = ",")
+      submission_alerts = paste(
+        unique(.data$alert_flag[!is.na(.data$alert_flag)]),
+        collapse = ","
+      )
     ) |>
     dplyr::mutate(
-      submission_alerts = ifelse(.data$submission_alerts == "", NA_character_, .data$submission_alerts)
+      submission_alerts = ifelse(
+        .data$submission_alerts == "",
+        NA_character_,
+        .data$submission_alerts
+      )
     ) |>
     dplyr::ungroup() |>
     dplyr::filter(is.na(.data$submission_alerts))
 
-
   validated_data <-
     preprocessed_surveys |>
     dplyr::left_join(catch_df_validated) |>
-    dplyr::select(-c("alert_flag", "submission_alerts", "min_length", "max_length_75", "n")) |>
+    dplyr::select(
+      -c("alert_flag", "submission_alerts", "min_length", "max_length_75", "n")
+    ) |>
     # if catch outcome is 0 catch kg must be set to 0
     dplyr::mutate(
       catch_kg = dplyr::if_else(.data$catch_outcome == "0", 0, .data$catch_kg),
-      catch_price = dplyr::if_else(.data$catch_outcome == "0", 0, .data$catch_price)
+      catch_price = dplyr::if_else(
+        .data$catch_outcome == "0",
+        0,
+        .data$catch_price
+      )
     )
 
   ### get flags for composite indicators ###
@@ -270,17 +312,41 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   indicators <-
     validated_data |>
     dplyr::filter(.data$submission_id %in% no_flag_ids$submission_id) |>
-    dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
+    dplyr::mutate(
+      n_fishers = .data$no_men_fishers +
+        .data$no_women_fishers +
+        .data$no_child_fishers
+    ) |>
     dplyr::select(
-      "submission_id", "catch_outcome", "landing_date", "district", "landing_site", "gear", "trip_duration",
-      "vessel_type", "n_fishers", "catch_taxon", "catch_price", "catch_kg"
+      "submission_id",
+      "catch_outcome",
+      "landing_date",
+      "district",
+      "landing_site",
+      "gear",
+      "trip_duration",
+      "vessel_type",
+      "n_fishers",
+      "catch_taxon",
+      "catch_price",
+      "catch_kg"
     ) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::summarise(
-      dplyr::across(.cols = c(
-        "catch_outcome", "landing_date", "district", "landing_site", "gear",
-        "trip_duration", "vessel_type", "n_fishers", "catch_price"
-      ), ~ dplyr::first(.x)),
+      dplyr::across(
+        .cols = c(
+          "catch_outcome",
+          "landing_date",
+          "district",
+          "landing_site",
+          "gear",
+          "trip_duration",
+          "vessel_type",
+          "n_fishers",
+          "catch_price"
+        ),
+        ~ dplyr::first(.x)
+      ),
       catch_kg = sum(.data$catch_kg)
     ) |>
     dplyr::transmute(
@@ -321,7 +387,11 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         stringr::str_remove_all("^NA$")
     ) |>
     dplyr::mutate(
-      alert_flag_composite = ifelse(.data$alert_flag_composite == "", NA_character_, .data$alert_flag_composite)
+      alert_flag_composite = ifelse(
+        .data$alert_flag_composite == "",
+        NA_character_,
+        .data$alert_flag_composite
+      )
     ) |>
     dplyr::select("submission_id", "alert_flag_composite")
 
@@ -332,7 +402,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::mutate(
       alert_flag = dplyr::case_when(
         # If both are non-NA, combine them
-        !is.na(.data$alert_flag) & !is.na(.data$alert_flag_composite) ~ paste(.data$alert_flag, .data$alert_flag_composite, sep = ", "),
+        !is.na(.data$alert_flag) & !is.na(.data$alert_flag_composite) ~
+          paste(.data$alert_flag, .data$alert_flag_composite, sep = ", "),
         # If only one is non-NA, use that one
         is.na(.data$alert_flag) ~ .data$alert_flag_composite,
         is.na(.data$alert_flag_composite) ~ .data$alert_flag,
@@ -342,9 +413,16 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     ) |>
     # Remove the now redundant alert_flag_composite column
     dplyr::select(-"alert_flag_composite") |>
-    dplyr::left_join(validated_data |> dplyr::select("submission_id", "submitted_by") |> dplyr::distinct(), by = "submission_id") |>
-    dplyr::relocate("submitted_by", .after = "submission_id") |> 
-    dplyr::distinct()
+    dplyr::left_join(
+      validated_data |>
+        dplyr::select("submission_id", "submitted_by") |>
+        dplyr::distinct(),
+      by = "submission_id"
+    ) |>
+    dplyr::relocate("submitted_by", .after = "submission_id") |>
+    dplyr::distinct() |>
+    # keep approved submissions untouched
+    dplyr::mutate(alert_flag = dplyr::if_else(.data$submission_id %in% approved_ids, NA_character_, .data$alert_flag))
 
   upload_parquet_to_cloud(
     data = flags_combined,
@@ -391,7 +469,8 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
   pars <- read_config()
 
   preprocessed_surveys <-
-    get_preprocessed_surveys(pars,
+    get_preprocessed_surveys(
+      pars,
       prefix = pars$surveys$ba_surveys$preprocessed_surveys$file_prefix
     ) |>
     dplyr::arrange(.data$survey_id)
@@ -401,7 +480,12 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::group_by(.data$survey_id) |>
     dplyr::mutate(total_catch_kg = sum(.data$catch_kg)) |>
     dplyr::ungroup() |>
-    dplyr::select("survey_id", "n_fishers", "trip_duration", "total_catch_kg") |>
+    dplyr::select(
+      "survey_id",
+      "n_fishers",
+      "trip_duration",
+      "total_catch_kg"
+    ) |>
     dplyr::distinct() |>
     dplyr::mutate(
       alert_flag = dplyr::case_when(
@@ -424,33 +508,61 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
   catch_bounds <- get_catch_bounds(data = clean_logic, k_param = 5)
   length_bounds <- get_length_bounds(data = clean_logic, k_param = 5)
 
-  bounds <- dplyr::full_join(catch_bounds, length_bounds, by = c("gear", "catch_taxon"))
+  bounds <- dplyr::full_join(
+    catch_bounds,
+    length_bounds,
+    by = c("gear", "catch_taxon")
+  )
 
   catch_clean <-
     clean_logic |>
     dplyr::left_join(bounds, by = c("gear", "catch_taxon")) |>
     dplyr::rowwise() |>
     dplyr::mutate(
-      alert_catch = ifelse(.data$catch_kg > .data$upper_catch, "4", NA_character_),
-      alert_length = ifelse(.data$length_cm > .data$upper_length, "4", NA_character_)
+      alert_catch = ifelse(
+        .data$catch_kg > .data$upper_catch,
+        "4",
+        NA_character_
+      ),
+      alert_length = ifelse(
+        .data$length_cm > .data$upper_length,
+        "4",
+        NA_character_
+      )
     ) |>
     dplyr::group_by(.data$survey_id) %>%
     dplyr::mutate(
       alert_catch_survey = max(as.numeric(.data$alert_catch), na.rm = TRUE),
-      alert_catch_survey = ifelse(.data$alert_catch_survey == -Inf, NA, .data$alert_catch_survey),
+      alert_catch_survey = ifelse(
+        .data$alert_catch_survey == -Inf,
+        NA,
+        .data$alert_catch_survey
+      ),
       alert_length_survey = max(as.numeric(.data$alert_length), na.rm = TRUE),
-      alert_length_survey = ifelse(.data$alert_length_survey == -Inf, NA, .data$alert_length_survey)
+      alert_length_survey = ifelse(
+        .data$alert_length_survey == -Inf,
+        NA,
+        .data$alert_length_survey
+      )
     ) |>
     dplyr::ungroup()
 
-
   flags_df <-
     catch_clean |>
-    dplyr::select("survey_id", "alert_flag", "alert_catch_survey", "alert_length_survey") |>
+    dplyr::select(
+      "survey_id",
+      "alert_flag",
+      "alert_catch_survey",
+      "alert_length_survey"
+    ) |>
     dplyr::mutate(
       alert_catch_survey = as.character(.data$alert_catch_survey),
       alert_length_survey = as.character(.data$alert_length_survey),
-      alert_flag = dplyr::coalesce(.data$alert_flag, .data$alert_catch_survey, .data$alert_length_survey)
+      alert_flag = dplyr::coalesce(
+        .data$alert_flag,
+        .data$alert_catch_survey,
+        .data$alert_length_survey
+      )
     ) |>
     dplyr::select(-c("alert_catch_survey", "alert_length_survey")) |>
     dplyr::ungroup() |>
@@ -458,10 +570,19 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
 
   validated_surveys <-
     catch_clean |>
-    dplyr::select(-c(
-      "fisher_id", "local_name", "alert_flag", "upper_catch", "upper_length",
-      "alert_catch", "alert_catch_survey", "alert_length", "alert_length_survey"
-    ))
+    dplyr::select(
+      -c(
+        "fisher_id",
+        "local_name",
+        "alert_flag",
+        "upper_catch",
+        "upper_length",
+        "alert_catch",
+        "alert_catch_survey",
+        "alert_length",
+        "alert_length_survey"
+      )
+    )
 
   validated_filename <- pars$surveys$ba_surveys$validated_surveys$file_prefix %>%
     add_version(extension = "parquet")
@@ -542,58 +663,69 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       options = pars$storage$google$options
     )
 
-  # Set up parallel processing
-  future::plan(strategy = future::multicore, workers = future::availableCores() - 2)
-
   # Enable progress reporting globally
   progressr::handlers(progressr::handler_progress(
     format = "[:bar] :current/:total (:percent) eta: :eta"
   ))
 
   # 1. First handle submissions with alert flags (mark as not approved)
-  flagged_submissions <- validation_flags %>%
+  flagged_submissions <-
+    validation_flags %>%
     dplyr::filter(!is.na(.data$alert_flag)) %>%
     dplyr::pull(.data$submission_id) %>%
     unique()
 
-  logger::log_info("Processing {} submissions with alert flags", length(flagged_submissions))
+  logger::log_info(
+    "Processing {} submissions with alert flags",
+    length(flagged_submissions)
+  )
 
   progressr::with_progress({
     p_flagged <- progressr::progressor(along = flagged_submissions)
 
     flagged_submissions %>%
-      furrr::future_walk(function(id) {
-        update_validation_status(
-          submission_id = id,
-          asset_id = pars$surveys$wf_surveys$asset_id,
-          token = pars$surveys$wf_surveys$token,
-          status = "validation_status_not_approved"
-        )
-        p_flagged(message = paste("Marked not approved:", id))
-      }, .options = furrr::furrr_options(seed = TRUE))
+      furrr::future_walk(
+        function(id) {
+          update_validation_status(
+            submission_id = id,
+            asset_id = pars$surveys$wf_surveys$asset_id,
+            token = pars$surveys$wf_surveys$token,
+            status = "validation_status_not_approved"
+          )
+          p_flagged(message = paste("Marked not approved:", id))
+        },
+        .options = furrr::furrr_options(seed = TRUE)
+      )
   })
 
   # 2. Now handle submissions without alert flags (mark as approved)
-  clean_submissions <- validation_flags %>%
+  clean_submissions <-
+    validation_flags %>%
     dplyr::filter(is.na(.data$alert_flag)) %>%
     dplyr::pull(.data$submission_id) %>%
     unique()
 
-  logger::log_info("Processing {} submissions without alert flags", length(clean_submissions))
+  logger::log_info(
+    "Processing {} submissions without alert flags",
+    length(clean_submissions)
+  )
 
   progressr::with_progress({
     p_clean <- progressr::progressor(along = clean_submissions)
 
     clean_submissions %>%
-      furrr::future_walk(function(id) {
-        update_validation_status(
-          submission_id = id,
-          asset_id = pars$surveys$wf_surveys$asset_id,
-          token = pars$surveys$wf_surveys$token,
-          status = "validation_status_approved"
-        )
-        p_clean(message = paste("Marked approved:", id))
-      }, .options = furrr::furrr_options(seed = TRUE))
+      furrr::future_walk(
+        function(id) {
+          update_validation_status(
+            submission_id = id,
+            asset_id = pars$surveys$wf_surveys$asset_id,
+            token = pars$surveys$wf_surveys$token,
+            status = "validation_status_approved"
+          )
+          p_clean(message = paste("Marked approved:", id))
+        },
+        .options = furrr::furrr_options(seed = TRUE)
+      )
   })
 
   # Finally, push the validation flags to MongoDB

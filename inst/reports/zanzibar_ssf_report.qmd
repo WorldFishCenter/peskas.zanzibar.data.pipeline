@@ -41,47 +41,49 @@ dat <- rio::import("zanizbarSSF_clean__20250414093746_da3c69d__.parquet") |>
 stats <- rio::import("fishery_stats__20250417160421_07d4dba__.parquet") |>
   dplyr::as_tibble()
 
-we <- 
-  validated_surveys |> 
+we <-
+  validated_surveys |>
   dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
-  dplyr::select(submission_id, district, trip_duration, gear, vessel_type, n_fishers) |> 
-  dplyr::group_by(submission_id) |> 
-  dplyr::summarise(dplyr::across(dplyr::everything(), ~ dplyr::first(.x))) |> 
-  dplyr::mutate(gear = dplyr::case_when(
-    .data$gear == "HL" ~ "Hand line",
-    .data$gear == "BS" ~ "Beach Seine",
-    .data$gear == "CS" ~ "Cast Net",
-    .data$gear == "GN" ~ "Gill Net",
-    .data$gear == "LL" ~ "Long line",
-    .data$gear == "SP" ~ "Spear gun",
-    .data$gear == "SR" ~ "Stick Rod",
-    .data$gear == "PS" ~ "Purse Seine",
-    .data$gear == "RN" ~ "Ring Net",
-    .data$gear == "SN" ~ "Shark Net",
-    .data$gear == "TR" ~ "Trap",
-    TRUE ~ .data$gear  # Keep original value if no match
-  ),
-  vessel_type = dplyr::case_when(
-    .data$vessel_type == "1" ~ "Fibre Boat",
-    .data$vessel_type == "2" ~ "Dhow",
-    .data$vessel_type == "3" ~ "Dugout canoe",
-    .data$vessel_type == "4" ~ "Outrigger canoe",
-    .data$vessel_type == "5" ~ "Planked Boat",
-    .data$vessel_type == "6" ~ "Wooden Boat",
-    TRUE ~ .data$vessel_type  # Keep original value if no match
-  ))
+  dplyr::select(submission_id, district, trip_duration, gear, vessel_type, n_fishers) |>
+  dplyr::group_by(submission_id) |>
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ dplyr::first(.x))) |>
+  dplyr::mutate(
+    gear = dplyr::case_when(
+      .data$gear == "HL" ~ "Hand line",
+      .data$gear == "BS" ~ "Beach Seine",
+      .data$gear == "CS" ~ "Cast Net",
+      .data$gear == "GN" ~ "Gill Net",
+      .data$gear == "LL" ~ "Long line",
+      .data$gear == "SP" ~ "Spear gun",
+      .data$gear == "SR" ~ "Stick Rod",
+      .data$gear == "PS" ~ "Purse Seine",
+      .data$gear == "RN" ~ "Ring Net",
+      .data$gear == "SN" ~ "Shark Net",
+      .data$gear == "TR" ~ "Trap",
+      TRUE ~ .data$gear # Keep original value if no match
+    ),
+    vessel_type = dplyr::case_when(
+      .data$vessel_type == "1" ~ "Fibre Boat",
+      .data$vessel_type == "2" ~ "Dhow",
+      .data$vessel_type == "3" ~ "Dugout canoe",
+      .data$vessel_type == "4" ~ "Outrigger canoe",
+      .data$vessel_type == "5" ~ "Planked Boat",
+      .data$vessel_type == "6" ~ "Wooden Boat",
+      TRUE ~ .data$vessel_type # Keep original value if no match
+    )
+  )
 
 district_colors <- c(
-  "urban" = "#1E88E5",    # Blue
-  "west_a" = "#FF5722",   # Orange
-  "central" = "#43A047",  # Green
-  "west_b" = "#FFC107",   # Yellow
-  "north_a" = "#9C27B0",  # Purple
-  "wete" = "#F44336",     # Red
-  "mkoani" = "#009688",   # Teal
-  "north_b" = "#795548",  # Brown
+  "urban" = "#1E88E5", # Blue
+  "west_a" = "#FF5722", # Orange
+  "central" = "#43A047", # Green
+  "west_b" = "#FFC107", # Yellow
+  "north_a" = "#9C27B0", # Purple
+  "wete" = "#F44336", # Red
+  "mkoani" = "#009688", # Teal
+  "north_b" = "#795548", # Brown
   "chake_chake" = "#607D8B", # Blue Grey
-  "south" = "#3F51B5",    # Indigo
+  "south" = "#3F51B5", # Indigo
   "micheweni" = "#E91E63" # Pink
 )
 
@@ -136,17 +138,18 @@ theme_modern <- function() {
 
 #### Gear usage
 ```{r characterization, fig.height=10, fig.width=10}
-
-gear_viz_grouped <- 
+gear_viz_grouped <-
   stats %>%
-  dplyr::group_by(district, gear) |> 
-  dplyr::count() |> 
-  dplyr::group_by(district) |> 
-  dplyr::mutate(total = sum(n),
-prc = n/total * 100) |> 
-  dplyr::arrange(desc(prc), .by_group = TRUE) |> 
-    mutate(prc_label = paste0(round(prc, 1), "%")) |> 
-    dplyr::filter(total >1)
+  dplyr::group_by(district, gear) |>
+  dplyr::count() |>
+  dplyr::group_by(district) |>
+  dplyr::mutate(
+    total = sum(n),
+    prc = n / total * 100
+  ) |>
+  dplyr::arrange(desc(prc), .by_group = TRUE) |>
+  mutate(prc_label = paste0(round(prc, 1), "%")) |>
+  dplyr::filter(total > 1)
 
 ggplot(gear_viz_grouped, aes(x = prc, y = reorder_within(gear, prc, district))) +
   # Add dots, sized by percentage
@@ -193,26 +196,28 @@ ggplot(gear_viz_grouped, aes(x = prc, y = reorder_within(gear, prc, district))) 
   facet_wrap(~district, ncol = 2, scales = "free_y") +
 
   # Hide the size legend
-  guides(size = "none",
-  color = "none")
-
+  guides(
+    size = "none",
+    color = "none"
+  )
 ```
 
 #### Vessel type
 
 ```{r vessels, fig.height=10, fig.width=10}
-
-gear_viz_grouped <- 
+gear_viz_grouped <-
   stats %>%
-  dplyr::mutate(vessel_type = dplyr::if_else(is.na(vessel_type), "Unknown", vessel_type)) |> 
-  dplyr::group_by(district, vessel_type) |> 
-  dplyr::count() |> 
-  dplyr::group_by(district) |> 
-  dplyr::mutate(total = sum(n),
-prc = n/total * 100) |> 
-  dplyr::arrange(desc(prc), .by_group = TRUE) |> 
-    mutate(prc_label = paste0(round(prc, 1), "%")) |> 
-    dplyr::filter(total >1)
+  dplyr::mutate(vessel_type = dplyr::if_else(is.na(vessel_type), "Unknown", vessel_type)) |>
+  dplyr::group_by(district, vessel_type) |>
+  dplyr::count() |>
+  dplyr::group_by(district) |>
+  dplyr::mutate(
+    total = sum(n),
+    prc = n / total * 100
+  ) |>
+  dplyr::arrange(desc(prc), .by_group = TRUE) |>
+  mutate(prc_label = paste0(round(prc, 1), "%")) |>
+  dplyr::filter(total > 1)
 
 ggplot(gear_viz_grouped, aes(x = prc, y = reorder_within(vessel_type, prc, district))) +
   # Add dots, sized by percentage
@@ -255,23 +260,26 @@ ggplot(gear_viz_grouped, aes(x = prc, y = reorder_within(vessel_type, prc, distr
 
   # Apply the custom theme
   theme_modern() +
-  theme(legend = "none",
-  color = "none")+
+  theme(
+    legend = "none",
+    color = "none"
+  ) +
 
   # Facet by region
   facet_wrap(~district, ncol = 2, scales = "free_y") +
 
   # Hide the size legend
-  guides(size = "none",
-  color = "none")
+  guides(
+    size = "none",
+    color = "none"
+  )
 ```
 
 
 #### Fishing effort
 
 ```{r duration, fig.height=10, fig.width=10}
-
-fisher_data <- stats  
+fisher_data <- stats
 
 # Calculate summary statistics by district
 district_summary <- fisher_data %>%
@@ -288,10 +296,12 @@ district_summary <- fisher_data %>%
 # Create a two-panel visualization
 p1 <- ggplot(district_summary, aes(x = reorder(district, mean_fishers), y = mean_fishers, fill = district)) +
   geom_col(width = 0.7) +
-  geom_text(aes(label = round(mean_fishers, 0), y = mean_fishers + 0.5), 
-            vjust = 0, size = 3.5) +
-  geom_text(aes(label = sprintf("n=%d", n_trips), y = 0.5), 
-            vjust = 0, hjust = 0, angle = 90, size = 3, color = "white") +
+  geom_text(aes(label = round(mean_fishers, 0), y = mean_fishers + 0.5),
+    vjust = 0, size = 3.5
+  ) +
+  geom_text(aes(label = sprintf("n=%d", n_trips), y = 0.5),
+    vjust = 0, hjust = 0, angle = 90, size = 3, color = "white"
+  ) +
   labs(
     title = "Average Number of fishers by District",
     subtitle = sprintf("Based on %d fishing trips", sum(district_summary$n_trips)),
@@ -309,10 +319,12 @@ p1 <- ggplot(district_summary, aes(x = reorder(district, mean_fishers), y = mean
 # Create a second panel showing district averages
 p2 <- ggplot(district_summary, aes(x = reorder(district, mean_duration), y = mean_duration, fill = district)) +
   geom_col(width = 0.7) +
-  geom_text(aes(label = sprintf("%.1f h", mean_duration), y = mean_duration + 0.5), 
-            vjust = 0, size = 3.5) +
-  geom_text(aes(label = sprintf("n=%d", n_trips), y = 0.5), 
-            vjust = 0, hjust = 0, angle = 90, size = 3, color = "white") +
+  geom_text(aes(label = sprintf("%.1f h", mean_duration), y = mean_duration + 0.5),
+    vjust = 0, size = 3.5
+  ) +
+  geom_text(aes(label = sprintf("n=%d", n_trips), y = 0.5),
+    vjust = 0, hjust = 0, angle = 90, size = 3, color = "white"
+  ) +
   labs(
     title = "Average Fishing Trip Duration by District",
     subtitle = sprintf("Based on %d fishing trips", sum(district_summary$n_trips)),
@@ -331,15 +343,13 @@ combined_plot <- p1 / p2 + plot_layout(heights = c(2, 1))
 
 # Display the combined plot
 combined_plot
-
 ```
 ### Catch
 
 ```{r cpue, fig.height=6, fig.width=10}
-
 district_summary <- dat %>%
-  dplyr::select(district, cpue, rpue) |> 
-    dplyr::mutate(rpue_usd = rpue * 0.00037) |>   
+  dplyr::select(district, cpue, rpue) |>
+  dplyr::mutate(rpue_usd = rpue * 0.00037) |>
   group_by(district) %>%
   summarize(
     mean_cpue = mean(cpue, na.rm = TRUE),
@@ -350,18 +360,18 @@ district_summary <- dat %>%
   ) %>%
   ungroup() %>%
   # Sort by average CPUE for consistent ordering
-  arrange(desc(mean_cpue)) |> 
-    dplyr::filter(!district == "north_a")
+  arrange(desc(mean_cpue)) |>
+  dplyr::filter(!district == "north_a")
 
 # Create the ordered district factor to ensure consistent ordering
 ordered_districts <- district_summary$district
 
 # Make the ordered version of the data
 dat_ordered <- dat %>%
-  mutate(district = factor(district, levels = ordered_districts)) |> 
-    dplyr::filter(!district == "north_a")
+  mutate(district = factor(district, levels = ordered_districts)) |>
+  dplyr::filter(!district == "north_a")
 
-# Create a cleaner visualization 
+# Create a cleaner visualization
 p1 <- ggplot(dat_ordered, aes(x = district, y = cpue, fill = district)) +
   geom_violin(alpha = 0.7, trim = TRUE, scale = "width") +
   geom_boxplot(width = 0.15, alpha = 0.7, outlier.shape = NA) +
@@ -381,10 +391,14 @@ p1 <- ggplot(dat_ordered, aes(x = district, y = cpue, fill = district)) +
   # Adjust y-axis limits to make room for labels at the bottom
   scale_y_continuous(limits = c(-0.5, NA)) +
   # Add sample size labels with adjusted y-position
-  geom_text(data = district_summary, 
-            aes(x = district, y = -0.3, # Position below 0
-                label = sprintf("n=%d", n_samples)),
-            size = 2.5)
+  geom_text(
+    data = district_summary,
+    aes(
+      x = district, y = -0.3, # Position below 0
+      label = sprintf("n=%d", n_samples)
+    ),
+    size = 2.5
+  )
 
 # For the bar chart - adjust positions
 p2 <- ggplot(district_summary, aes(x = reorder(district, mean_cpue), y = mean_cpue, fill = district)) +
@@ -406,11 +420,11 @@ p2 <- ggplot(district_summary, aes(x = reorder(district, mean_cpue), y = mean_cp
     panel.grid.major.y = element_blank()
   ) +
   # Add text with adjusted position
-  geom_text(aes(label = sprintf("%.2f", mean_cpue)), 
-            hjust = -0.3, size = 3)
+  geom_text(aes(label = sprintf("%.2f", mean_cpue)),
+    hjust = -0.3, size = 3
+  )
 
 p1 + p2 + patchwork::plot_layout(widths = c(1.5, 1))
-
 ```
 
 
@@ -418,10 +432,9 @@ p1 + p2 + patchwork::plot_layout(widths = c(1.5, 1))
 ### Revenue
 
 ```{r rpue, fig.height=6, fig.width=10}
-
 district_summary <- dat %>%
-  dplyr::select(district, cpue, rpue) |> 
-    dplyr::mutate(rpue_usd = rpue * 0.00037) |>   
+  dplyr::select(district, cpue, rpue) |>
+  dplyr::mutate(rpue_usd = rpue * 0.00037) |>
   group_by(district) %>%
   summarize(
     mean_cpue = mean(cpue, na.rm = TRUE),
@@ -432,18 +445,18 @@ district_summary <- dat %>%
   ) %>%
   ungroup() %>%
   # Sort by average CPUE for consistent ordering
-  arrange(desc(mean_rpue_usd)) |> 
-    dplyr::filter(!district == "north_a")
+  arrange(desc(mean_rpue_usd)) |>
+  dplyr::filter(!district == "north_a")
 
 # Create the ordered district factor to ensure consistent ordering
 ordered_districts <- district_summary$district
 
 # Make the ordered version of the data
 dat_ordered <- dat %>%
-  mutate(district = factor(district, levels = ordered_districts)) |> 
-    dplyr::filter(!district == "north_a")
+  mutate(district = factor(district, levels = ordered_districts)) |>
+  dplyr::filter(!district == "north_a")
 
-# Create a cleaner visualization 
+# Create a cleaner visualization
 p1 <- ggplot(dat_ordered, aes(x = district, y = rpue * 0.00037, fill = district)) +
   geom_violin(alpha = 0.7, trim = TRUE, scale = "width") +
   geom_boxplot(width = 0.15, alpha = 0.7, outlier.shape = NA) +
@@ -463,10 +476,14 @@ p1 <- ggplot(dat_ordered, aes(x = district, y = rpue * 0.00037, fill = district)
   # Adjust y-axis limits to make room for labels at the bottom
   scale_y_continuous(limits = c(-0.5, NA), n.breaks = 10) +
   # Add sample size labels with adjusted y-position
-  geom_text(data = district_summary, 
-            aes(x = district, y = -0.3, # Position below 0
-                label = sprintf("n=%d", n_samples)),
-            size = 2.5)
+  geom_text(
+    data = district_summary,
+    aes(
+      x = district, y = -0.3, # Position below 0
+      label = sprintf("n=%d", n_samples)
+    ),
+    size = 2.5
+  )
 
 # For the bar chart - adjust positions
 p2 <- ggplot(district_summary, aes(x = reorder(district, mean_rpue_usd), y = mean_rpue_usd, fill = district)) +
@@ -488,11 +505,11 @@ p2 <- ggplot(district_summary, aes(x = reorder(district, mean_rpue_usd), y = mea
     panel.grid.major.y = element_blank()
   ) +
   # Add text with adjusted position
-  geom_text(aes(label = sprintf("%.2f", mean_rpue_usd)), 
-            hjust = -0.3, size = 3)
+  geom_text(aes(label = sprintf("%.2f", mean_rpue_usd)),
+    hjust = -0.3, size = 3
+  )
 
 p1 + p2 + patchwork::plot_layout(widths = c(1.5, 1))
-
 ```
 
 

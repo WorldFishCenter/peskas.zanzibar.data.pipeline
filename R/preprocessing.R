@@ -239,7 +239,17 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
       .data$catch_taxon == "SKH" ~ "CVX", TRUE ~ .data$catch_taxon
     ))
 
-  lwcoeffs <- getLWCoeffs(taxa_list = unique(catch_info$catch_taxon), asfis_list = asfis)
+  # Try to get length-weight coefficients from Rfishbase
+  lwcoeffs <- tryCatch(
+    {
+      getLWCoeffs(taxa_list = unique(catch_info$catch_taxon), asfis_list = asfis)
+    },
+    error = function(e) {
+      message("Error in getLWCoeffs, using local fallback: ", e$message)
+      # Fallback to local data
+      readr::read_rds(system.file("length_weight_params.rds", package = "peskas.zanzibar.data.pipeline"))
+    }
+  )
 
   # add flyng fish estimates
   fly_lwcoeffs <- dplyr::tibble(catch_taxon = "FLY", n = 0, a_6 = 0.00631, b_6 = 3.05)

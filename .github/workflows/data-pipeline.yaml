@@ -127,6 +127,22 @@ jobs:
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_ba_surveys()'
       - name: Call validate_wf_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wf_surveys()'
+
+  sync-validation:
+    name: Sync surveys validation
+    needs: validate-surveys
+    runs-on: ubuntu-24.04
+    container:
+      image: docker.pkg.github.com/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call sync_validation_submissions()
+        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::sync_validation_submissions()'
         
 
   export-wcs-surveys:
