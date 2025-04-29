@@ -149,7 +149,9 @@ export_data <- function(log_threshold = logger::DEBUG) {
       fill = list(catch_prop = 0)
     ) |>
     dplyr::group_by(.data$landing_site) |>
-    dplyr::mutate(family = ifelse(.data$catch_prop < 5, "Others", .data$family)) |>
+    dplyr::mutate(
+      family = ifelse(.data$catch_prop < 5, "Others", .data$family)
+    ) |>
     dplyr::group_by(.data$landing_site, .data$family) |>
     dplyr::summarise(
       catch_prop = sum(.data$catch_prop),
@@ -244,12 +246,16 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     dplyr::select(-"source")
 
   # Choose a parallelization strategy - adjust the number of workers as needed
-  future::plan(strategy = future::multicore, workers = future::availableCores() - 2) # Use 4 parallel workers
+  future::plan(
+    strategy = future::multisession,
+    workers = future::availableCores() - 2
+  ) # Use 4 parallel workers
 
   # get validation table
   valid_ids <-
     unique(validated_surveys$submission_id) %>%
-    furrr::future_map_dfr(get_validation_status,
+    furrr::future_map_dfr(
+      get_validation_status,
       asset_id = pars$surveys$wf_surveys$asset_id,
       token = pars$surveys$wf_surveys$token,
       .options = furrr::furrr_options(seed = TRUE)
@@ -265,18 +271,47 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
   indicators_df <-
     clean_data |>
     dplyr::filter(.data$collect_data_today == "1") |>
-    dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
+    dplyr::mutate(
+      n_fishers = .data$no_men_fishers +
+        .data$no_women_fishers +
+        .data$no_child_fishers
+    ) |>
     dplyr::select(
-      "submission_id", "landing_date", "district", "landing_site",
-      "habitat", "gear", "vessel_type", "propulsion_gear", "fuel_L", "trip_duration",
-      "vessel_type", "n_fishers", "catch_taxon", "catch_price", "catch_kg"
+      "submission_id",
+      "landing_date",
+      "district",
+      "landing_site",
+      "habitat",
+      "gear",
+      "vessel_type",
+      "propulsion_gear",
+      "fuel_L",
+      "trip_duration",
+      "vessel_type",
+      "n_fishers",
+      "catch_taxon",
+      "catch_price",
+      "catch_kg"
     ) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::summarise(
-      dplyr::across(.cols = c(
-        "landing_date", "district", "landing_site", "habitat", "gear",
-        "vessel_type", "propulsion_gear", "fuel_L", "trip_duration", "vessel_type", "n_fishers", "catch_price"
-      ), ~ dplyr::first(.x)),
+      dplyr::across(
+        .cols = c(
+          "landing_date",
+          "district",
+          "landing_site",
+          "habitat",
+          "gear",
+          "vessel_type",
+          "propulsion_gear",
+          "fuel_L",
+          "trip_duration",
+          "vessel_type",
+          "n_fishers",
+          "catch_price"
+        ),
+        ~ dplyr::first(.x)
+      ),
       tot_catch_kg = sum(.data$catch_kg),
       catch_taxon = paste(unique(.data$catch_taxon), collapse = "-")
     ) |>
@@ -287,15 +322,30 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       rpue = .data$catch_price / .data$n_fishers / .data$trip_duration
     )
 
-
   taxa_df <-
     clean_data |>
     dplyr::filter(.data$collect_data_today == "1") |>
-    dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
+    dplyr::mutate(
+      n_fishers = .data$no_men_fishers +
+        .data$no_women_fishers +
+        .data$no_child_fishers
+    ) |>
     dplyr::select(
-      "submission_id", "landing_date", "district", "landing_site",
-      "habitat", "gear", "vessel_type", "propulsion_gear", "fuel_L", "trip_duration",
-      "vessel_type", "n_fishers", "catch_taxon", "catch_price", "catch_kg"
+      "submission_id",
+      "landing_date",
+      "district",
+      "landing_site",
+      "habitat",
+      "gear",
+      "vessel_type",
+      "propulsion_gear",
+      "fuel_L",
+      "trip_duration",
+      "vessel_type",
+      "n_fishers",
+      "catch_taxon",
+      "catch_price",
+      "catch_kg"
     ) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::mutate(
@@ -304,10 +354,24 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::group_by(.data$submission_id, .data$catch_taxon) |>
     dplyr::summarise(
-      dplyr::across(.cols = c(
-        "n_catch", "landing_date", "district", "landing_site", "habitat", "gear",
-        "vessel_type", "propulsion_gear", "fuel_L", "trip_duration", "vessel_type", "n_fishers", "catch_price"
-      ), ~ dplyr::first(.x)),
+      dplyr::across(
+        .cols = c(
+          "n_catch",
+          "landing_date",
+          "district",
+          "landing_site",
+          "habitat",
+          "gear",
+          "vessel_type",
+          "propulsion_gear",
+          "fuel_L",
+          "trip_duration",
+          "vessel_type",
+          "n_fishers",
+          "catch_price"
+        ),
+        ~ dplyr::first(.x)
+      ),
       tot_catch_kg = sum(.data$catch_kg),
       .groups = "drop"
     ) |>

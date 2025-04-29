@@ -35,12 +35,18 @@ library(patchwork)
 This report presents preliminary analyses of Zanzibar's small-scale fisheries, including gear usage, vessel types, fishing effort, catch rates, and revenue across different districts.
 
 ```{r data-import_constants}
+
 path <- "inst/reports/zanizbarSSF_clean__20250414093746_da3c69d__.parquet"
 dat <- rio::import("zanizbarSSF_clean__20250414093746_da3c69d__.parquet") |>
   dplyr::as_tibble()
 stats <- rio::import("fishery_stats__20250417160421_07d4dba__.parquet") |>
   dplyr::as_tibble()
 
+taxa <- rio::import("aggregated_taxa__20250427171641_ab5e96e__.parquet") |>
+  dplyr::as_tibble()
+
+
+if (FALSE) {
 we <-
   validated_surveys |>
   dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
@@ -72,6 +78,7 @@ we <-
       TRUE ~ .data$vessel_type # Keep original value if no match
     )
   )
+    }
 
 district_colors <- c(
   "urban" = "#1E88E5", # Blue
@@ -133,10 +140,10 @@ theme_modern <- function() {
 }
 ```
 
-
 ### Fishery characterization
 
 #### Gear usage
+
 ```{r characterization, fig.height=10, fig.width=10}
 gear_viz_grouped <-
   stats %>%
@@ -275,7 +282,6 @@ ggplot(gear_viz_grouped, aes(x = prc, y = reorder_within(vessel_type, prc, distr
   )
 ```
 
-
 #### Fishing effort
 
 ```{r duration, fig.height=10, fig.width=10}
@@ -344,6 +350,7 @@ combined_plot <- p1 / p2 + plot_layout(heights = c(2, 1))
 # Display the combined plot
 combined_plot
 ```
+
 ### Catch
 
 ```{r cpue, fig.height=6, fig.width=10}
@@ -426,8 +433,6 @@ p2 <- ggplot(district_summary, aes(x = reorder(district, mean_cpue), y = mean_cp
 
 p1 + p2 + patchwork::plot_layout(widths = c(1.5, 1))
 ```
-
-
 
 ### Revenue
 
@@ -512,4 +517,157 @@ p2 <- ggplot(district_summary, aes(x = reorder(district, mean_rpue_usd), y = mea
 p1 + p2 + patchwork::plot_layout(widths = c(1.5, 1))
 ```
 
+### Fish groups
 
+```{r taxa-all, fig.height=7, fig.width=7}
+
+taxa_overall <- taxa %>%
+  # Sum catch weight by fish group across all districts
+  dplyr::group_by(fish_group) %>%
+  dplyr::filter(!is.na(fish_group)) |> 
+  dplyr::summarize(
+    tot_catch_kg = sum(tot_catch_kg),
+    .groups = "drop"
+  ) %>%
+  # Calculate percentage of total catch
+  dplyr::mutate(
+    total_catch = sum(tot_catch_kg),
+    prc = tot_catch_kg / total_catch * 100
+  ) %>%
+  # Arrange in descending order of catch
+  dplyr::arrange(dplyr::desc(tot_catch_kg)) %>%
+  # Take top 5 and create "Others" category
+  dplyr::mutate(
+    rank = dplyr::row_number(),
+    fish_category = if_else(rank <= 5, fish_group, "Others")
+  ) %>%
+  # Group by fish category (combining "Others")
+  dplyr::group_by(fish_category) %>%
+  dplyr::summarize(
+    tot_catch_kg = sum(tot_catch_kg),
+    prc = sum(prc),
+    .groups = "drop"
+  ) %>%
+  # Arrange again for consistent ordering
+  dplyr::arrange(dplyr::desc(tot_catch_kg)) %>%
+  # Create label with percentage for the pie chart
+  dplyr::mutate(label = paste0(fish_category, "\n", round(prc, 1), "%"))
+
+# Create a pie chart
+ggplot(taxa_overall, aes(x = "", y = prc, fill = fish_category)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  # Use a colorful palette
+  scale_fill_brewer(palette = "Set2") +
+  # Add labels
+  geom_text(aes(label = label),
+            position = position_stack(vjust = 0.5),
+            size = 3.5
+  ) +
+  # Add informative title
+  labs(
+    title = "Overall Fish Group Composition in Zanzibar",
+    subtitle = "Top 5 fish groups across all districts",
+    caption = "Source: PESKAS"
+  ) +
+  # Remove unnecessary elements
+  theme_void() +
+  theme(
+    plot.title = element_text(size = 18, face = "bold", margin = margin(b = 10)),
+    plot.subtitle = element_text(size = 12, color = "#555555", margin = margin(b = 20)),
+    plot.caption = element_markdown(size = 8, color = "#888888", margin = margin(t = 15)),
+    legend.position = "none",
+    plot.margin = margin(20, 25, 20, 25)
+  )
+```
+
+```{r taxa-district, fig.height=10, fig.width=10}
+
+taxa_processed <- 
+  taxa |> 
+  dplyr::filter(!is.na(fish_group)) %>%
+  dplyr::group_by(district) %>%
+  # Arrange in descending order of catch within each district
+  dplyr::arrange(district, desc(tot_catch_kg)) %>%
+  # Add a rank column within each district
+  dplyr::mutate(rank = dplyr::row_number()) %>%
+  # Create a new column for the grouped categories
+  dplyr::mutate(
+    fish_category = dplyr::if_else(rank <= 5, fish_group, "Others")
+  ) %>%
+  # Remove the rank column as it's no longer needed
+  dplyr::select(-rank) %>%
+  # Group by both district and the new fish category
+  dplyr::group_by(district, fish_category) %>%
+  # Summarize to combine all "others" into one row per district
+  dplyr::summarize(
+    tot_catch_kg = sum(tot_catch_kg),
+    prc = sum(prc),
+    .groups = "drop"
+  ) %>%
+  # Create a factor with "Others" as the last level
+  dplyr::mutate(
+    # Create ordered factor where "Others" is always last regardless of percentage
+    fish_category = factor(fish_category, 
+                         levels = c(setdiff(unique(fish_category), "Others"), "Others"))
+  ) %>%
+  # Now arrange by district, then by this factor (which keeps "Others" last)
+  dplyr::arrange(district, desc(fish_category != "Others"), desc(tot_catch_kg))
+
+
+ggplot(taxa_processed, aes(x = prc, y = reorder_within(fish_category, 
+                                                      ifelse(fish_category == "Others", -Inf, prc), 
+                                                      district))) +
+  # Add dots, sized by percentage
+  geom_point(aes(size = prc, color = district), alpha = 0.8) +
+  
+  # Add connecting segments
+  geom_segment(aes(xend = 0, 
+                   yend = reorder_within(fish_category, 
+                                       ifelse(fish_category == "Others", -Inf, prc), 
+                                       district), 
+                   color = district),
+    alpha = 0.3, size = 0.8
+  ) +
+  
+  # Add percentage labels
+  geom_text(aes(label = paste0(round(prc, 1), "%"), color = district),
+    hjust = -0.5,
+    size = 3,
+    show.legend = FALSE
+  ) +
+  
+  # Set size scale
+  scale_size_continuous(range = c(2, 8)) +
+  scale_color_manual(values = district_colors) +
+  
+  # Scale y axis with region-specific ordering
+  scale_y_reordered() +
+  
+  # Set x-axis scale
+  scale_x_continuous(
+    labels = function(x) paste0(x, "%"),
+    limits = c(0, max(taxa_processed$prc) * 1.2),
+    expand = c(0, 0)
+  ) +
+  
+  # Add informative labels
+  labs(
+    title = "Fish Groups Composition in Zanzibar",
+    subtitle = "Top 5 fish groups by district (percentage of total catch)",
+    x = "Percentage of catch",
+    y = "",
+    caption = "Source: PESKAS"
+  ) +
+  
+  # Apply the custom theme
+  theme_modern() +
+  # Facet by region
+  facet_wrap(~district, ncol = 2, scales = "free_y") +
+  
+  # Hide the size legend
+  guides(
+    size = "none",
+    color = "none"
+  )
+```

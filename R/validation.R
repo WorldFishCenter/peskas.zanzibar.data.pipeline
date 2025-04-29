@@ -422,7 +422,13 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::relocate("submitted_by", .after = "submission_id") |>
     dplyr::distinct() |>
     # keep approved submissions untouched
-    dplyr::mutate(alert_flag = dplyr::if_else(.data$submission_id %in% approved_ids, NA_character_, .data$alert_flag))
+    dplyr::mutate(
+      alert_flag = dplyr::if_else(
+        .data$submission_id %in% approved_ids,
+        NA_character_,
+        .data$alert_flag
+      )
+    )
 
   upload_parquet_to_cloud(
     data = flags_combined,
@@ -663,10 +669,10 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       options = pars$storage$google$options
     )
 
-  # Enable progress reporting globally
-  progressr::handlers(progressr::handler_progress(
-    format = "[:bar] :current/:total (:percent) eta: :eta"
-  ))
+  validation_flags_long <-
+    validation_flags |>
+    dplyr::mutate(alert_flag = as.character(.data$alert_flag)) %>%
+    tidyr::separate_rows("alert_flag", sep = ",\\s*")
 
   # 1. First handle submissions with alert flags (mark as not approved)
   flagged_submissions <-
@@ -674,6 +680,16 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     dplyr::filter(!is.na(.data$alert_flag)) %>%
     dplyr::pull(.data$submission_id) %>%
     unique()
+
+  future::plan(
+    strategy = future::multisession,
+    workers = future::availableCores() - 2
+  )
+
+  # Enable progress reporting globally
+  progressr::handlers(progressr::handler_progress(
+    format = "[:bar] :current/:total (:percent) eta: :eta"
+  ))
 
   logger::log_info(
     "Processing {} submissions with alert flags",
@@ -728,11 +744,19 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       )
   })
 
-  # Finally, push the validation flags to MongoDB
+  # Push the validation flags to MongoDB
   mdb_collection_push(
     data = validation_flags,
     connection_string = pars$storage$mongodb$connection_string,
-    collection_name = pars$storage$mongodb$validation,
+    collection_name = pars$storage$mongodb$validation$collection$flags,
+    db_name = pars$storage$mongodb$database_name
+  )
+
+  # Push enumerators statistics to MongoDB
+  mdb_collection_push(
+    data = validation_flags_long,
+    connection_string = pars$storage$mongodb$connection_string,
+    collection_name = pars$storage$mongodb$validation$collection$enumerators_stats,
     db_name = pars$storage$mongodb$database_name
   )
 
