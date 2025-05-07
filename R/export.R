@@ -455,6 +455,10 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       -c("district", "common_name"),
       names_to = "metric",
       values_to = "value"
+    ) |>
+    dplyr::mutate(
+      district = stringr::str_to_title(.data$district),
+      district = stringr::str_replace(.data$district, "_", " ")
     )
 
   districts_summaries <-
@@ -473,6 +477,10 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       -"district",
       names_to = "indicator",
       values_to = "value"
+    ) |>
+    dplyr::mutate(
+      district = stringr::str_to_title(.data$district),
+      district = stringr::str_replace(.data$district, "_", " ")
     )
 
   gear_summaries <-
@@ -504,6 +512,10 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       -c("district", "gear"),
       names_to = "indicator",
       values_to = "value"
+    ) |>
+    dplyr::mutate(
+      district = stringr::str_to_title(.data$district),
+      district = stringr::str_replace(.data$district, "_", " ")
     )
 
   # Dataframes to upload
