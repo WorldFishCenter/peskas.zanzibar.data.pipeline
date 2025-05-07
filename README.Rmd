@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/peskas.zanzibar.data.pipeline)](https://CRAN.R-project.org/package=peskas.zanzibar.data.pipeline)
 [![Codecov test coverage](https://codecov.io/gh/WorldFishCenter/peskas.zanzibar.data.pipeline/branch/master/graph/badge.svg)](https://codecov.io/gh/WorldFishCenter/peskas.zanzibar.data.pipeline?branch=master)
 [![R build status](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/workflows/R-CMD-check/badge.svg)](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions)
+[![R-CMD-check](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 The goal of peskas.zanzibar.data.pipeline is to implement, deploy, and execute the data and modelling pipelines that underpin Zanzibar, the small-scale fisheries analytics in Zanzibar. 
