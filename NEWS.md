@@ -1,3 +1,8 @@
+# peskas.zanzibar.data.pipeline 3.0.0
+
+### New Features
+- Generate clean dataframes to export to dashboard. These include districts and taxa summaries and monthly regional time series of the main fishery indicators, CPUE, RPUE and price per kg
+
 # peskas.zanzibar.data.pipeline 2.6.0
 
 ### New Features

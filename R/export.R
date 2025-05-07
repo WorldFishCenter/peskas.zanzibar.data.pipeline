@@ -240,6 +240,7 @@ export_data <- function(log_threshold = logger::DEBUG) {
 export_wf_data <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
   pars <- read_config()
+  metadata_tables <- get_metadata()
 
   validated_surveys <-
     get_validated_surveys(pars, sources = "wf") |>
@@ -344,6 +345,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       "vessel_type",
       "n_fishers",
       "catch_taxon",
+      "length",
       "catch_price",
       "catch_kg"
     ) |>
@@ -372,8 +374,166 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
         ),
         ~ dplyr::first(.x)
       ),
+      lenght = mean(.data$length),
       tot_catch_kg = sum(.data$catch_kg),
       .groups = "drop"
     ) |>
     dplyr::relocate("n_catch", .after = "submission_id")
+
+  monthly_summaries <-
+    indicators_df |>
+    dplyr::mutate(
+      date = lubridate::floor_date(.data$landing_date, "month"),
+      date = lubridate::as_datetime(.data$date)
+    ) |>
+    dplyr::group_by(.data$district, .data$date) |>
+    dplyr::summarise(
+      dplyr::across(
+        .cols = c(
+          "cpue",
+          "rpue",
+          "price_kg"
+        ),
+        ~ mean(.x, na.rm = TRUE)
+      ),
+      .groups = "drop"
+    ) |>
+    dplyr::rename(
+      mean_cpue = "cpue",
+      mean_rpue = "rpue",
+      mean_price_kg = "price_kg"
+    ) |>
+    tidyr::complete(
+      .data$district,
+      date = seq(min(.data$date), max(.data$date), by = "month"),
+      fill = list(
+        mean_cpue = NA,
+        mean_rpue = NA,
+        mean_price_kg = NA
+      )
+    ) |>
+    tidyr::pivot_longer(
+      -c("date", "district"),
+      names_to = "metric",
+      values_to = "value"
+    ) |>
+    dplyr::mutate(
+      district = stringr::str_to_title(.data$district),
+      district = stringr::str_replace(.data$district, "_", " ")
+    )
+
+  taxa_summaries <-
+    taxa_df |>
+    dplyr::group_by(.data$district, .data$catch_taxon) |>
+    dplyr::summarise(
+      catch_kg = sum(.data$tot_catch_kg, na.rm = T),
+      catch_price = sum(.data$catch_price, na.rm = T),
+      mean_length = mean(.data$lenght, na.rm = T),
+      .groups = "drop"
+    ) |>
+    dplyr::rename(alpha3_code = "catch_taxon") |>
+    dplyr::left_join(metadata_tables$catch_type, by = "alpha3_code") |>
+    dplyr::select(
+      "district",
+      "common_name",
+      "catch_kg",
+      "catch_price",
+      "mean_length"
+    ) |>
+    tidyr::complete(
+      .data$district,
+      .data$common_name,
+      fill = list(
+        catch_kg = 0,
+        catch_price = NA,
+        length = NA
+      )
+    ) |>
+    dplyr::mutate(price_kg = .data$catch_price / .data$catch_kg) |>
+    dplyr::select(-c("catch_price")) |>
+    tidyr::pivot_longer(
+      -c("district", "common_name"),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  districts_summaries <-
+    indicators_df |>
+    dplyr::group_by(.data$district) |>
+    dplyr::summarise(
+      n_submissions = dplyr::n(),
+      n_fishers = mean(.data$n_fishers),
+      trip_duration = mean(.data$trip_duration),
+      mean_cpue = mean(.data$cpue, na.rm = TRUE),
+      mean_rpue = mean(.data$rpue, na.rm = TRUE),
+      mean_price_kg = mean(.data$price_kg, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    tidyr::pivot_longer(
+      -"district",
+      names_to = "indicator",
+      values_to = "value"
+    )
+
+  gear_summaries <-
+    indicators_df |>
+    dplyr::group_by(.data$district, .data$gear) |>
+    dplyr::summarise(
+      n_submissions = dplyr::n(),
+      cpue = mean(.data$cpue, na.rm = T),
+      rpue = mean(.data$rpue),
+      .groups = "drop"
+    ) |>
+    dplyr::mutate(
+      gear = dplyr::case_when(
+        .data$gear == "HL" ~ "Hand line",
+        .data$gear == "BS" ~ "Beach Seine",
+        .data$gear == "CS" ~ "Cast Net",
+        .data$gear == "GN" ~ "Gill Net",
+        .data$gear == "LL" ~ "Long line",
+        .data$gear == "SP" ~ "Spear gun",
+        .data$gear == "SR" ~ "Stick Rod",
+        .data$gear == "PS" ~ "Purse Seine",
+        .data$gear == "RN" ~ "Ring Net",
+        .data$gear == "SN" ~ "Shark Net",
+        .data$gear == "TR" ~ "Trap",
+        TRUE ~ .data$gear # Keep original value if no match
+      )
+    ) |>
+    tidyr::pivot_longer(
+      -c("district", "gear"),
+      names_to = "indicator",
+      values_to = "value"
+    )
+
+  # Dataframes to upload
+  dataframes_to_upload <- list(
+    monthly_summaries = monthly_summaries,
+    taxa_summaries = taxa_summaries,
+    districts_summaries = districts_summaries,
+    gear_summaries = gear_summaries
+  )
+
+  # Collection names
+  collection_names <- list(
+    monthly_summaries = pars$storage$mongodb$portal$collection$monthly_summaries,
+    taxa_summaries = pars$storage$mongodb$portal$collection$taxa_summaries,
+    districts_summaries = pars$storage$mongodb$portal$collection$districts_summaries,
+    gear_summaries = pars$storage$mongodb$portal$collection$gear_summaries
+  )
+
+  # Iterate over the dataframes and upload them
+  purrr::walk2(
+    .x = dataframes_to_upload,
+    .y = collection_names,
+    .f = ~ {
+      logger::log_info(paste("Uploading", .y, "data to MongoDB"))
+      mdb_collection_push(
+        data = .x,
+        connection_string = pars$storage$mongodb$connection_string,
+        collection_name = .y,
+        db_name = pars$storage$mongodb$database_name
+      )
+    }
+  )
 }

@@ -84,10 +84,17 @@ default:
           gear_metrics: gear_metrics
           taxa: taxa_proportions
           effort_map: effort_map
-      validation: 
+      validation:
         collection:
           flags: surveys_flags
           enumerators_stats: enumerators_stats
+      portal:
+        collection:
+          monthly_summaries: monthly_summaries
+          taxa_summaries: taxa_summaries
+          districts_summaries: districts_summaries
+          gear_summaries: gear_summaries
+
   pds_storage:
     google:
       key: gcs
@@ -103,6 +110,7 @@ default:
         - devices
         - sites
         - boats
+        - catch_type
   validation:
     k_MAD_catch: 7
 
