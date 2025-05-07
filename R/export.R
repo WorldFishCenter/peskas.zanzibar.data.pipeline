@@ -167,9 +167,9 @@ export_data <- function(log_threshold = logger::DEBUG) {
 
   # Collection names
   collection_names <- list(
-    monthly_metrics_tidy = pars$storage$mongodb$export$collection$monthly_metrics,
-    gear_metrics_tidy = pars$storage$mongodb$export$collection$gear_metrics,
-    taxa_proportion = pars$storage$mongodb$export$collection$taxa
+    monthly_metrics_tidy = pars$storage$mongodb$pipeline$collection$monthly_metrics,
+    gear_metrics_tidy = pars$storage$mongodb$pipeline$collection$gear_metrics,
+    taxa_proportion = pars$storage$mongodb$pipeline$collection$taxa
   )
 
   # Upload data
@@ -182,7 +182,7 @@ export_data <- function(log_threshold = logger::DEBUG) {
         data = .x,
         connection_string = pars$storage$mongodb$connection_string,
         collection_name = .y,
-        db_name = pars$storage$mongodb$database_name
+        db_name = pars$storage$mongodb$pipeline$database_name
       )
     }
   )
@@ -532,7 +532,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
         data = .x,
         connection_string = pars$storage$mongodb$connection_string,
         collection_name = .y,
-        db_name = pars$storage$mongodb$database_name
+        db_name = pars$storage$mongodb$portal$database_name
       )
     }
   )

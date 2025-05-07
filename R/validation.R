@@ -749,7 +749,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     data = validation_flags,
     connection_string = pars$storage$mongodb$connection_string,
     collection_name = pars$storage$mongodb$validation$collection$flags,
-    db_name = pars$storage$mongodb$database_name
+    db_name = pars$storage$mongodb$validation$database_name
   )
 
   # Push enumerators statistics to MongoDB
@@ -757,7 +757,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     data = validation_flags_long,
     connection_string = pars$storage$mongodb$connection_string,
     collection_name = pars$storage$mongodb$validation$collection$enumerators_stats,
-    db_name = pars$storage$mongodb$database_name
+    db_name = pars$storage$mongodb$validation$database_name
   )
 
   logger::log_info("Validation synchronization completed successfully")

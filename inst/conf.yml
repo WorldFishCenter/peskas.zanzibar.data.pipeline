@@ -77,24 +77,25 @@ default:
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
     mongodb:
       connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
-      database_name: zanzibar-dev
-      export:
+      pipeline:
+        database_name: zanzibar-dev
         collection:
           monthly_metrics: monthly_metrics
           gear_metrics: gear_metrics
           taxa: taxa_proportions
           effort_map: effort_map
       validation:
+        database_name: zanzibar-dev
         collection:
           flags: surveys_flags
           enumerators_stats: enumerators_stats
       portal:
+        database_name: portal-dev
         collection:
           monthly_summaries: monthly_summaries
           taxa_summaries: taxa_summaries
           districts_summaries: districts_summaries
           gear_summaries: gear_summaries
-
   pds_storage:
     google:
       key: gcs
@@ -119,6 +120,13 @@ production:
     google:
       options:
         bucket: zanzibar-prod
+    mongodb:
+      pipeline:
+        database_name: zanzibar-prod
+      validation:
+        database_name: zanzibar-prod
+      portal:
+        database_name: portal-prod
   pds_storage:
     google:
       options:
