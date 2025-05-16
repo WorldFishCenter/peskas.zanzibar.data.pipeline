@@ -1,6 +1,5 @@
-FROM rocker/r-ver
+FROM rocker/geospatial:4.5
 
-# Tidyverse system requirements
 RUN apt-get update -qq && apt-get -y --no-install-recommends install \
     libxml2-dev \
     libcairo2-dev \
@@ -14,7 +13,6 @@ RUN apt-get update -qq && apt-get -y --no-install-recommends install \
   rm -rf /var/lib/apt/lists/*
 
 
-# 2) Install required R packages
 RUN install2.r --error --skipinstalled \
     remotes \
     config \
@@ -40,7 +38,6 @@ RUN install2.r --error --skipinstalled \
     mongolite \
     rfishbase
 
-# 3) Install suggested packages
 RUN install2.r --error --skipinstalled \
     covr \
     pkgdown \

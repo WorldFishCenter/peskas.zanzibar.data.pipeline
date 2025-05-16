@@ -1,7 +1,20 @@
-FROM rocker/geospatial:4.2
+FROM rocker/geospatial:4.5
 
-# Install imports
+RUN apt-get update -qq && apt-get -y --no-install-recommends install \
+    libxml2-dev \
+    libcairo2-dev \
+    libgit2-dev \
+    default-libmysqlclient-dev \
+    libpq-dev \
+    libsasl2-dev \
+    libsqlite3-dev \
+    libssh2-1-dev \
+    unixodbc-dev && \
+  rm -rf /var/lib/apt/lists/*
+
+
 RUN install2.r --error --skipinstalled \
+    remotes \
     config \
     dplyr \
     git2r \
@@ -14,9 +27,17 @@ RUN install2.r --error --skipinstalled \
     tidyr \
     rlang \
     lubridate \
-    arrow
+    arrow \
+    cleaner \
+    httr2 \
+    readr \
+    googlesheets4 \
+    digest \
+    furrr \
+    future \
+    mongolite \
+    rfishbase
 
-# Install suggests
 RUN install2.r --error --skipinstalled \
     covr \
     pkgdown \
@@ -24,7 +45,6 @@ RUN install2.r --error --skipinstalled \
     tibble \
     roxygen2 \
     tidyselect \
-    remotes \
     tidytext \
     KoboconnectR \
     univOutl \
@@ -32,5 +52,9 @@ RUN install2.r --error --skipinstalled \
     stringi \
     taxize
 
-# Rstudio interface preferences
-COPY rstudio-prefs.json /home/rstudio/.config/rstudio/rstudio-prefs.json
+# Install local package
+COPY . /home
+WORKDIR /home
+RUN Rscript -e 'remotes::install_local(dependencies = TRUE)'
+
+ENTRYPOINT ["Rscript"]
