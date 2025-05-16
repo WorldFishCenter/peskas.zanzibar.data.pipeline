@@ -47,7 +47,8 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   other_info <-
     catch_surveys_raw %>%
-    tidyr::separate(.data$gps,
+    tidyr::separate(
+      .data$gps,
       into = c("lat", "lon", "drop1", "drop2"),
       sep = " "
     ) %>%
@@ -63,16 +64,21 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       "boats_landed"
     ) |>
     dplyr::mutate(
-      submission_date = lubridate::with_tz(.data$submission_date, "Africa/Dar_es_Salaam"),
+      submission_date = lubridate::with_tz(
+        .data$submission_date,
+        "Africa/Dar_es_Salaam"
+      ),
       submission_date = as.Date(.data$submission_date),
-      dplyr::across(.cols = c(
-        "lat",
-        "lon",
-        "n_fishers",
-        "boats_landed"
-      ), ~ as.numeric(.x))
+      dplyr::across(
+        .cols = c(
+          "lat",
+          "lon",
+          "n_fishers",
+          "boats_landed"
+        ),
+        ~ as.numeric(.x)
+      )
     )
-
 
   logger::log_info("Nesting survey groups' fields")
   group_surveys <-
@@ -157,7 +163,9 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::rename_with(~ stringr::str_remove(., "group_general/")) %>%
     dplyr::rename_with(~ stringr::str_remove(., "group_trip/")) %>%
     dplyr::rename_with(~ stringr::str_remove(., "no_fishers/")) %>%
-    dplyr::rename_with(~ stringr::str_remove(., "group_conservation_trading/")) %>%
+    dplyr::rename_with(
+      ~ stringr::str_remove(., "group_conservation_trading/")
+    ) %>%
     dplyr::select(
       "submission_id",
       submitted_by = "_submitted_by",
@@ -185,7 +193,11 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
       "catch_price",
       "happiness_rating"
     ) %>%
-    dplyr::mutate(landing_site = dplyr::coalesce(!!!dplyr::select(., dplyr::contains("landing_site")))) |>
+    dplyr::mutate(
+      landing_site = dplyr::coalesce(
+        !!!dplyr::select(., dplyr::contains("landing_site"))
+      )
+    ) |>
     dplyr::select(-dplyr::contains("landing_site"), "landing_site") |>
     dplyr::relocate("landing_site", .after = "district") |>
     # dplyr::mutate(landing_code = dplyr::coalesce(.data$landing_site_palma, .data$landing_site_mocimboa)) %>%
@@ -197,16 +209,21 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::mutate(
       landing_date = lubridate::as_date(.data$landing_date),
       submission_date = lubridate::as_date(.data$submission_date),
-      dplyr::across(c("trip_duration", "catch_price", dplyr::ends_with("_fishers")), ~ as.double(.x))
+      dplyr::across(
+        c("trip_duration", "catch_price", dplyr::ends_with("_fishers")),
+        ~ as.double(.x)
+      )
     )
-
 
   catch_info <-
     catch_surveys_raw |>
     dplyr::select("submission_id", dplyr::starts_with("species_group")) |>
     reshape_catch_data() |>
     dplyr::mutate(
-      count_method = dplyr::coalesce(.data$counting_method, .data$COUNTING_METHOD_USED_TO_RECORD),
+      count_method = dplyr::coalesce(
+        .data$counting_method,
+        .data$COUNTING_METHOD_USED_TO_RECORD
+      ),
       count_method = dplyr::case_when(
         !is.na(.data$count) ~ "1",
         !is.na(.data$n_buckets) ~ "2",
@@ -214,13 +231,24 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
       )
     ) |>
     dplyr::select(-c("counting_method", "COUNTING_METHOD_USED_TO_RECORD")) |>
-    dplyr::mutate(length_range = dplyr::case_when(.data$length_range == "over100" ~ NA_character_, TRUE ~ .data$length_range)) |>
-    tidyr::separate_wider_delim("length_range", delim = "_", names = c("min", "max")) |>
     dplyr::mutate(
-      length = as.numeric(.data$min) + ((as.numeric(.data$max) - as.numeric(.data$min)) / 2),
+      length_range = dplyr::case_when(
+        .data$length_range == "over100" ~ NA_character_,
+        TRUE ~ .data$length_range
+      )
+    ) |>
+    tidyr::separate_wider_delim(
+      "length_range",
+      delim = "_",
+      names = c("min", "max")
+    ) |>
+    dplyr::mutate(
+      length = as.numeric(.data$min) +
+        ((as.numeric(.data$max) - as.numeric(.data$min)) / 2),
       length = dplyr::coalesce(.data$length, as.numeric(.data$length_over))
     ) |>
-    dplyr::select("submission_id",
+    dplyr::select(
+      "submission_id",
       "n_catch",
       "count_method",
       catch_taxon = "species",
@@ -234,25 +262,39 @@ preprocess_wf_surveys <- function(log_threshold = logger::DEBUG) {
       dplyr::across(c("n_buckets":"length"), ~ as.double(.x))
     ) |>
     # replace TUN with TUS and SKH to Carcharhiniformes as more pertinent
-    dplyr::mutate(catch_taxon = dplyr::case_when(
-      .data$catch_taxon == "TUN" ~ "TUS",
-      .data$catch_taxon == "SKH" ~ "CVX", TRUE ~ .data$catch_taxon
-    ))
+    dplyr::mutate(
+      catch_taxon = dplyr::case_when(
+        .data$catch_taxon == "TUN" ~ "TUS",
+        .data$catch_taxon == "SKH" ~ "CVX",
+        TRUE ~ .data$catch_taxon
+      )
+    )
 
   # Try to get length-weight coefficients from Rfishbase
   lwcoeffs <- tryCatch(
     {
-      getLWCoeffs(taxa_list = unique(catch_info$catch_taxon), asfis_list = asfis)
+      getLWCoeffs(
+        taxa_list = unique(catch_info$catch_taxon),
+        asfis_list = asfis
+      )
     },
     error = function(e) {
       message("Error in getLWCoeffs, using local fallback: ", e$message)
       # Fallback to local data
-      readr::read_rds(system.file("length_weight_params.rds", package = "peskas.zanzibar.data.pipeline"))
+      readr::read_rds(system.file(
+        "length_weight_params.rds",
+        package = "peskas.zanzibar.data.pipeline"
+      ))
     }
   )
 
   # add flyng fish estimates
-  fly_lwcoeffs <- dplyr::tibble(catch_taxon = "FLY", n = 0, a_6 = 0.00631, b_6 = 3.05)
+  fly_lwcoeffs <- dplyr::tibble(
+    catch_taxon = "FLY",
+    n = 0,
+    a_6 = 0.00631,
+    b_6 = 3.05
+  )
   lwcoeffs$lw <- dplyr::bind_rows(lwcoeffs$lw, fly_lwcoeffs)
 
   catch_df <-
@@ -335,38 +377,52 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::select(-c("month", "year")) |>
     dplyr::rowwise() %>%
-    dplyr::mutate(survey_id = digest::digest(
-      paste(.data$landing_date, .data$fisher_id, .data$landing_site, .data$n_fishers, .data$gear, .data$trip_duration, .data$n_fishers,
-        sep = "_"
-      ),
-      algo = "crc32"
-    )) |>
+    dplyr::mutate(
+      survey_id = digest::digest(
+        paste(
+          .data$landing_date,
+          .data$fisher_id,
+          .data$landing_site,
+          .data$n_fishers,
+          .data$gear,
+          .data$trip_duration,
+          .data$n_fishers,
+          sep = "_"
+        ),
+        algo = "crc32"
+      )
+    ) |>
     dplyr::ungroup() |>
     dplyr::select("survey_id", dplyr::everything()) |>
     dplyr::mutate(dplyr::across(dplyr::where(is.character), ~ tolower(.x))) |>
     # fix taxa names
-    dplyr::mutate(catch_taxon = dplyr::case_when(
-      .data$catch_taxon == "cheilunus trilobatus" ~ "cheilinus trilobatus",
-      .data$catch_taxon == "pufflamen crysopterum" ~ "sufflamen chrysopterum",
-      .data$catch_taxon == "sufflamen crysopterum" ~ "sufflamen chrysopterum",
-      .data$catch_taxon == "perupeneus fraserorum" ~ "parupeneus fraserorum",
-      .data$catch_taxon == "perupeneus macronemus" ~ "parupeneus macronemus",
-      .data$catch_taxon == "octopus mucronatus" ~ "octopus",
-      .data$catch_taxon == "parupeneus signutus" ~ "parupeneus",
-      .data$catch_taxon == "perupeneus" ~ "parupeneus",
-      .data$catch_taxon == "acanhocybium solandri" ~ "acanthocybium solandri",
-      .data$catch_taxon == "parupeneus signutu" ~ "parupeneus",
-      .data$catch_taxon == "gymnothorax crobroris" ~ "gymnothorax cribroris",
-      .data$catch_taxon == "perupeneus signatus" ~ "parupeneus signatus",
-      .data$catch_taxon == "gymonthorax favagineus" ~ "gymnothorax favagineus",
-      .data$catch_taxon == "colotomus carolinus" ~ "calotomus carolinus",
-      .data$catch_taxon == "pegullus naatalensis" ~ "pagellus natalensis",
-      .data$catch_taxon == "scomberomorus plurineatus" ~ "scomberomorus plurilineatus",
-      .data$catch_taxon == "lethrinus fulvus" ~ "lethrinus",
-      .data$catch_taxon == "neotrygon caeruieopunctata" ~ "neotrygon caeruleopunctata",
-      .data$catch_taxon == "myuripristis berndti" ~ "myripristis berndti",
-      TRUE ~ .data$catch_taxon
-    ))
+    dplyr::mutate(
+      catch_taxon = dplyr::case_when(
+        .data$catch_taxon == "cheilunus trilobatus" ~ "cheilinus trilobatus",
+        .data$catch_taxon == "pufflamen crysopterum" ~ "sufflamen chrysopterum",
+        .data$catch_taxon == "sufflamen crysopterum" ~ "sufflamen chrysopterum",
+        .data$catch_taxon == "perupeneus fraserorum" ~ "parupeneus fraserorum",
+        .data$catch_taxon == "perupeneus macronemus" ~ "parupeneus macronemus",
+        .data$catch_taxon == "octopus mucronatus" ~ "octopus",
+        .data$catch_taxon == "parupeneus signutus" ~ "parupeneus",
+        .data$catch_taxon == "perupeneus" ~ "parupeneus",
+        .data$catch_taxon == "acanhocybium solandri" ~ "acanthocybium solandri",
+        .data$catch_taxon == "parupeneus signutu" ~ "parupeneus",
+        .data$catch_taxon == "gymnothorax crobroris" ~ "gymnothorax cribroris",
+        .data$catch_taxon == "perupeneus signatus" ~ "parupeneus signatus",
+        .data$catch_taxon == "gymonthorax favagineus" ~
+          "gymnothorax favagineus",
+        .data$catch_taxon == "colotomus carolinus" ~ "calotomus carolinus",
+        .data$catch_taxon == "pegullus naatalensis" ~ "pagellus natalensis",
+        .data$catch_taxon == "scomberomorus plurineatus" ~
+          "scomberomorus plurilineatus",
+        .data$catch_taxon == "lethrinus fulvus" ~ "lethrinus",
+        .data$catch_taxon == "neotrygon caeruieopunctata" ~
+          "neotrygon caeruleopunctata",
+        .data$catch_taxon == "myuripristis berndti" ~ "myripristis berndti",
+        TRUE ~ .data$catch_taxon
+      )
+    )
 
   upload_parquet_to_cloud(
     data = catch_surveys_preprocessed,
@@ -397,7 +453,10 @@ pt_nest_length <- function(x) {
     dplyr::mutate(
       n = stringr::str_extract(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, "(\\d+)"),
-      name = stringr::str_remove(.data$name, pattern = "Length_Frequency_Survey/catch_length..Length_Frequency_Survey/catch_length/")
+      name = stringr::str_remove(
+        .data$name,
+        pattern = "Length_Frequency_Survey/catch_length..Length_Frequency_Survey/catch_length/"
+      )
     ) %>%
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
@@ -406,8 +465,10 @@ pt_nest_length <- function(x) {
     dplyr::mutate(total_length = as.numeric(.data$total_length)) |>
     tidyr::nest(
       "length" = c(
-        .data$family, .data$species,
-        .data$sex, .data$total_length
+        .data$family,
+        .data$species,
+        .data$sex,
+        .data$total_length
       ),
       .by = .data$survey_id
     )
@@ -434,7 +495,10 @@ pt_nest_market <- function(x) {
     dplyr::mutate(
       n = stringr::str_extract(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, "(\\d+)"),
-      name = stringr::str_remove(.data$name, pattern = "Market_Catch_Survey/catch_market..Market_Catch_Survey/catch_market/")
+      name = stringr::str_remove(
+        .data$name,
+        pattern = "Market_Catch_Survey/catch_market..Market_Catch_Survey/catch_market/"
+      )
     ) %>%
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
@@ -450,8 +514,10 @@ pt_nest_market <- function(x) {
     ) |>
     tidyr::nest(
       "market" = c(
-        .data$group_market, .data$species_market,
-        .data$catch_kg_market, .data$catch_price
+        .data$group_market,
+        .data$species_market,
+        .data$catch_kg_market,
+        .data$catch_price
       ),
       .by = .data$survey_id
     )
@@ -478,24 +544,39 @@ pt_nest_catch <- function(x) {
     dplyr::mutate(
       n = stringr::str_extract(.data$name, "(\\d+)"),
       name = stringr::str_remove(.data$name, "(\\d+)"),
-      name = stringr::str_remove(.data$name, pattern = "Total_Catch_Survey/catch_catch..Total_Catch_Survey/catch_catch/")
+      name = stringr::str_remove(
+        .data$name,
+        pattern = "Total_Catch_Survey/catch_catch..Total_Catch_Survey/catch_catch/"
+      )
     ) %>%
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
     dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
     dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
-    dplyr::mutate(type_measure = dplyr::case_when(
-      !is.na(.data$nb_ind_catch) ~ "individual",
-      !is.na(.data$nb_buckets_catch) ~ "bucket",
-      TRUE ~ .data$type_measure
-    )) |>
     dplyr::mutate(
-      weight_kg = dplyr::coalesce(.data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch),
+      type_measure = dplyr::case_when(
+        !is.na(.data$nb_ind_catch) ~ "individual",
+        !is.na(.data$nb_buckets_catch) ~ "bucket",
+        TRUE ~ .data$type_measure
+      )
+    ) |>
+    dplyr::mutate(
+      weight_kg = dplyr::coalesce(
+        .data$weight_catch,
+        .data$wgt_ind_catch,
+        .data$wgt_buckets_catch
+      ),
       nb_elements = dplyr::coalesce(.data$nb_ind_catch, .data$nb_buckets_catch)
     ) %>%
-    dplyr::select(-c(
-      .data$content, .data$weight_catch, .data$wgt_ind_catch, .data$wgt_buckets_catch,
-      .data$nb_ind_catch, .data$nb_buckets_catch
-    )) %>%
+    dplyr::select(
+      -c(
+        .data$content,
+        .data$weight_catch,
+        .data$wgt_ind_catch,
+        .data$wgt_buckets_catch,
+        .data$nb_ind_catch,
+        .data$nb_buckets_catch
+      )
+    ) %>%
     dplyr::rename(
       n_elements = .data$nb_elements,
       length_individual = .data$len_ind_catch,
@@ -511,19 +592,26 @@ pt_nest_catch <- function(x) {
     ) |>
     dplyr::mutate(
       group_catch = dplyr::case_when(
-        .data$group_catch %in% c("reef_fish", "goatfish", "parrotfish", "rabbitfish", "scavengers") ~ "reef_fish",
+        .data$group_catch %in%
+          c("reef_fish", "goatfish", "parrotfish", "rabbitfish", "scavengers") ~
+          "reef_fish",
         .data$group_catch %in% c("sharks_rays") ~ "sharks_rays",
         .data$group_catch %in% c("small_pelagic") ~ "small_pelagic",
         .data$group_catch %in% c("large_pelagic", "pelagic") ~ "large_pelagic",
         .data$group_catch %in% c("tuna_like", "tunalike") ~ "tuna_like",
-        .data$group_catch %in% c("molluscs_crustaceans", "octopus", "squid") ~ "molluscs_crustaceans",
+        .data$group_catch %in% c("molluscs_crustaceans", "octopus", "squid") ~
+          "molluscs_crustaceans",
         TRUE ~ .data$group_catch
       )
     ) |>
     tidyr::nest(
       "catch" = c(
-        .data$type_measure, .data$all_catch_in_boat, .data$group_catch,
-        .data$species_catch, .data$n_elements, .data$catch_kg
+        .data$type_measure,
+        .data$all_catch_in_boat,
+        .data$group_catch,
+        .data$species_catch,
+        .data$n_elements,
+        .data$catch_kg
       ),
       .by = .data$survey_id
     )
@@ -565,8 +653,15 @@ pt_nest_trip <- function(x) {
       gear_other = .data$gear_type_other,
     ) |>
     dplyr::mutate(
-      gear = dplyr::case_when(.data$gear == "spear" ~ "spear_gun", TRUE ~ .data$gear),
-      boat_engine = ifelse(.data$boat_engine == "yes", "motorised", "unmotorised"),
+      gear = dplyr::case_when(
+        .data$gear == "spear" ~ "spear_gun",
+        TRUE ~ .data$gear
+      ),
+      boat_engine = ifelse(
+        .data$boat_engine == "yes",
+        "motorised",
+        "unmotorised"
+      ),
       fishing_location = tolower(.data$fishing_location),
       fishing_location = cleaner::clean_character(.data$fishing_location),
       gear_other = tolower(.data$gear_other),
@@ -650,7 +745,9 @@ pt_nest_attachments <- function(x) {
 #'
 #' @keywords workflow preprocessing
 #' @export
-preprocess_pds_tracks <- function(log_threshold = logger::DEBUG, grid_size = 500) {
+preprocess_pds_tracks <- function(
+    log_threshold = logger::DEBUG,
+    grid_size = 500) {
   logger::log_threshold(log_threshold)
   pars <- read_config()
 
@@ -754,12 +851,27 @@ preprocess_pds_tracks <- function(log_threshold = logger::DEBUG, grid_size = 500
   if (exists("preprocessed_filename")) unlink(preprocessed_filename)
 
   logger::log_success("Track preprocessing complete")
+
+  grid_summaries <- generate_track_summaries(final_data)
+
+  output_filename <-
+    paste0(pars$pds$pds_tracks$file_prefix, "-grid_summaries") |>
+    add_version(extension = "parquet")
+
+  arrow::write_parquet(
+    grid_summaries,
+    sink = output_filename,
+    compression = "lz4",
+    compression_level = 12
+  )
+
+  logger::log_info("Uploading preprocessed tracks...")
+  upload_cloud_file(
+    file = output_filename,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
 }
-
-
-
-
-
 
 
 #' Preprocess Track Data into Spatial Grid Summary
@@ -854,7 +966,11 @@ preprocess_track_data <- function(data, grid_size = 500) {
       # For last point in series, use difference with previous point
       time_diff = dplyr::if_else(
         is.na(.data$time_diff),
-        as.numeric(difftime(.data$Time, dplyr::lag(.data$Time), units = "mins")),
+        as.numeric(difftime(
+          .data$Time,
+          dplyr::lag(.data$Time),
+          units = "mins"
+        )),
         .data$time_diff
       )
     ) %>%
@@ -872,8 +988,60 @@ preprocess_track_data <- function(data, grid_size = 500) {
     dplyr::filter(.data$time_spent_mins > 0) %>%
     dplyr::group_by(.data$Trip) %>%
     dplyr::arrange(.data$first_seen) %>%
-    dplyr::filter(!(dplyr::row_number() %in% c(1, 2, dplyr::n() - 1, dplyr::n()))) %>%
+    dplyr::filter(
+      !(dplyr::row_number() %in% c(1, 2, dplyr::n() - 1, dplyr::n()))
+    ) %>%
     dplyr::ungroup()
+}
+
+#' Generate Grid Summaries for Track Data
+#'
+#' @description
+#' Processes GPS track data into 1km grid summaries for visualization and analysis.
+#'
+#' @param data Preprocessed track data
+#' @param min_hours Minimum hours threshold for filtering (default: 0.15)
+#' @param max_hours Maximum hours threshold for filtering (default: 10)
+#'
+#' @return A dataframe with grid summary statistics
+#'
+#' @keywords preprocessing
+#' @export
+generate_track_summaries <- function(data, min_hours = 0.15, max_hours = 15) {
+  data %>%
+    # First summarize by current grid (500m)
+    dplyr::group_by(.data$lat_grid, .data$lng_grid) %>%
+    dplyr::summarise(
+      avg_time_mins = mean(.data$time_spent_mins),
+      avg_speed = mean(.data$mean_speed),
+      avg_range = mean(.data$mean_range),
+      visits = dplyr::n_distinct(.data$Trip),
+      total_points = sum(.data$n_points),
+      .groups = "drop"
+    ) %>%
+    # Then regrid to 1km
+    dplyr::mutate(
+      lat_grid_1km = round(.data$lat_grid / 0.01) * 0.01,
+      lng_grid_1km = round(.data$lng_grid / 0.01) * 0.01
+    ) %>%
+    dplyr::group_by(.data$lat_grid_1km, .data$lng_grid_1km) %>%
+    dplyr::summarise(
+      avg_time_mins = mean(.data$avg_time_mins),
+      avg_speed = mean(.data$avg_speed),
+      avg_range = mean(.data$avg_range),
+      total_visits = sum(.data$visits),
+      original_cells = dplyr::n(),
+      total_points = sum(.data$total_points),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      avg_time_hours = .data$avg_time_mins / 60
+    ) %>%
+    dplyr::filter(
+      .data$avg_time_hours >= min_hours,
+      .data$avg_time_hours <= max_hours
+    ) |>
+    dplyr::select(-"avg_time_mins")
 }
 
 #' Reshape Species Groups from Wide to Long Format
@@ -905,7 +1073,10 @@ reshape_species_groups <- function(df = NULL) {
   species_columns <- names(df)[grep("species_group\\.[0-9]+", names(df))]
 
   # Find unique position indicators (0, 1, 2, etc.)
-  positions <- unique(stringr::str_extract(species_columns, "species_group\\.[0-9]+"))
+  positions <- unique(stringr::str_extract(
+    species_columns,
+    "species_group\\.[0-9]+"
+  ))
 
   # Create a list to store each position's data
   position_dfs <- list()
@@ -913,7 +1084,10 @@ reshape_species_groups <- function(df = NULL) {
   # For each position, extract its columns and create a data frame
   for (pos in positions) {
     # Get columns for this position
-    pos_cols <- c("submission_id", names(df)[grep(paste0(pos, "\\."), names(df))])
+    pos_cols <- c(
+      "submission_id",
+      names(df)[grep(paste0(pos, "\\."), names(df))]
+    )
 
     # Skip if there are no columns for this position
     if (length(pos_cols) <= 1) next
@@ -939,9 +1113,13 @@ reshape_species_groups <- function(df = NULL) {
 
   # Remove rows where all species group columns are NA
   # (These are empty species group entries)
-  species_detail_cols <- names(result)[!names(result) %in% c("submission_id", "n_catch")]
+  species_detail_cols <- names(result)[
+    !names(result) %in% c("submission_id", "n_catch")
+  ]
   result <- result %>%
-    dplyr::filter(rowSums(is.na(.[species_detail_cols])) != length(species_detail_cols))
+    dplyr::filter(
+      rowSums(is.na(.[species_detail_cols])) != length(species_detail_cols)
+    )
 
   # Sort by submission_id and n_catch
   result <- result %>%
@@ -990,7 +1168,10 @@ reshape_catch_data <- function(df = NULL) {
   species_long <- reshape_species_groups(df)
 
   # Extract length group columns
-  length_cols <- names(species_long)[grep("no_fish_by_length_group/", names(species_long))]
+  length_cols <- names(species_long)[grep(
+    "no_fish_by_length_group/",
+    names(species_long)
+  )]
 
   # Create a base dataset without length columns
   base_data <- species_long %>%
@@ -1025,7 +1206,10 @@ reshape_catch_data <- function(df = NULL) {
     ) %>%
     # Clean up length_category column
     dplyr::mutate(
-      length_category = stringr::str_remove(.data$length_category, "no_fish_by_length_group/"),
+      length_category = stringr::str_remove(
+        .data$length_category,
+        "no_fish_by_length_group/"
+      ),
       # Extract actual length ranges or special categories
       length_range = dplyr::case_when(
         stringr::str_detect(.data$length_category, "no_individuals_") ~
@@ -1034,14 +1218,21 @@ reshape_catch_data <- function(df = NULL) {
         TRUE ~ .data$length_category
       ),
       # For over100 entries, move the value to length_over and set count to 1
-      length_over = dplyr::if_else(.data$length_category == "fish_length_over100", .data$count, NA_character_),
-      count = dplyr::if_else(.data$length_category == "fish_length_over100", "1", .data$count)
+      length_over = dplyr::if_else(
+        .data$length_category == "fish_length_over100",
+        .data$count,
+        NA_character_
+      ),
+      count = dplyr::if_else(
+        .data$length_category == "fish_length_over100",
+        "1",
+        .data$count
+      )
     ) %>%
     dplyr::ungroup() |>
     # Remove the original length_category column and length columns
     dplyr::select(-"length_category", -dplyr::any_of(length_cols)) |>
     dplyr::filter(!(.data$length_range == "over100" & is.na(.data$length_over)))
-
 
   # Process rows without length data
   if (length(rows_with_length) < nrow(species_long)) {

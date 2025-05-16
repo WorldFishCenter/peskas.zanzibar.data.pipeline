@@ -1,3 +1,16 @@
+# peskas.zanzibar.data.pipeline 3.1.0
+
+### New Features
+- Added `create_geos()` function to generate geospatial regional summaries of fishery data
+- Added support for GPS track data visualization through new grid-based analytics
+- Added `generate_track_summaries()` function to process GPS tracks into 1km grid cells
+
+### Improvements
+- Integrated spatial data with dashboard exports through new GeoJSON support
+- Enhanced code readability and formatting throughout codebase
+- Added Region-based aggregation of fishery metrics (CPUE, RPUE, price per kg)
+- Added grid summaries to MongoDB exports for dashboard integration
+
 # peskas.zanzibar.data.pipeline 3.0.0
 
 ### New Features

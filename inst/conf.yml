@@ -96,6 +96,7 @@ default:
           taxa_summaries: taxa_summaries
           districts_summaries: districts_summaries
           gear_summaries: gear_summaries
+          grid_summaries: grid_summaries
   pds_storage:
     google:
       key: gcs
@@ -110,7 +111,7 @@ default:
       tables:
         - devices
         - sites
-        - boats
+        #- boats
         - catch_type
   validation:
     k_MAD_catch: 7

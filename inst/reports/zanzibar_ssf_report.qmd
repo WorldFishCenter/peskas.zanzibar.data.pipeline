@@ -35,7 +35,6 @@ library(patchwork)
 This report presents preliminary analyses of Zanzibar's small-scale fisheries, including gear usage, vessel types, fishing effort, catch rates, and revenue across different districts.
 
 ```{r data-import_constants}
-
 path <- "inst/reports/zanizbarSSF_clean__20250414093746_da3c69d__.parquet"
 dat <- rio::import("zanizbarSSF_clean__20250414093746_da3c69d__.parquet") |>
   dplyr::as_tibble()
@@ -47,38 +46,38 @@ taxa <- rio::import("aggregated_taxa__20250427171641_ab5e96e__.parquet") |>
 
 
 if (FALSE) {
-we <-
-  validated_surveys |>
-  dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
-  dplyr::select(submission_id, district, trip_duration, gear, vessel_type, n_fishers) |>
-  dplyr::group_by(submission_id) |>
-  dplyr::summarise(dplyr::across(dplyr::everything(), ~ dplyr::first(.x))) |>
-  dplyr::mutate(
-    gear = dplyr::case_when(
-      .data$gear == "HL" ~ "Hand line",
-      .data$gear == "BS" ~ "Beach Seine",
-      .data$gear == "CS" ~ "Cast Net",
-      .data$gear == "GN" ~ "Gill Net",
-      .data$gear == "LL" ~ "Long line",
-      .data$gear == "SP" ~ "Spear gun",
-      .data$gear == "SR" ~ "Stick Rod",
-      .data$gear == "PS" ~ "Purse Seine",
-      .data$gear == "RN" ~ "Ring Net",
-      .data$gear == "SN" ~ "Shark Net",
-      .data$gear == "TR" ~ "Trap",
-      TRUE ~ .data$gear # Keep original value if no match
-    ),
-    vessel_type = dplyr::case_when(
-      .data$vessel_type == "1" ~ "Fibre Boat",
-      .data$vessel_type == "2" ~ "Dhow",
-      .data$vessel_type == "3" ~ "Dugout canoe",
-      .data$vessel_type == "4" ~ "Outrigger canoe",
-      .data$vessel_type == "5" ~ "Planked Boat",
-      .data$vessel_type == "6" ~ "Wooden Boat",
-      TRUE ~ .data$vessel_type # Keep original value if no match
+  we <-
+    validated_surveys |>
+    dplyr::mutate(n_fishers = .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers) |>
+    dplyr::select(submission_id, district, trip_duration, gear, vessel_type, n_fishers) |>
+    dplyr::group_by(submission_id) |>
+    dplyr::summarise(dplyr::across(dplyr::everything(), ~ dplyr::first(.x))) |>
+    dplyr::mutate(
+      gear = dplyr::case_when(
+        .data$gear == "HL" ~ "Hand line",
+        .data$gear == "BS" ~ "Beach Seine",
+        .data$gear == "CS" ~ "Cast Net",
+        .data$gear == "GN" ~ "Gill Net",
+        .data$gear == "LL" ~ "Long line",
+        .data$gear == "SP" ~ "Spear gun",
+        .data$gear == "SR" ~ "Stick Rod",
+        .data$gear == "PS" ~ "Purse Seine",
+        .data$gear == "RN" ~ "Ring Net",
+        .data$gear == "SN" ~ "Shark Net",
+        .data$gear == "TR" ~ "Trap",
+        TRUE ~ .data$gear # Keep original value if no match
+      ),
+      vessel_type = dplyr::case_when(
+        .data$vessel_type == "1" ~ "Fibre Boat",
+        .data$vessel_type == "2" ~ "Dhow",
+        .data$vessel_type == "3" ~ "Dugout canoe",
+        .data$vessel_type == "4" ~ "Outrigger canoe",
+        .data$vessel_type == "5" ~ "Planked Boat",
+        .data$vessel_type == "6" ~ "Wooden Boat",
+        TRUE ~ .data$vessel_type # Keep original value if no match
+      )
     )
-  )
-    }
+}
 
 district_colors <- c(
   "urban" = "#1E88E5", # Blue
@@ -520,11 +519,10 @@ p1 + p2 + patchwork::plot_layout(widths = c(1.5, 1))
 ### Fish groups
 
 ```{r taxa-all, fig.height=7, fig.width=7}
-
 taxa_overall <- taxa %>%
   # Sum catch weight by fish group across all districts
   dplyr::group_by(fish_group) %>%
-  dplyr::filter(!is.na(fish_group)) |> 
+  dplyr::filter(!is.na(fish_group)) |>
   dplyr::summarize(
     tot_catch_kg = sum(tot_catch_kg),
     .groups = "drop"
@@ -561,8 +559,8 @@ ggplot(taxa_overall, aes(x = "", y = prc, fill = fish_category)) +
   scale_fill_brewer(palette = "Set2") +
   # Add labels
   geom_text(aes(label = label),
-            position = position_stack(vjust = 0.5),
-            size = 3.5
+    position = position_stack(vjust = 0.5),
+    size = 3.5
   ) +
   # Add informative title
   labs(
@@ -582,9 +580,8 @@ ggplot(taxa_overall, aes(x = "", y = prc, fill = fish_category)) +
 ```
 
 ```{r taxa-district, fig.height=10, fig.width=10}
-
-taxa_processed <- 
-  taxa |> 
+taxa_processed <-
+  taxa |>
   dplyr::filter(!is.na(fish_group)) %>%
   dplyr::group_by(district) %>%
   # Arrange in descending order of catch within each district
@@ -608,49 +605,57 @@ taxa_processed <-
   # Create a factor with "Others" as the last level
   dplyr::mutate(
     # Create ordered factor where "Others" is always last regardless of percentage
-    fish_category = factor(fish_category, 
-                         levels = c(setdiff(unique(fish_category), "Others"), "Others"))
+    fish_category = factor(fish_category,
+      levels = c(setdiff(unique(fish_category), "Others"), "Others")
+    )
   ) %>%
   # Now arrange by district, then by this factor (which keeps "Others" last)
   dplyr::arrange(district, desc(fish_category != "Others"), desc(tot_catch_kg))
 
 
-ggplot(taxa_processed, aes(x = prc, y = reorder_within(fish_category, 
-                                                      ifelse(fish_category == "Others", -Inf, prc), 
-                                                      district))) +
+ggplot(taxa_processed, aes(x = prc, y = reorder_within(
+  fish_category,
+  ifelse(fish_category == "Others", -Inf, prc),
+  district
+))) +
   # Add dots, sized by percentage
   geom_point(aes(size = prc, color = district), alpha = 0.8) +
-  
+
   # Add connecting segments
-  geom_segment(aes(xend = 0, 
-                   yend = reorder_within(fish_category, 
-                                       ifelse(fish_category == "Others", -Inf, prc), 
-                                       district), 
-                   color = district),
+  geom_segment(
+    aes(
+      xend = 0,
+      yend = reorder_within(
+        fish_category,
+        ifelse(fish_category == "Others", -Inf, prc),
+        district
+      ),
+      color = district
+    ),
     alpha = 0.3, size = 0.8
   ) +
-  
+
   # Add percentage labels
   geom_text(aes(label = paste0(round(prc, 1), "%"), color = district),
     hjust = -0.5,
     size = 3,
     show.legend = FALSE
   ) +
-  
+
   # Set size scale
   scale_size_continuous(range = c(2, 8)) +
   scale_color_manual(values = district_colors) +
-  
+
   # Scale y axis with region-specific ordering
   scale_y_reordered() +
-  
+
   # Set x-axis scale
   scale_x_continuous(
     labels = function(x) paste0(x, "%"),
     limits = c(0, max(taxa_processed$prc) * 1.2),
     expand = c(0, 0)
   ) +
-  
+
   # Add informative labels
   labs(
     title = "Fish Groups Composition in Zanzibar",
@@ -659,12 +664,12 @@ ggplot(taxa_processed, aes(x = prc, y = reorder_within(fish_category,
     y = "",
     caption = "Source: PESKAS"
   ) +
-  
+
   # Apply the custom theme
   theme_modern() +
   # Facet by region
   facet_wrap(~district, ncol = 2, scales = "free_y") +
-  
+
   # Hide the size legend
   guides(
     size = "none",

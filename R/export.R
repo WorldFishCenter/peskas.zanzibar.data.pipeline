@@ -412,14 +412,19 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
         mean_price_kg = NA
       )
     ) |>
+    dplyr::mutate(
+      district = stringr::str_to_title(.data$district),
+      district = stringr::str_replace(.data$district, "_", " ")
+    )
+
+  create_geos(monthly_summaries_dat = monthly_summaries)
+
+  monthly_summaries <-
+    monthly_summaries |>
     tidyr::pivot_longer(
       -c("date", "district"),
       names_to = "metric",
       values_to = "value"
-    ) |>
-    dplyr::mutate(
-      district = stringr::str_to_title(.data$district),
-      district = stringr::str_replace(.data$district, "_", " ")
     )
 
   taxa_summaries <-
@@ -518,12 +523,20 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       district = stringr::str_replace(.data$district, "_", " ")
     )
 
+  grid_summaries <-
+    download_parquet_from_cloud(
+      prefix = paste0(pars$pds$pds_tracks$file_prefix, "-grid_summaries"),
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options
+    )
+
   # Dataframes to upload
   dataframes_to_upload <- list(
     monthly_summaries = monthly_summaries,
     taxa_summaries = taxa_summaries,
     districts_summaries = districts_summaries,
-    gear_summaries = gear_summaries
+    gear_summaries = gear_summaries,
+    grid_summaries = grid_summaries
   )
 
   # Collection names
@@ -531,7 +544,8 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     monthly_summaries = pars$storage$mongodb$portal$collection$monthly_summaries,
     taxa_summaries = pars$storage$mongodb$portal$collection$taxa_summaries,
     districts_summaries = pars$storage$mongodb$portal$collection$districts_summaries,
-    gear_summaries = pars$storage$mongodb$portal$collection$gear_summaries
+    gear_summaries = pars$storage$mongodb$portal$collection$gear_summaries,
+    grid_summaries = pars$storage$mongodb$portal$collection$grid_summaries
   )
 
   # Iterate over the dataframes and upload them
@@ -547,5 +561,133 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
         db_name = pars$storage$mongodb$portal$database_name
       )
     }
+  )
+}
+
+
+#' Generate Geographic Regional Summaries of Fishery Data
+#'
+#' @description
+#' This function creates geospatial representations of fishery metrics by aggregating
+#' lnding sites data to regional levels along the Zanzibar coast. It assigns
+#' each site to its nearest coastal region, calculates regional summaries of fishery
+#' performance metrics, and exports the results as a GeoJSON file for spatial visualization.
+#'
+#' @details
+#' The function performs the following operations:
+#' 1. **BMU Coordinate Extraction**: Retrieves geographic coordinates (latitude/longitude) for all landing sites
+#' 2. **Spatial Conversion**: Converts sites coordinates to spatial point objects.
+#' 3. **Regional Assignment**: Uses spatial analysis to assign each BMU to its nearest coastal region.
+#' 4. **Regional Aggregation**: Calculates monthly summary statistics for each region by aggregating BMU data.
+#' 5. **GeoJSON Creation**: Combines regional polygon geometries with summary statistics and exports as GeoJSON.
+#'
+#' **Calculated Regional Metrics** (using median values across BMUs in each region):
+#' - Mean CPUE (Catch Per Unit Effort, kg per fisher)
+#' - Mean RPUE (Revenue Per Unit Effort, currency per fisher)
+#' - Mean Price per kg of catch
+
+#'
+#' @param monthly_summaries_dat A data frame containing monthly fishery metrics by site
+#'
+#' @return This function does not return a value. It writes a GeoJSON file named
+#'         "zanzibar_monthly_summaries.geojson" to the inst/ directory of the package,
+#'         containing regional polygons with associated monthly fishery metrics.#'
+#' @note
+#' **Dependencies**:
+#' - Requires the `sf` package for spatial operations.
+#' - Requires a GeoJSON file named "ZAN_coast_regions.geojson" included in the
+#'   peskas.zanzibar.data.pipeline package.
+#' - Uses the `get_metadata()` function to retrieve sites location information.
+#'
+#' @importFrom sf st_as_sf st_read st_boundary st_distance st_write
+#' @importFrom dplyr transmute left_join select group_by summarise mutate
+#' @importFrom stats median
+#' @importFrom stringr str_to_title
+#'
+#' @keywords export
+#' @examples
+#' \dontrun{
+#' # First generate monthly summaries
+#' monthly_data <- get_fishery_metrics(validated_data, bmu_size)
+#'
+#' # Then create regional geospatial summary
+#' create_geos(monthly_summaries_dat = monthly_data)
+#' }
+create_geos <- function(monthly_summaries_dat = NULL) {
+  zan_coords <-
+    get_metadata()$sites |>
+    dplyr::transmute(
+      .data$district,
+      lat = as.numeric(.data$lat),
+      lon = as.numeric(.data$lon)
+    )
+
+  sites_points <- sf::st_as_sf(
+    zan_coords,
+    coords = c("lon", "lat"),
+    crs = 4326,
+    na.fail = FALSE
+  )
+
+  zan_coast <- sf::st_read(system.file(
+    "ZAN_coast_regions.geojson",
+    package = "peskas.zanzibar.data.pipeline"
+  ))
+
+  # ASSIGN EACH site TO THE NEAREST REGION
+  # Calculate boundaries of regions
+  region_boundaries <- sf::st_boundary(zan_coast)
+
+  # Calculate distances between sites points and region boundaries
+  distances <- sf::st_distance(sites_points, region_boundaries)
+
+  # Assign each site to the nearest region
+  nearest_region <- as.numeric(apply(distances, 1, which.min))
+
+  # Add the nearest region to the sites_points data frame
+  sites_points$nearest_region <- zan_coast$region[nearest_region]
+
+  geos_df <-
+    sites_points |>
+    dplyr::select("district", region = "nearest_region")
+
+  region_monthly_summaries <-
+    monthly_summaries_dat |>
+    dplyr::left_join(geos_df, by = "district") |>
+    dplyr::group_by(.data$region, .data$date) |>
+    dplyr::summarise(
+      mean_cpue = stats::median(.data$mean_cpue, na.rm = TRUE),
+      mean_rpue = stats::median(.data$mean_rpue, na.rm = TRUE),
+      mean_price_kg = stats::median(.data$mean_price_kg, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    dplyr::distinct()
+
+  geo_region_monthly_summaries <-
+    sf::st_read(system.file(
+      "ZAN_coast_regions.geojson",
+      package = "peskas.zanzibar.data.pipeline"
+    )) |>
+    dplyr::left_join(region_monthly_summaries, by = "region") |>
+    # drop regions where there is no data at all
+    # dplyr::filter(
+    #  !is.na(.data$mean_effort) &
+    #    !is.na(.data$mean_cpue) &
+    #    !is.na(.data$mean_cpua) &
+    #    !is.na(.data$mean_rpue) &
+    #    !is.na(.data$mean_rpua)
+    # ) |>
+    dplyr::mutate(
+      date = format(.data$date, "%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+  sf::st_write(
+    geo_region_monthly_summaries,
+    system.file(
+      "zanzibar_monthly_summaries.geojson",
+      package = "peskas.zanzibar.data.pipeline"
+    ),
+    driver = "GeoJSON",
+    delete_dsn = TRUE
   )
 }
