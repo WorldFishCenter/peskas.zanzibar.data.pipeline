@@ -666,8 +666,8 @@ create_geos <- function(monthly_summaries_dat = NULL, pars = NULL) {
     dplyr::left_join(geos_df, by = "district") |>
     dplyr::group_by(.data$region, .data$date) |>
     dplyr::summarise(
-      mean_cpue = stats::median(.data$mean_cpue, na.rm = TRUE),
-      mean_rpue = stats::median(.data$mean_rpue, na.rm = TRUE),
+      mean_cpue = stats::median(.data$mean_cpue_day, na.rm = TRUE),
+      mean_rpue = stats::median(.data$mean_rpue_day, na.rm = TRUE),
       mean_price_kg = stats::median(.data$mean_price_kg, na.rm = TRUE),
       .groups = "drop"
     ) |>
