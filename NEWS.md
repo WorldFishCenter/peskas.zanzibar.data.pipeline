@@ -1,3 +1,8 @@
+# peskas.zanzibar.data.pipeline 3.2.0
+
+### Improvements
+- Export standardized fishery metrics for general usage with other peskas datasets 
+
 # peskas.zanzibar.data.pipeline 3.1.0
 
 ### New Features

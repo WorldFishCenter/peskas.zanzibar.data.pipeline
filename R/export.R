@@ -320,7 +320,9 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       catch_price = .data$catch_price,
       price_kg = .data$catch_price / .data$tot_catch_kg,
       cpue = .data$tot_catch_kg / .data$n_fishers / .data$trip_duration,
-      rpue = .data$catch_price / .data$n_fishers / .data$trip_duration
+      rpue = .data$catch_price / .data$n_fishers / .data$trip_duration,
+      cpue_day = .data$tot_catch_kg / .data$n_fishers, # CPUE per day for map data (assuming 1 trip per day)
+      rpue_day = .data$catch_price / .data$n_fishers # RPUE per day for map data (assuming 1 trip per day)
     )
 
   taxa_df <-
@@ -391,7 +393,9 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       dplyr::across(
         .cols = c(
           "cpue",
+          "cpue_day",
           "rpue",
+          "rpue_day",
           "price_kg"
         ),
         ~ mean(.x, na.rm = TRUE)
@@ -400,7 +404,9 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::rename(
       mean_cpue = "cpue",
+      mean_cpue_day = "cpue_day",
       mean_rpue = "rpue",
+      mean_rpue_day = "rpue_day",
       mean_price_kg = "price_kg"
     ) |>
     tidyr::complete(
@@ -408,7 +414,9 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       date = seq(min(.data$date), max(.data$date), by = "month"),
       fill = list(
         mean_cpue = NA,
+        mean_cpue_day = NA,
         mean_rpue = NA,
+        mean_rpue_day = NA,
         mean_price_kg = NA
       )
     ) |>
@@ -417,10 +425,11 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       district = stringr::str_replace(.data$district, "_", " ")
     )
 
-  create_geos(monthly_summaries_dat = monthly_summaries)
+  create_geos(monthly_summaries_dat = monthly_summaries, pars = pars)
 
   monthly_summaries <-
     monthly_summaries |>
+    dplyr::select(-c("mean_cpue_day", "mean_rpue_day")) |> # we can drop these as these metrics were only used for mapping
     tidyr::pivot_longer(
       -c("date", "district"),
       names_to = "metric",
@@ -588,6 +597,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
 
 #'
 #' @param monthly_summaries_dat A data frame containing monthly fishery metrics by site
+#' @param pars Congiguration parameters
 #'
 #' @return This function does not return a value. It writes a GeoJSON file named
 #'         "zanzibar_monthly_summaries.geojson" to the inst/ directory of the package,
@@ -613,7 +623,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
 #' # Then create regional geospatial summary
 #' create_geos(monthly_summaries_dat = monthly_data)
 #' }
-create_geos <- function(monthly_summaries_dat = NULL) {
+create_geos <- function(monthly_summaries_dat = NULL, pars = NULL) {
   zan_coords <-
     get_metadata()$sites |>
     dplyr::transmute(
@@ -661,33 +671,45 @@ create_geos <- function(monthly_summaries_dat = NULL) {
       mean_price_kg = stats::median(.data$mean_price_kg, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    dplyr::distinct()
-
-  geo_region_monthly_summaries <-
-    sf::st_read(system.file(
-      "ZAN_coast_regions.geojson",
-      package = "peskas.zanzibar.data.pipeline"
-    )) |>
-    dplyr::left_join(region_monthly_summaries, by = "region") |>
-    # drop regions where there is no data at all
-    # dplyr::filter(
-    #  !is.na(.data$mean_effort) &
-    #    !is.na(.data$mean_cpue) &
-    #    !is.na(.data$mean_cpua) &
-    #    !is.na(.data$mean_rpue) &
-    #    !is.na(.data$mean_rpua)
-    # ) |>
+    dplyr::distinct() |>
     dplyr::mutate(
       date = format(.data$date, "%Y-%m-%dT%H:%M:%SZ"),
-    )
+      country = "zanzibar",
+      region = tolower(.data$region)
+    ) |>
+    dplyr::relocate("country", .before = "region")
+
+  zan_coast <-
+    zan_coast |>
+    dplyr::mutate(
+      country = "zanzibar",
+      region = tolower(.data$region)
+    ) |>
+    dplyr::relocate("country", .before = "region")
+
+  upload_parquet_to_cloud(
+    data = region_monthly_summaries,
+    prefix = "zanzibar_monthly_summaries_map",
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options_coasts
+  )
+
+  filename_geo <-
+    "ZAN_regions" %>%
+    add_version(extension = "geojson")
 
   sf::st_write(
-    geo_region_monthly_summaries,
-    system.file(
-      "zanzibar_monthly_summaries.geojson",
-      package = "peskas.zanzibar.data.pipeline"
-    ),
+    zan_coast,
+    filename_geo,
     driver = "GeoJSON",
     delete_dsn = TRUE
   )
+
+  upload_cloud_file(
+    file = filename_geo,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options_coasts
+  )
+
+  file.remove(filename_geo)
 }

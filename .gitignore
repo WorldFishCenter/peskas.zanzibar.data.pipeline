@@ -45,3 +45,4 @@ docs
 *.csv
 *.tsv
 *.parquet
+*.geojson

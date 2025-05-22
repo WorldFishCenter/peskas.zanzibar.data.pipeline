@@ -4,10 +4,12 @@
 \alias{create_geos}
 \title{Generate Geographic Regional Summaries of Fishery Data}
 \usage{
-create_geos(monthly_summaries_dat = NULL)
+create_geos(monthly_summaries_dat = NULL, pars = NULL)
 }
 \arguments{
 \item{monthly_summaries_dat}{A data frame containing monthly fishery metrics by site}
+
+\item{pars}{Congiguration parameters}
 }
 \value{
 This function does not return a value. It writes a GeoJSON file named
