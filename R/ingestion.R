@@ -70,20 +70,20 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   pars <- read_config()
 
   # WCS Survey
-  logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
-  wcs_files <- retrieve_surveys(
-    prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
-    append_version = TRUE,
-    url = "kf.kobotoolbox.org",
-    project_id = pars$surveys$wcs_surveys$asset_id,
-    username = pars$surveys$wcs_surveys$username,
-    psswd = pars$surveys$wcs_surveys$password,
-    encoding = "UTF-8"
-  )
+  #logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
+  #wcs_files <- retrieve_surveys(
+  #  prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
+  #  append_version = TRUE,
+  #  url = "kf.kobotoolbox.org",
+  #  project_id = pars$surveys$wcs_surveys$asset_id,
+  #  username = pars$surveys$wcs_surveys$username,
+  #  psswd = pars$surveys$wcs_surveys$password,
+  #  encoding = "UTF-8"
+  #)
 
-  logger::log_info("Uploading WCS files to cloud...")
-  purrr::map(pars$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
-  logger::log_success("WCS files upload succeeded")
+  #logger::log_info("Uploading WCS files to cloud...")
+  #purrr::map(pars$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
+  #logger::log_success("WCS files upload succeeded")
 
   # WF Survey
   logger::log_info("Downloading WF Fish Catch Survey Kobo data...")
@@ -131,13 +131,14 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
 #' }
 #'
 retrieve_surveys <- function(
-    prefix = NULL,
-    append_version = NULL,
-    url = NULL,
-    project_id = NULL,
-    username = NULL,
-    psswd = NULL,
-    encoding = NULL) {
+  prefix = NULL,
+  append_version = NULL,
+  url = NULL,
+  project_id = NULL,
+  username = NULL,
+  psswd = NULL,
+  encoding = NULL
+) {
   data_raw <-
     KoboconnectR::kobotools_kpi_data(
       url = url,
@@ -148,11 +149,15 @@ retrieve_surveys <- function(
     )$results
 
   # Check that submissions are unique in case there is overlap in the pagination
-  if (dplyr::n_distinct(purrr::map_dbl(data_raw, ~ .$`_id`)) != length(data_raw)) {
+  if (
+    dplyr::n_distinct(purrr::map_dbl(data_raw, ~ .$`_id`)) != length(data_raw)
+  ) {
     stop("Number of submission ids not the same as number of records")
   }
 
-  logger::log_info("Converting WCS Fish Catch Survey Kobo data to tabular format...")
+  logger::log_info(
+    "Converting WCS Fish Catch Survey Kobo data to tabular format..."
+  )
   tabular_data <- purrr::map_dfr(data_raw, flatten_row)
   data_filename <- prefix
 
@@ -237,7 +242,9 @@ flatten_field <- function(x, p) {
 #' @export
 rename_child <- function(x, i, p) {
   if (length(x) == 0) {
-    if (is.null(x)) x <- NA
+    if (is.null(x)) {
+      x <- NA
+    }
     x <- list(x)
     x <- rlang::set_names(x, paste(p, i - 1, sep = "."))
   } else {
@@ -353,7 +360,10 @@ ingest_pds_trips <- function(log_threshold = logger::DEBUG) {
 #'
 #' @keywords workflow ingestion
 #' @export
-ingest_pds_tracks <- function(log_threshold = logger::DEBUG, batch_size = NULL) {
+ingest_pds_tracks <- function(
+  log_threshold = logger::DEBUG,
+  batch_size = NULL
+) {
   logger::log_threshold(log_threshold)
   pars <- read_config()
 
@@ -406,7 +416,11 @@ ingest_pds_tracks <- function(log_threshold = logger::DEBUG, batch_size = NULL) 
   future::plan(future::multisession, workers = workers)
 
   # Select tracks to process
-  process_ids <- if (!is.null(batch_size)) new_trip_ids[1:batch_size] else new_trip_ids
+  process_ids <- if (!is.null(batch_size)) {
+    new_trip_ids[1:batch_size]
+  } else {
+    new_trip_ids
+  }
   logger::log_info("Processing {length(process_ids)} new tracks in parallel...")
 
   # Process tracks in parallel with progress bar
@@ -475,7 +489,9 @@ ingest_pds_tracks <- function(log_threshold = logger::DEBUG, batch_size = NULL) 
   successes <- sum(purrr::map_chr(results, "status") == "success")
   failures <- sum(purrr::map_chr(results, "status") == "error")
 
-  logger::log_info("Processing complete. Successfully processed {successes} tracks.")
+  logger::log_info(
+    "Processing complete. Successfully processed {successes} tracks."
+  )
   if (failures > 0) {
     logger::log_warn("Failed to process {failures} tracks.")
     failed_results <- results[purrr::map_chr(results, "status") == "error"]
@@ -483,7 +499,11 @@ ingest_pds_tracks <- function(log_threshold = logger::DEBUG, batch_size = NULL) 
     failed_messages <- purrr::map_chr(failed_results, "message")
 
     logger::log_warn("Failed trip IDs and reasons:")
-    purrr::walk2(failed_trips, failed_messages, ~ logger::log_warn("Trip {.x}: {.y}"))
+    purrr::walk2(
+      failed_trips,
+      failed_messages,
+      ~ logger::log_warn("Trip {.x}: {.y}")
+    )
   }
 }
 
