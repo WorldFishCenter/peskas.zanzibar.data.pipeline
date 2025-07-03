@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,23 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="3.3.0" id="peskaszanzibardatapipeline-330">peskas.zanzibar.data.pipeline 3.3.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-330"></a></h2>
+<div class="section level4">
+<h4 id="major-changes-3-3-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-3-3-0"></a></h4>
+<ul><li>All summary tables (taxa, districts, gear) now include a ‘date’ (monthly) column and are grouped by month. Missing months are filled as NA for consistent time series exports.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="validation-updates-3-3-0">Validation Updates<a class="anchor" aria-label="anchor" href="#validation-updates-3-3-0"></a></h4>
+<ul><li>The maximum number of individuals per catch is now 200 (was 80).</li>
+<li>Validation flag for ‘number of fishers too high’ is now triggered at &gt;100 (was &gt;70) for non-ring nets.</li>
+<li>Documentation updated to reflect new validation thresholds.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="code-quality-3-3-0">Code Quality<a class="anchor" aria-label="anchor" href="#code-quality-3-3-0"></a></h4>
+<ul><li>Improved code formatting and clarity in validation functions and documentation.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="3.2.0" id="peskaszanzibardatapipeline-320">peskas.zanzibar.data.pipeline 3.2.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-320"></a></h2>
 <div class="section level4">
@@ -302,7 +319,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer></div>
