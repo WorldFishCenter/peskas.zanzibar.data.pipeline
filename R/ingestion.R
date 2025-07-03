@@ -70,20 +70,20 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   pars <- read_config()
 
   # WCS Survey
-  #logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
-  #wcs_files <- retrieve_surveys(
-  #  prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
-  #  append_version = TRUE,
-  #  url = "kf.kobotoolbox.org",
-  #  project_id = pars$surveys$wcs_surveys$asset_id,
-  #  username = pars$surveys$wcs_surveys$username,
-  #  psswd = pars$surveys$wcs_surveys$password,
-  #  encoding = "UTF-8"
-  #)
+  logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
+  wcs_files <- retrieve_surveys(
+    prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
+    append_version = TRUE,
+    url = "kf.kobotoolbox.org",
+    project_id = pars$surveys$wcs_surveys$asset_id,
+    username = pars$surveys$wcs_surveys$username,
+    psswd = pars$surveys$wcs_surveys$password,
+    encoding = "UTF-8"
+  )
 
-  #logger::log_info("Uploading WCS files to cloud...")
-  #purrr::map(pars$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
-  #logger::log_success("WCS files upload succeeded")
+  logger::log_info("Uploading WCS files to cloud...")
+  purrr::map(pars$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
+  logger::log_success("WCS files upload succeeded")
 
   # WF Survey
   logger::log_info("Downloading WF Fish Catch Survey Kobo data...")
@@ -156,7 +156,7 @@ retrieve_surveys <- function(
   }
 
   logger::log_info(
-    "Converting WCS Fish Catch Survey Kobo data to tabular format..."
+    "Converting Fish Catch Survey Kobo data to tabular format..."
   )
   tabular_data <- purrr::map_dfr(data_raw, flatten_row)
   data_filename <- prefix
@@ -196,6 +196,8 @@ flatten_row <- function(x) {
     # Each row is composed of several fields
     purrr::imap(flatten_field) %>%
     rlang::squash() %>%
+    # Remove NULL values before creating tibble
+    purrr::compact() %>%
     tibble::as_tibble()
 }
 
@@ -223,6 +225,9 @@ flatten_field <- function(x, p) {
         # If the field-list is an "array" we need to iterate over its children
         x <- purrr::imap(x, rename_child, p = p)
       }
+    } else {
+      # Handle empty lists by returning NULL (will be removed by compact)
+      return(NULL)
     }
   } else {
     if (is.null(x)) x <- NA
