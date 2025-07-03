@@ -51,10 +51,20 @@ process_catch_data <- function(preprocessed_surveys, trips_info) {
     dplyr::ungroup() |>
     dplyr::relocate("catch_number", .after = "survey_id") |>
     dplyr::left_join(
-      trips_info |> dplyr::select("survey_id", "landing_date", "vessel_type", "gear", "n_fishers"),
+      trips_info |>
+        dplyr::select(
+          "survey_id",
+          "landing_date",
+          "vessel_type",
+          "gear",
+          "n_fishers"
+        ),
       by = "survey_id"
     ) |>
-    dplyr::relocate(c("vessel_type", "gear", "n_fishers"), .after = "catch_number")
+    dplyr::relocate(
+      c("vessel_type", "gear", "n_fishers"),
+      .after = "catch_number"
+    )
 }
 
 #' Add validation flags to catch data
@@ -69,7 +79,7 @@ process_catch_data <- function(preprocessed_surveys, trips_info) {
 #' 6: Bucket is > 40kg
 #' 7: Small pelagic individual weight > 10kg
 #' 8: Individual weight > 250kg
-#' 9: Number of fishers is too high (>70) for non-ring nets
+#' 9: Number of fishers is too high (>100) for non-ring nets
 #'
 #' @param catch_data Processed catch data
 #' @return A dataframe with validation flags added
@@ -78,20 +88,22 @@ process_catch_data <- function(preprocessed_surveys, trips_info) {
 add_validation_flags <- function(catch_data) {
   catch_data |>
     dplyr::mutate(
-      alert_flag =
-        dplyr::case_when(
-          .data$n_fishers < 1 ~ "1",
-          .data$catch_kg < 0 ~ "2",
-          is.na(.data$catch_kg) & !is.na(.data$group_catch) ~ "3",
-          .data$catch_kg == 0 & !is.na(.data$group_catch) ~ "4",
-          .data$type_measure == "bucket" & .data$n_elements > 150 ~ "5",
-          .data$type_measure == "bucket" & .data$catch_kg > 40 ~ "6",
-          .data$type_measure == "individual" & .data$group_catch == "small_pelagic" & .data$catch_kg > 20 ~ "7",
-          .data$type_measure == "individual" & .data$catch_kg > 250 ~ "8",
-          .data$n_fishers > 70 & !.data$gear == "ring_nets" ~ "9",
-          .data$landing_date < "2020-01-01" ~ "10",
-          TRUE ~ NA_character_
-        )
+      alert_flag = dplyr::case_when(
+        .data$n_fishers < 1 ~ "1",
+        .data$catch_kg < 0 ~ "2",
+        is.na(.data$catch_kg) & !is.na(.data$group_catch) ~ "3",
+        .data$catch_kg == 0 & !is.na(.data$group_catch) ~ "4",
+        .data$type_measure == "bucket" & .data$n_elements > 150 ~ "5",
+        .data$type_measure == "bucket" & .data$catch_kg > 40 ~ "6",
+        .data$type_measure == "individual" &
+          .data$group_catch == "small_pelagic" &
+          .data$catch_kg > 20 ~
+          "7",
+        .data$type_measure == "individual" & .data$catch_kg > 250 ~ "8",
+        .data$n_fishers > 100 & !.data$gear == "ring_nets" ~ "9",
+        .data$landing_date < "2020-01-01" ~ "10",
+        TRUE ~ NA_character_
+      )
     )
 }
 
@@ -111,7 +123,11 @@ validate_catches <- function(catch_data) {
     dplyr::group_by(.data$survey_id) %>%
     dplyr::mutate(
       alert_catch_survey = max(as.numeric(.data$alert_flag), na.rm = TRUE),
-      alert_catch_survey = ifelse(.data$alert_catch_survey == -Inf, NA, .data$alert_catch_survey)
+      alert_catch_survey = ifelse(
+        .data$alert_catch_survey == -Inf,
+        NA,
+        .data$alert_catch_survey
+      )
     ) %>%
     dplyr::ungroup() |>
     dplyr::filter(is.na(.data$alert_catch_survey)) |>
@@ -178,7 +194,15 @@ calculate_catch_revenue <- function(validated, market_table) {
     dplyr::group_by(.data$survey_id, .data$catch_number) |>
     dplyr::summarise(
       dplyr::across(
-        c("landing_date", "vessel_type", "gear", "n_fishers", "group_catch", "species_catch", "n_elements"),
+        c(
+          "landing_date",
+          "vessel_type",
+          "gear",
+          "n_fishers",
+          "group_catch",
+          "species_catch",
+          "n_elements"
+        ),
         ~ dplyr::first(.x)
       ),
       catch_kg = dplyr::first(.data$catch_kg),
@@ -186,16 +210,27 @@ calculate_catch_revenue <- function(validated, market_table) {
       .groups = "drop"
     ) |>
     dplyr::mutate(
-      catch_kg = ifelse(!is.na(.data$n_elements), .data$catch_kg * .data$n_elements, .data$catch_kg)
+      catch_kg = ifelse(
+        !is.na(.data$n_elements),
+        .data$catch_kg * .data$n_elements,
+        .data$catch_kg
+      )
     ) |>
     dplyr::select(-"n_elements") |>
     dplyr::group_by(.data$group_catch) %>%
-    dplyr::mutate(median_price = stats::median(.data$catch_price_kg, na.rm = TRUE)) %>%
+    dplyr::mutate(
+      median_price = stats::median(.data$catch_price_kg, na.rm = TRUE)
+    ) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(
       overall_median_price = stats::median(.data$catch_price_kg, na.rm = TRUE),
-      catch_price_kg = ifelse(is.na(.data$catch_price_kg),
-        ifelse(is.na(.data$median_price), .data$overall_median_price, .data$median_price),
+      catch_price_kg = ifelse(
+        is.na(.data$catch_price_kg),
+        ifelse(
+          is.na(.data$median_price),
+          .data$overall_median_price,
+          .data$median_price
+        ),
         .data$catch_price_kg
       ),
       revenue_TZS = .data$catch_price_kg * .data$catch_kg
@@ -248,15 +283,33 @@ aggregate_survey_data <- function(catch_price_table, trips_info) {
     dplyr::ungroup()
 
   validated_price_catch |>
-    dplyr::left_join(trips_info, by = c("survey_id", "landing_date", "vessel_type", "gear", "n_fishers")) |>
+    dplyr::left_join(
+      trips_info,
+      by = c("survey_id", "landing_date", "vessel_type", "gear", "n_fishers")
+    ) |>
     dplyr::select(
-      "survey_id", "landing_date", "landing_site", "trip_length_days", "habitat",
-      "vessel_type", "boats_landed", "gear", "n_fishers", "total_catch_kg", "total_revenue_TZS", "catch_taxa"
+      "survey_id",
+      "landing_date",
+      "landing_site",
+      "trip_length_days",
+      "habitat",
+      "vessel_type",
+      "boats_landed",
+      "gear",
+      "n_fishers",
+      "total_catch_kg",
+      "total_revenue_TZS",
+      "catch_taxa"
     ) |>
     dplyr::mutate(
       boats_landed = ifelse(is.na(.data$boats_landed), 0, .data$boats_landed),
-      n_fishers = ifelse(.data$boats_landed > 0, .data$n_fishers * .data$boats_landed, .data$n_fishers),
-      rpue = (.data$total_revenue_TZS / .data$n_fishers) / .data$trip_length_days,
+      n_fishers = ifelse(
+        .data$boats_landed > 0,
+        .data$n_fishers * .data$boats_landed,
+        .data$n_fishers
+      ),
+      rpue = (.data$total_revenue_TZS / .data$n_fishers) /
+        .data$trip_length_days,
       cpue = (.data$total_catch_kg / .data$n_fishers) / .data$trip_length_days
     ) |>
     dplyr::select(-c("boats_landed", "trip_length_days")) |>
@@ -316,13 +369,19 @@ get_catch_bounds <- function(data = NULL, k_param = NULL) {
     split(interaction(.$gear, .$catch_taxon)) %>%
     purrr::map(~ na.omit(.)) %>%
     purrr::discard(~ nrow(.) == 0) %>%
-    purrr::map(~ {
-      univOutl::LocScaleB(.x[["catch_kg"]], logt = TRUE, k = k_param) %>%
-        magrittr::extract2("bounds")
-    }) %>%
+    purrr::map(
+      ~ {
+        univOutl::LocScaleB(.x[["catch_kg"]], logt = TRUE, k = k_param) %>%
+          magrittr::extract2("bounds")
+      }
+    ) %>%
     dplyr::bind_rows(.id = "gear_catch") %>%
     dplyr::mutate(upper_catch = exp(.data$upper.up)) %>%
-    tidyr::separate(col = "gear_catch", into = c("gear", "catch_taxon"), sep = "\\.") %>%
+    tidyr::separate(
+      col = "gear_catch",
+      into = c("gear", "catch_taxon"),
+      sep = "\\."
+    ) %>%
     dplyr::select(-c("lower.low", "upper.up"))
 }
 
@@ -348,13 +407,19 @@ get_length_bounds <- function(data = NULL, k_param = NULL) {
     split(interaction(.$gear, .$catch_taxon)) %>%
     purrr::map(~ na.omit(.)) %>%
     purrr::discard(~ nrow(.) == 0) %>%
-    purrr::map(~ {
-      univOutl::LocScaleB(.x[["length_cm"]], logt = TRUE, k = k_param) %>%
-        magrittr::extract2("bounds")
-    }) %>%
+    purrr::map(
+      ~ {
+        univOutl::LocScaleB(.x[["length_cm"]], logt = TRUE, k = k_param) %>%
+          magrittr::extract2("bounds")
+      }
+    ) %>%
     dplyr::bind_rows(.id = "gear_length") %>%
     dplyr::mutate(upper_length = exp(.data$upper.up)) %>%
-    tidyr::separate(col = "gear_length", into = c("gear", "catch_taxon"), sep = "\\.") %>%
+    tidyr::separate(
+      col = "gear_length",
+      into = c("gear", "catch_taxon"),
+      sep = "\\."
+    ) %>%
     dplyr::select(-c("lower.low", "upper.up"))
 }
 
@@ -398,11 +463,16 @@ get_length_bounds <- function(data = NULL, k_param = NULL) {
 #' @keywords workflow validation
 #' @export
 get_validation_status <- function(
-    submission_id = NULL,
-    asset_id = NULL,
-    token = NULL,
-    debug = FALSE) {
-  base_url <- paste0("https://eu.kobotoolbox.org/api/v2/assets/", asset_id, "/data/")
+  submission_id = NULL,
+  asset_id = NULL,
+  token = NULL,
+  debug = FALSE
+) {
+  base_url <- paste0(
+    "https://eu.kobotoolbox.org/api/v2/assets/",
+    asset_id,
+    "/data/"
+  )
   url <- paste0(base_url, submission_id, "/validation_status/")
 
   # Remove "Token " prefix if it exists
@@ -425,19 +495,25 @@ get_validation_status <- function(
         validation_data <- httr2::resp_body_json(response)
 
         # Handle NULL validation data
-        timestamp <- if (!is.null(validation_data) && !is.null(validation_data$timestamp)) {
+        timestamp <- if (
+          !is.null(validation_data) && !is.null(validation_data$timestamp)
+        ) {
           lubridate::as_datetime(validation_data$timestamp)
         } else {
           lubridate::as_datetime(NA)
         }
 
-        status <- if (!is.null(validation_data) && !is.null(validation_data$uid)) {
+        status <- if (
+          !is.null(validation_data) && !is.null(validation_data$uid)
+        ) {
           validation_data$uid
         } else {
           "not_validated"
         }
 
-        validator <- if (!is.null(validation_data) && !is.null(validation_data$by_whom)) {
+        validator <- if (
+          !is.null(validation_data) && !is.null(validation_data$by_whom)
+        ) {
           validation_data$by_whom
         } else {
           NA_character_
@@ -516,11 +592,12 @@ get_validation_status <- function(
 #' @keywords workflow validation
 #' @export
 update_validation_status <- function(
-    submission_id = NULL,
-    asset_id = NULL,
-    token = NULL,
-    status = "validation_status_approved",
-    debug = FALSE) {
+  submission_id = NULL,
+  asset_id = NULL,
+  token = NULL,
+  status = "validation_status_approved",
+  debug = FALSE
+) {
   # Validate status
   valid_statuses <- c(
     "validation_status_approved",
@@ -533,7 +610,11 @@ update_validation_status <- function(
   }
 
   # Construct the URL
-  base_url <- paste0("https://eu.kobotoolbox.org/api/v2/assets/", asset_id, "/data/")
+  base_url <- paste0(
+    "https://eu.kobotoolbox.org/api/v2/assets/",
+    asset_id,
+    "/data/"
+  )
   url <- paste0(base_url, submission_id, "/validation_status/")
 
   # Set up request body

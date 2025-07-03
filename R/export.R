@@ -438,7 +438,8 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
 
   taxa_summaries <-
     taxa_df |>
-    dplyr::group_by(.data$district, .data$catch_taxon) |>
+    dplyr::mutate(date = lubridate::floor_date(.data$landing_date, "month")) |>
+    dplyr::group_by(.data$district, .data$date, .data$catch_taxon) |>
     dplyr::summarise(
       catch_kg = sum(.data$tot_catch_kg, na.rm = T),
       catch_price = sum(.data$catch_price, na.rm = T),
@@ -449,6 +450,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     dplyr::left_join(metadata_tables$catch_type, by = "alpha3_code") |>
     dplyr::select(
       "district",
+      "date",
       "common_name",
       "catch_kg",
       "catch_price",
@@ -456,9 +458,10 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     ) |>
     tidyr::complete(
       .data$district,
+      date = seq(min(.data$date), max(.data$date), by = "month"),
       .data$common_name,
       fill = list(
-        catch_kg = 0,
+        catch_kg = NA,
         catch_price = NA,
         length = NA
       )
@@ -466,7 +469,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     dplyr::mutate(price_kg = .data$catch_price / .data$catch_kg) |>
     dplyr::select(-c("catch_price")) |>
     tidyr::pivot_longer(
-      -c("district", "common_name"),
+      -c("district", "date", "common_name"),
       names_to = "metric",
       values_to = "value"
     ) |>
@@ -477,7 +480,8 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
 
   districts_summaries <-
     indicators_df |>
-    dplyr::group_by(.data$district) |>
+    dplyr::mutate(date = lubridate::floor_date(.data$landing_date, "month")) |>
+    dplyr::group_by(.data$district, .data$date) |>
     dplyr::summarise(
       n_submissions = dplyr::n(),
       n_fishers = mean(.data$n_fishers),
@@ -488,9 +492,21 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       .groups = "drop"
     ) |>
     tidyr::pivot_longer(
-      -"district",
+      -c("district", "date"),
       names_to = "indicator",
       values_to = "value"
+    ) |>
+    tidyr::complete(
+      .data$district,
+      date = seq(min(.data$date), max(.data$date), by = "month"),
+      fill = list(
+        n_submissions = NA,
+        n_fishers = NA,
+        trip_duration = NA,
+        mean_cpue = NA,
+        mean_rpue = NA,
+        mean_price_kg = NA
+      )
     ) |>
     dplyr::mutate(
       district = stringr::str_to_title(.data$district),
@@ -499,7 +515,8 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
 
   gear_summaries <-
     indicators_df |>
-    dplyr::group_by(.data$district, .data$gear) |>
+    dplyr::mutate(date = lubridate::floor_date(.data$landing_date, "month")) |>
+    dplyr::group_by(.data$district, .data$date, .data$gear) |>
     dplyr::summarise(
       n_submissions = dplyr::n(),
       cpue = mean(.data$cpue, na.rm = T),
@@ -523,9 +540,18 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       )
     ) |>
     tidyr::pivot_longer(
-      -c("district", "gear"),
+      -c("district", "date", "gear"),
       names_to = "indicator",
       values_to = "value"
+    ) |>
+    tidyr::complete(
+      .data$district,
+      date = seq(min(.data$date), max(.data$date), by = "month"),
+      fill = list(
+        gear = NA,
+        indicator = NA,
+        value = NA
+      )
     ) |>
     dplyr::mutate(
       district = stringr::str_to_title(.data$district),

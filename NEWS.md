@@ -1,3 +1,16 @@
+# peskas.zanzibar.data.pipeline 3.3.0
+
+### Major Changes
+- All summary tables (taxa, districts, gear) now include a 'date' (monthly) column and are grouped by month. Missing months are filled as NA for consistent time series exports.
+
+### Validation Updates
+- The maximum number of individuals per catch is now 200 (was 80).
+- Validation flag for 'number of fishers too high' is now triggered at >100 (was >70) for non-ring nets.
+- Documentation updated to reflect new validation thresholds.
+
+### Code Quality
+- Improved code formatting and clarity in validation functions and documentation.
+
 # peskas.zanzibar.data.pipeline 3.2.0
 
 ### Improvements

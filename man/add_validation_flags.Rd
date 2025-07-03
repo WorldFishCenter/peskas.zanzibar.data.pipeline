@@ -23,6 +23,6 @@ Flag descriptions:
 6: Bucket is > 40kg
 7: Small pelagic individual weight > 10kg
 8: Individual weight > 250kg
-9: Number of fishers is too high (>70) for non-ring nets
+9: Number of fishers is too high (>100) for non-ring nets
 }
 \keyword{validation}
