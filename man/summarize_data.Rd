@@ -69,4 +69,5 @@ summarize_data(logger::INFO)
 }
 }
 \keyword{mining}
+\keyword{pipeline}
 \keyword{workflow}

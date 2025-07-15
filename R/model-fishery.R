@@ -445,7 +445,7 @@ generate_fleet_analysis <- function(log_threshold = logger::DEBUG) {
   monthly_summaries <-
     download_parquet_from_cloud(
       prefix = paste0(
-        pars$surveys$wf_surveys$aggregated$file_prefix,
+        pars$surveys$wf_surveys$summaries$file_prefix,
         "_monthly_summaries"
       ),
       provider = pars$storage$google$key,
