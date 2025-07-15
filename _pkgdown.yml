@@ -17,7 +17,7 @@ reference:
   - title: Data Pipeline Workflow
     desc: >
       Core functions that execute each step in the data pipeline, from data ingestion
-      to validation and export.
+      through validation, analysis, and export to MongoDB and cloud storage.
     contents:
       - has_keyword("workflow")
 
@@ -38,16 +38,25 @@ reference:
   - title: Data Preprocessing
     desc: >
       Functions for cleaning, transforming, and structuring raw data into standardized
-      formats ready for analysis, including data nesting and reshaping.
+      formats ready for analysis, including data nesting, reshaping, and trip processing.
     contents:
       - has_keyword("preprocessing")
 
-  - title: Data Mining & Enrichment
+  - title: Data Mining & Summarization
     desc: >
       Functions for enriching fisheries data with scientific information, taxonomic
-      classification, and biological parameters (length-weight relationships).
+      classification, biological parameters, and creating summary datasets for analysis.
     contents:
       - has_keyword("mining")
+      - has_keyword("summary")
+
+  - title: Data Modeling & Analysis
+    desc: >
+      Functions for statistical modeling, fleet activity estimation, and scaling
+      sample-based GPS data to fleet-wide estimates using boat registry information.
+    contents:
+      - has_keyword("modeling")
+      - has_keyword("analysis")
 
   - title: Data Validation
     desc: >
@@ -58,11 +67,18 @@ reference:
 
   - title: Data Export & Visualization
     desc: >
-      Functions for exporting processed data to various formats and creating
-      visualizations for reporting and analysis.
+      Functions for exporting processed data to MongoDB collections, creating
+      geographic visualizations, and preparing data for portals and reporting.
     contents:
       - has_keyword("export")
       - kepler_mapper
+
+  - title: Pipeline Orchestration
+    desc: >
+      High-level functions that orchestrate complete analysis pipelines, combining
+      multiple processing steps into integrated workflows.
+    contents:
+      - has_keyword("pipeline")
 
   - title: Helper Functions
     desc: >

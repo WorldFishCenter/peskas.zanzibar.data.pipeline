@@ -39,6 +39,12 @@ default:
       validation:
         flags:
           file_prefix: wf-flags
+      summaries:
+        file_prefix: wf-summaries
+        version: latest
+      aggregated:
+        file_prefix: wf-aggregated
+        version: latest      
     ba_surveys:
       asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
       username: !expr Sys.getenv('BA_SURVEYS_UNAME')
@@ -73,7 +79,7 @@ default:
       key: gcs
       options:
         project: peskas
-        bucket: zanzibar-dev
+        bucket: zanzibar-prod
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
       options_coasts:
         project: peskas
@@ -106,7 +112,7 @@ default:
       key: gcs
       options:
         project: peskas
-        bucket: pds-zanzibar-dev
+        bucket: pds-zanzibar-prod
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
   metadata:
     google_sheets:
@@ -115,8 +121,9 @@ default:
       tables:
         - devices
         - sites
-        #- boats
+        - boats
         - catch_type
+        - communities
   validation:
     k_MAD_catch: 7
 

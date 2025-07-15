@@ -1,3 +1,37 @@
+# peskas.zanzibar.data.pipeline 4.0.0
+
+### Major Changes
+- **Fleet Activity Analysis Pipeline:**
+  Introduced a comprehensive pipeline for estimating and analyzing fishing fleet activity using GPS-tracked boats and boat registry data. This includes new functions for preparing boat registries, processing trip data, calculating monthly trip statistics, estimating fleet-wide activity, and calculating district-level total catch and revenue.
+- **New Modeling and Summarization Functions:**
+  - `prepare_boat_registry()`: Summarizes boat registry data by district.
+  - `process_trip_data()`: Processes trip data with district information and filters outliers.
+  - `calculate_monthly_trip_stats()`: Computes monthly fishing activity statistics by district.
+  - `estimate_fleet_activity()`: Scales up sample-based trip statistics to fleet-wide estimates.
+  - `calculate_district_totals()`: Combines fleet activity and catch data for district-level totals.
+  - `generate_fleet_analysis()`: Orchestrates the full analysis pipeline and uploads results.
+  - `summarize_data()`: Generates and uploads summary datasets (monthly, taxa, district, gear, grid) for WorldFish survey data.
+- **Enhanced Data Export and Integration:**
+  - `export_wf_data()`: Exports summarized WorldFish survey data and modeled estimates to MongoDB, including new geographic regional summaries.
+  - `create_geos()`: Generates geospatial regional summaries and exports as GeoJSON for spatial visualization.
+- **Expanded Documentation:**
+  New and updated Rd files for all major new functions, with improved examples and cross-references.
+
+### Improvements
+- **Consistent Time Series and Grouping:**
+  All summary tables (taxa, districts, gear) now include a 'date' (monthly) column and are grouped by month, with missing months filled as NA for consistent time series exports.
+- **Parallel Processing:**
+  Improved use of parallelization (via `future` and `furrr`) for validation and summarization steps, enhancing performance for large datasets.
+- **Data Quality and Validation:**
+  - Enhanced filtering and validation of survey data before summarization and export.
+  - Improved handling of flagged/invalid submissions.
+
+### Infrastructure & Workflow
+- **Configuration and Documentation:**
+  Updated configuration files and documentation to support new modeling and export workflows.
+- **Workflow Automation:**
+  Updates to GitHub Actions and Docker configuration to support the expanded pipeline.
+
 # peskas.zanzibar.data.pipeline 3.3.0
 
 ### Major Changes

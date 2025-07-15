@@ -746,8 +746,9 @@ pt_nest_attachments <- function(x) {
 #' @keywords workflow preprocessing
 #' @export
 preprocess_pds_tracks <- function(
-    log_threshold = logger::DEBUG,
-    grid_size = 500) {
+  log_threshold = logger::DEBUG,
+  grid_size = 500
+) {
   logger::log_threshold(log_threshold)
   pars <- read_config()
 
@@ -848,7 +849,9 @@ preprocess_pds_tracks <- function(
   )
 
   unlink(output_filename)
-  if (exists("preprocessed_filename")) unlink(preprocessed_filename)
+  if (exists("preprocessed_filename")) {
+    unlink(preprocessed_filename)
+  }
 
   logger::log_success("Track preprocessing complete")
 
@@ -932,7 +935,8 @@ preprocess_pds_tracks <- function(
 preprocess_track_data <- function(data, grid_size = 500) {
   # Define grid size in meters to degrees (approximately)
   # 1 degree = 111km at equator
-  grid_degrees <- switch(as.character(grid_size),
+  grid_degrees <- switch(
+    as.character(grid_size),
     "100" = 0.001, # ~100m
     "250" = 0.0025, # ~250m
     "500" = 0.005, # ~500m
@@ -1090,7 +1094,9 @@ reshape_species_groups <- function(df = NULL) {
     )
 
     # Skip if there are no columns for this position
-    if (length(pos_cols) <= 1) next
+    if (length(pos_cols) <= 1) {
+      next
+    }
 
     # Create data frame for this position
     pos_df <- df[, pos_cols, drop = FALSE]

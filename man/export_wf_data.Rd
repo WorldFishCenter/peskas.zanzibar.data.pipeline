@@ -2,7 +2,7 @@
 % Please edit documentation in R/export.R
 \name{export_wf_data}
 \alias{export_wf_data}
-\title{Export WorldFish Survey Data}
+\title{Export WorldFish Summary Data to MongoDB}
 \usage{
 export_wf_data(log_threshold = logger::DEBUG)
 }
@@ -11,49 +11,38 @@ export_wf_data(log_threshold = logger::DEBUG)
 See \code{logger::log_levels} for available options.}
 }
 \value{
-Two data frames (invisible):
-\itemize{
-\item indicators_df: Aggregated catch metrics by submission
-\item taxa_df: Species-specific catch information
-}
+NULL (invisible). The function uploads data to MongoDB as a side effect.
 }
 \description{
-Processes validated survey data from WorldFish sources, filtering out flagged submissions
-and generating two key datasets:
-\enumerate{
-\item Indicators dataset with aggregated catch metrics
-\item Taxa dataset with species-specific catch information
-}
+Downloads previously summarized WorldFish survey data from cloud storage, incorporates
+modeled aggregated estimates, and exports everything to MongoDB collections for use
+in data portals. The function also generates geographic regional summaries.
 }
 \details{
 The function performs the following operations:
 \itemize{
-\item Retrieves validated WF survey data
-\item Pulls submission flags from MongoDB
-\item Filters out submissions with alert flags
-\item For the indicators dataset:
+\item Downloads five summary datasets from cloud storage:
 \itemize{
-\item Aggregates catch data by submission
-\item Calculates price per kg, CPUE, and RPUE metrics
+\item Monthly summaries: Aggregated catch metrics by district and month
+\item Taxa summaries: Species-specific metrics in long format
+\item Districts summaries: District-level indicators over time
+\item Gear summaries: Performance metrics by gear type
+\item Grid summaries: Spatial grid data from vessel tracking
 }
-\item For the taxa dataset:
-\itemize{
-\item Preserves taxonomic information
-\item Calculates catch metrics by species
-}
+\item Downloads aggregated catch estimates from the modeling step
+\item Creates geographic regional summaries using the monthly data
+\item Joins aggregated estimates (fishing trips, catch tonnage, revenue) to monthly summaries
+\item Transforms monthly summaries to long format for portal consumption
+\item Uploads all datasets to specified MongoDB collections
 }
 
-The metrics calculated include:
-\itemize{
-\item Total catch weight per submission
-\item Price per kg of catch
-\item CPUE (Catch Per Unit Effort)
-\item RPUE (Revenue Per Unit Effort)
-}
+The function expects the summary files to be named with the pattern:
+\verb{\{file_prefix\}_\{table_name\}.parquet} where table_name is one of:
+monthly_summaries, taxa_summaries, districts_summaries, gear_summaries, grid_summaries
 }
 \examples{
 \dontrun{
-# Export WF data with default debug logging
+# Export WF summary data with default debug logging
 export_wf_data()
 
 # Export with info-level logging only
@@ -63,9 +52,10 @@ export_wf_data(logger::INFO)
 }
 \seealso{
 \itemize{
-\item \code{\link[=get_validated_surveys]{get_validated_surveys()}} for details on the input data format
-\item \code{\link[=mdb_collection_pull]{mdb_collection_pull()}} for retrieving flag information
-\item \code{\link[=export_data]{export_data()}} for the more comprehensive export function
+\item \code{\link[=summarize_data]{summarize_data()}} for generating the summary datasets
+\item \code{\link[=download_parquet_from_cloud]{download_parquet_from_cloud()}} for retrieving data from cloud storage
+\item \code{\link[=mdb_collection_push]{mdb_collection_push()}} for uploading data to MongoDB
+\item \code{\link[=create_geos]{create_geos()}} for generating geographic summaries
 }
 }
 \keyword{export}
