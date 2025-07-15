@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,7 +33,7 @@
     <div class="section level2">
       <h2 id="data-pipeline-workflow">Data Pipeline Workflow<a class="anchor" aria-label="anchor" href="#data-pipeline-workflow"></a></h2>
 
-      <div class="section-desc"><p>Core functions that execute each step in the data pipeline, from data ingestion to validation and export.</p></div>
+      <div class="section-desc"><p>Core functions that execute each step in the data pipeline, from data ingestion through validation, analysis, and export to MongoDB and cloud storage.</p></div>
 
 
     </div><div class="section level2">
@@ -43,16 +43,34 @@
 
       <dl><dt>
 
-          <code><a href="export_data.html">export_data()</a></code>
+          <code><a href="calculate_district_totals.html">calculate_district_totals()</a></code>
 
         </dt>
-        <dd>Export Processed Fisheries Data to MongoDB</dd>
+        <dd>Calculate District-Level Total Catch and Revenue</dd>
+      </dl><dl><dt>
+
+          <code><a href="calculate_monthly_trip_stats.html">calculate_monthly_trip_stats()</a></code>
+
+        </dt>
+        <dd>Calculate Monthly Trip Statistics by District</dd>
+      </dl><dl><dt>
+
+          <code><a href="estimate_fleet_activity.html">estimate_fleet_activity()</a></code>
+
+        </dt>
+        <dd>Estimate Fleet-Wide Activity from Sample Data</dd>
       </dl><dl><dt>
 
           <code><a href="export_wf_data.html">export_wf_data()</a></code>
 
         </dt>
-        <dd>Export WorldFish Survey Data</dd>
+        <dd>Export WorldFish Summary Data to MongoDB</dd>
+      </dl><dl><dt>
+
+          <code><a href="generate_fleet_analysis.html">generate_fleet_analysis()</a></code>
+
+        </dt>
+        <dd>Generate Complete Fleet Activity Analysis Pipeline</dd>
       </dl><dl><dt>
 
           <code><a href="get_validation_status.html">get_validation_status()</a></code>
@@ -79,6 +97,12 @@
         <dd>Ingest WCS and WF Catch Survey Data</dd>
       </dl><dl><dt>
 
+          <code><a href="prepare_boat_registry.html">prepare_boat_registry()</a></code>
+
+        </dt>
+        <dd>Prepare Boat Registry Data from Metadata</dd>
+      </dl><dl><dt>
+
           <code><a href="preprocess_ba_surveys.html">preprocess_ba_surveys()</a></code>
 
         </dt>
@@ -101,6 +125,18 @@
 
         </dt>
         <dd>Pre-process WorldFish Surveys</dd>
+      </dl><dl><dt>
+
+          <code><a href="process_trip_data.html">process_trip_data()</a></code>
+
+        </dt>
+        <dd>Process Trip Data with District Information</dd>
+      </dl><dl><dt>
+
+          <code><a href="summarize_data.html">summarize_data()</a></code>
+
+        </dt>
+        <dd>Summarize WorldFish Survey Data</dd>
       </dl><dl><dt>
 
           <code><a href="sync_validation_submissions.html">sync_validation_submissions()</a></code>
@@ -258,7 +294,7 @@
       </dl></div><div class="section level2">
       <h2 id="data-preprocessing">Data Preprocessing<a class="anchor" aria-label="anchor" href="#data-preprocessing"></a></h2>
 
-      <div class="section-desc"><p>Functions for cleaning, transforming, and structuring raw data into standardized formats ready for analysis, including data nesting and reshaping.</p></div>
+      <div class="section-desc"><p>Functions for cleaning, transforming, and structuring raw data into standardized formats ready for analysis, including data nesting, reshaping, and trip processing.</p></div>
 
 
     </div><div class="section level2">
@@ -316,6 +352,12 @@
         <dd>Match Species from Taxa Databases</dd>
       </dl><dl><dt>
 
+          <code><a href="prepare_boat_registry.html">prepare_boat_registry()</a></code>
+
+        </dt>
+        <dd>Prepare Boat Registry Data from Metadata</dd>
+      </dl><dl><dt>
+
           <code><a href="preprocess_ba_surveys.html">preprocess_ba_surveys()</a></code>
 
         </dt>
@@ -352,6 +394,12 @@
         <dd>Process Species List with Taxonomic Information</dd>
       </dl><dl><dt>
 
+          <code><a href="process_trip_data.html">process_trip_data()</a></code>
+
+        </dt>
+        <dd>Process Trip Data with District Information</dd>
+      </dl><dl><dt>
+
           <code><a href="reshape_catch_data.html">reshape_catch_data()</a></code>
 
         </dt>
@@ -363,9 +411,9 @@
         </dt>
         <dd>Reshape Species Groups from Wide to Long Format</dd>
       </dl></div><div class="section level2">
-      <h2 id="data-mining-enrichment">Data Mining &amp; Enrichment<a class="anchor" aria-label="anchor" href="#data-mining-enrichment"></a></h2>
+      <h2 id="data-mining-summarization">Data Mining &amp; Summarization<a class="anchor" aria-label="anchor" href="#data-mining-summarization"></a></h2>
 
-      <div class="section-desc"><p>Functions for enriching fisheries data with scientific information, taxonomic classification, and biological parameters (length-weight relationships).</p></div>
+      <div class="section-desc"><p>Functions for enriching fisheries data with scientific information, taxonomic classification, biological parameters, and creating summary datasets for analysis.</p></div>
 
 
     </div><div class="section level2">
@@ -427,6 +475,47 @@
 
         </dt>
         <dd>Process Species List with Taxonomic Information</dd>
+      </dl><dl><dt>
+
+          <code><a href="summarize_data.html">summarize_data()</a></code>
+
+        </dt>
+        <dd>Summarize WorldFish Survey Data</dd>
+      </dl></div><div class="section level2">
+      <h2 id="data-modeling-analysis">Data Modeling &amp; Analysis<a class="anchor" aria-label="anchor" href="#data-modeling-analysis"></a></h2>
+
+      <div class="section-desc"><p>Functions for statistical modeling, fleet activity estimation, and scaling sample-based GPS data to fleet-wide estimates using boat registry information.</p></div>
+
+
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="estimate_fleet_activity.html">estimate_fleet_activity()</a></code>
+
+        </dt>
+        <dd>Estimate Fleet-Wide Activity from Sample Data</dd>
+      </dl><dl><dt>
+
+          <code><a href="calculate_district_totals.html">calculate_district_totals()</a></code>
+
+        </dt>
+        <dd>Calculate District-Level Total Catch and Revenue</dd>
+      </dl><dl><dt>
+
+          <code><a href="calculate_monthly_trip_stats.html">calculate_monthly_trip_stats()</a></code>
+
+        </dt>
+        <dd>Calculate Monthly Trip Statistics by District</dd>
+      </dl><dl><dt>
+
+          <code><a href="generate_fleet_analysis.html">generate_fleet_analysis()</a></code>
+
+        </dt>
+        <dd>Generate Complete Fleet Activity Analysis Pipeline</dd>
       </dl></div><div class="section level2">
       <h2 id="data-validation">Data Validation<a class="anchor" aria-label="anchor" href="#data-validation"></a></h2>
 
@@ -531,7 +620,7 @@
       </dl></div><div class="section level2">
       <h2 id="data-export-visualization">Data Export &amp; Visualization<a class="anchor" aria-label="anchor" href="#data-export-visualization"></a></h2>
 
-      <div class="section-desc"><p>Functions for exporting processed data to various formats and creating visualizations for reporting and analysis.</p></div>
+      <div class="section-desc"><p>Functions for exporting processed data to MongoDB collections, creating geographic visualizations, and preparing data for portals and reporting.</p></div>
 
 
     </div><div class="section level2">
@@ -547,22 +636,33 @@
         <dd>Generate Geographic Regional Summaries of Fishery Data</dd>
       </dl><dl><dt>
 
-          <code><a href="export_data.html">export_data()</a></code>
-
-        </dt>
-        <dd>Export Processed Fisheries Data to MongoDB</dd>
-      </dl><dl><dt>
-
           <code><a href="export_wf_data.html">export_wf_data()</a></code>
 
         </dt>
-        <dd>Export WorldFish Survey Data</dd>
+        <dd>Export WorldFish Summary Data to MongoDB</dd>
       </dl><dl><dt>
 
           <code><a href="kepler_mapper.html">kepler_mapper()</a></code>
 
         </dt>
         <dd>Generate a Kepler.gl map</dd>
+      </dl></div><div class="section level2">
+      <h2 id="pipeline-orchestration">Pipeline Orchestration<a class="anchor" aria-label="anchor" href="#pipeline-orchestration"></a></h2>
+
+      <div class="section-desc"><p>High-level functions that orchestrate complete analysis pipelines, combining multiple processing steps into integrated workflows.</p></div>
+
+
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="generate_fleet_analysis.html">generate_fleet_analysis()</a></code>
+
+        </dt>
+        <dd>Generate Complete Fleet Activity Analysis Pipeline</dd>
       </dl></div><div class="section level2">
       <h2 id="helper-functions">Helper Functions<a class="anchor" aria-label="anchor" href="#helper-functions"></a></h2>
 

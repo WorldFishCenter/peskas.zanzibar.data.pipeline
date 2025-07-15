@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,59 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.0.0" id="peskaszanzibardatapipeline-400">peskas.zanzibar.data.pipeline 4.0.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-400"></a></h2>
+<div class="section level4">
+<h4 id="major-changes-4-0-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-4-0-0"></a></h4>
+<ul><li>
+<strong>Fleet Activity Analysis Pipeline:</strong> Introduced a comprehensive pipeline for estimating and analyzing fishing fleet activity using GPS-tracked boats and boat registry data. This includes new functions for preparing boat registries, processing trip data, calculating monthly trip statistics, estimating fleet-wide activity, and calculating district-level total catch and revenue.</li>
+<li>
+<strong>New Modeling and Summarization Functions:</strong>
+<ul><li>
+<code><a href="../reference/prepare_boat_registry.html">prepare_boat_registry()</a></code>: Summarizes boat registry data by district.</li>
+<li>
+<code><a href="../reference/process_trip_data.html">process_trip_data()</a></code>: Processes trip data with district information and filters outliers.</li>
+<li>
+<code><a href="../reference/calculate_monthly_trip_stats.html">calculate_monthly_trip_stats()</a></code>: Computes monthly fishing activity statistics by district.</li>
+<li>
+<code><a href="../reference/estimate_fleet_activity.html">estimate_fleet_activity()</a></code>: Scales up sample-based trip statistics to fleet-wide estimates.</li>
+<li>
+<code><a href="../reference/calculate_district_totals.html">calculate_district_totals()</a></code>: Combines fleet activity and catch data for district-level totals.</li>
+<li>
+<code><a href="../reference/generate_fleet_analysis.html">generate_fleet_analysis()</a></code>: Orchestrates the full analysis pipeline and uploads results.</li>
+<li>
+<code><a href="../reference/summarize_data.html">summarize_data()</a></code>: Generates and uploads summary datasets (monthly, taxa, district, gear, grid) for WorldFish survey data.</li>
+</ul></li>
+<li>
+<strong>Enhanced Data Export and Integration:</strong>
+<ul><li>
+<code><a href="../reference/export_wf_data.html">export_wf_data()</a></code>: Exports summarized WorldFish survey data and modeled estimates to MongoDB, including new geographic regional summaries.</li>
+<li>
+<code><a href="../reference/create_geos.html">create_geos()</a></code>: Generates geospatial regional summaries and exports as GeoJSON for spatial visualization.</li>
+</ul></li>
+<li>
+<strong>Expanded Documentation:</strong> New and updated Rd files for all major new functions, with improved examples and cross-references.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="improvements-4-0-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-4-0-0"></a></h4>
+<ul><li>
+<strong>Consistent Time Series and Grouping:</strong> All summary tables (taxa, districts, gear) now include a ‘date’ (monthly) column and are grouped by month, with missing months filled as NA for consistent time series exports.</li>
+<li>
+<strong>Parallel Processing:</strong> Improved use of parallelization (via <code>future</code> and <code>furrr</code>) for validation and summarization steps, enhancing performance for large datasets.</li>
+<li>
+<strong>Data Quality and Validation:</strong>
+<ul><li>Enhanced filtering and validation of survey data before summarization and export.</li>
+<li>Improved handling of flagged/invalid submissions.</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="infrastructure--workflow-4-0-0">Infrastructure &amp; Workflow<a class="anchor" aria-label="anchor" href="#infrastructure--workflow-4-0-0"></a></h4>
+<ul><li>
+<strong>Configuration and Documentation:</strong> Updated configuration files and documentation to support new modeling and export workflows.</li>
+<li>
+<strong>Workflow Automation:</strong> Updates to GitHub Actions and Docker configuration to support the expanded pipeline.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="3.3.0" id="peskaszanzibardatapipeline-330">peskas.zanzibar.data.pipeline 3.3.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-330"></a></h2>
 <div class="section level4">
