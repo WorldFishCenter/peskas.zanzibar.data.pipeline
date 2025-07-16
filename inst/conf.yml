@@ -79,7 +79,7 @@ default:
       key: gcs
       options:
         project: peskas
-        bucket: zanzibar-prod
+        bucket: zanzibar-dev
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
       options_coasts:
         project: peskas
@@ -88,19 +88,19 @@ default:
     mongodb:
       connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
       pipeline:
-        database_name: zanzibar-prod
+        database_name: zanzibar-dev
         collection:
           monthly_metrics: monthly_metrics
           gear_metrics: gear_metrics
           taxa: taxa_proportions
           effort_map: effort_map
       validation:
-        database_name: zanzibar-prod
+        database_name: zanzibar-dev
         collection:
           flags: surveys_flags
           enumerators_stats: enumerators_stats
       portal:
-        database_name: portal-prod
+        database_name: portal-dev
         collection:
           monthly_summaries: monthly_summaries
           taxa_summaries: taxa_summaries
@@ -112,7 +112,7 @@ default:
       key: gcs
       options:
         project: peskas
-        bucket: pds-zanzibar-prod
+        bucket: pds-zanzibar-dev
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
   metadata:
     google_sheets:

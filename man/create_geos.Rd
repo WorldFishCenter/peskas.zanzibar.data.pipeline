@@ -58,3 +58,4 @@ create_geos(monthly_summaries_dat = monthly_data)
 }
 }
 \keyword{export}
+\keyword{spatial}
