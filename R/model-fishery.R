@@ -336,7 +336,7 @@ estimate_fleet_activity <- function(monthly_stats, boat_registry) {
 calculate_district_totals <- function(fleet_estimates, monthly_summaries) {
   fleet_estimates |>
     # Join with catch/revenue data
-    dplyr::left_join(
+    dplyr::full_join(
       monthly_summaries,
       by = c("district" = "district", "date_month" = "date")
     ) |>
@@ -366,7 +366,8 @@ calculate_district_totals <- function(fleet_estimates, monthly_summaries) {
       .data$estimated_total_revenue
     ) |>
     # Filter out rows with missing catch data
-    dplyr::filter(!is.na(.data$mean_catch_kg))
+    dplyr::filter(!is.na(.data$mean_catch_kg)) |>
+    dplyr::arrange(.data$district, .data$date_month)
 }
 
 #' Generate Complete Fleet Activity Analysis Pipeline
@@ -459,13 +460,39 @@ generate_fleet_analysis <- function(log_threshold = logger::DEBUG) {
   fleet_estimates <- estimate_fleet_activity(
     monthly_stats = monthly_stats,
     boat_registry = boat_registry
-  )
+  ) |>
+    dplyr::mutate(
+      district = dplyr::case_when(
+        .data$district == "North A" ~ "North a",
+        .data$district == "North B" ~ "North b",
+        .data$district == "West A" ~ "West a",
+        .data$district == "West B" ~ "West b",
+        TRUE ~ .data$district
+      )
+    )
 
   # Calculate district totals
   district_totals <- calculate_district_totals(
     fleet_estimates,
     monthly_summaries
-  )
+  ) |>
+    tidyr::complete(
+      .data$district,
+      date_month = seq(
+        min(.data$date_month),
+        max(.data$date_month),
+        by = "month"
+      ),
+      fill = list(
+        sample_total_trips = NA,
+        estimated_total_trips = NA,
+        sampling_rate = NA,
+        mean_catch_kg = NA,
+        mean_catch_price = NA,
+        estimated_total_catch_kg = NA,
+        estimated_total_revenue = NA
+      )
+    )
 
   # Generate annual summary
   annual_summary <-
