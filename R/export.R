@@ -120,11 +120,22 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       values_to = "value"
     )
 
+  districts_summaries <-
+    data_summaries$districts_summaries |>
+    tidyr::pivot_wider(names_from = "indicator", values_from = "value") |>
+    dplyr::full_join(monthly_aggregated, by = c("district", "date")) |>
+    dplyr::select(dplyr::where(~ !all(is.na(.))), -"estimated_fishing_trips") |>
+    tidyr::pivot_longer(
+      -c("date", "district"),
+      names_to = "indicator",
+      values_to = "value"
+    )
+
   # Dataframes to upload
   dataframes_to_upload <- list(
     monthly_summaries = monthly_summaries,
     taxa_summaries = data_summaries$taxa_summaries,
-    districts_summaries = data_summaries$districts_summaries,
+    districts_summaries = districts_summaries,
     gear_summaries = data_summaries$gear_summaries,
     grid_summaries = data_summaries$grid_summaries
   )
