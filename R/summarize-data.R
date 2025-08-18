@@ -81,14 +81,7 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
 
   clean_data <-
     validated_surveys |>
-    dplyr::filter(.data$submission_id %in% valid_ids) |>
-    # clean up gear names
-    dplyr::mutate(
-      gear = dplyr::case_when(
-        stringr::str_count(.data$gear) > 3 ~ "Mixed gears",
-        TRUE ~ .data$gear
-      )
-    )
+    dplyr::filter(.data$submission_id %in% valid_ids)
 
   indicators_df <-
     clean_data |>
@@ -343,6 +336,7 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::mutate(
       gear = dplyr::case_when(
+        stringr::str_count(.data$gear) > 3 ~ "Mixed gears",
         .data$gear == "HL" ~ "Hand line",
         .data$gear == "BS" ~ "Beach Seine",
         .data$gear == "CS" ~ "Cast Net",
