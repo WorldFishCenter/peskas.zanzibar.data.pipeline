@@ -81,7 +81,14 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
 
   clean_data <-
     validated_surveys |>
-    dplyr::filter(.data$submission_id %in% valid_ids)
+    dplyr::filter(.data$submission_id %in% valid_ids) |>
+    # clean up gear names
+    dplyr::mutate(
+      gear = dplyr::case_when(
+        stringr::str_count(.data$gear) > 3 ~ "Mixed gears",
+        TRUE ~ .data$gear
+      )
+    )
 
   indicators_df <-
     clean_data |>
