@@ -15,6 +15,7 @@ Description: Implements the data processing and modelling
 License: GPL-3
 Imports:
     config,
+    dotenv,
     dplyr,
     git2r,
     googleAuthR,

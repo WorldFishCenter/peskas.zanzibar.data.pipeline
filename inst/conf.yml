@@ -150,29 +150,33 @@ local:
   inherits: development
   surveys:
     wcs_surveys:
-      asset_id: !expr readLines('auth/wcs_surveys_ID')
-      username: !expr readLines('auth/wcs_surveys_USNAME')
-      password: !expr readLines('auth/wcs_surveys_PSSW')
+      asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
+      username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
     wf_surveys:
-      asset_id: !expr readLines('auth/wf_surveys_ID')
-      username: !expr readLines('auth/wf_surveys_USNAME')
-      password: !expr readLines('auth/wf_surveys_PSSW')
-      token: !expr readLines('auth/wf_surveys_TOKEN')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+    ba_surveys:
+      asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
+      username: !expr Sys.getenv('BA_SURVEYS_UNAME')
+      password: !expr Sys.getenv('BA_SURVEYS_PSSW')
   pds:
-    token: !expr readLines('auth/pds-token')
-    secret: !expr readLines('auth/pds-secret')
+    token: !expr Sys.getenv('PDS_TOKEN')
+    secret: !expr Sys.getenv('PDS_SECRET')
   storage:
     google:
       options:
-        service_account_key: !expr readLines("auth/gcp-sa-peskas_ingestion-key.json")
+        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
       options_coasts:
-        service_account_key: !expr readLines("auth/gcp-sa-peskas_ingestion-key.json")
+        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
     mongodb:
-      connection_string: !expr readLines("auth/mongodb_connection_string")
+      connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
   pds_storage:
     google:
       options:
-        service_account_key: !expr readLines("auth/gcp-sa-peskas_ingestion-key.json")
+        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
   metadata:
     google_sheets:
-      sheet_id: !expr readLines("auth/metadata-sheet-id")
+      sheet_id: !expr Sys.getenv("GOOGLE_SHEET_ID")
