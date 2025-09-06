@@ -83,6 +83,8 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
     validated_surveys |>
     dplyr::filter(.data$submission_id %in% valid_ids)
 
+  f_metrics <- calculate_fishery_metrics(data = clean_data)
+
   indicators_df <-
     clean_data |>
     dplyr::filter(.data$collect_data_today == "1") |>
@@ -377,7 +379,6 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
-
   # Dataframes to upload
   dataframes_to_upload <- list(
     monthly_summaries = monthly_summaries,
@@ -407,4 +408,11 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
       options = pars$storage$google$options
     )
   }
+
+  upload_parquet_to_cloud(
+    data = f_metrics,
+    prefix = "zanzibar_fishery_metrics",
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options_coasts
+  )
 }
