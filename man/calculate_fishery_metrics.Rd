@@ -19,3 +19,4 @@ year_month, metric_type, metric_value, gear_type, species, rank
 Transforms catch-level data into normalized fishery performance indicators.
 Calculates site-level, gear-specific, and species-specific metrics.
 }
+\keyword{preprocessing}
