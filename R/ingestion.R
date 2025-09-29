@@ -85,37 +85,37 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   purrr::map(pars$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
   logger::log_success("WCS files upload succeeded")
 
-  # WF Survey
-  logger::log_info("Downloading WF Fish Catch Survey Kobo data...")
-  wf_files <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys_v1$raw_surveys$file_prefix,
+  # WF Survey - Version 1
+  logger::log_info("Downloading WF Fish Catch Survey Kobo data (v1)...")
+  wf_files_v1 <- retrieve_surveys(
+    prefix = pars$surveys$wf_surveys$versions$v1$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
-    project_id = pars$surveys$wf_surveys$asset_id,
+    project_id = pars$surveys$wf_surveys$versions$v1$asset_id,
     username = pars$surveys$wf_surveys$username,
     psswd = pars$surveys$wf_surveys$password,
     encoding = "UTF-8"
   )
 
-  logger::log_info("Uploading WF files to cloud...")
-  purrr::map(pars$storage, ~ upload_cloud_file(wf_files, .$key, .$options))
-  logger::log_success("WF files upload succeeded")
+  logger::log_info("Uploading WF v1 files to cloud...")
+  purrr::map(pars$storage, ~ upload_cloud_file(wf_files_v1, .$key, .$options))
+  logger::log_success("WF v1 files upload succeeded")
 
-  # WF Survey
-  logger::log_info("Downloading WF Fish Catch Survey Kobo data...")
+  # WF Survey - Version 2
+  logger::log_info("Downloading WF Fish Catch Survey Kobo data (v2)...")
   wf_files_v2 <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys_v2$raw_surveys$file_prefix,
+    prefix = pars$surveys$wf_surveys$versions$v2$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
-    project_id = pars$surveys$wf_surveys_v2$asset_id,
-    username = pars$surveys$wf_surveys_v2$username,
-    psswd = pars$surveys$wf_surveys_v2$password,
+    project_id = pars$surveys$wf_surveys$versions$v2$asset_id,
+    username = pars$surveys$wf_surveys$username,
+    psswd = pars$surveys$wf_surveys$password,
     encoding = "UTF-8"
   )
 
-  logger::log_info("Uploading WF files to cloud...")
+  logger::log_info("Uploading WF v2 files to cloud...")
   purrr::map(pars$storage, ~ upload_cloud_file(wf_files_v2, .$key, .$options))
-  logger::log_success("WF files upload succeeded")
+  logger::log_success("WF v2 files upload succeeded")
 }
 
 #' Retrieve Surveys from Kobotoolbox

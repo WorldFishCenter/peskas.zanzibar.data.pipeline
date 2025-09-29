@@ -114,7 +114,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   # 1. Load and preprocess survey data
   preprocessed_surveys <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
+      prefix = pars$surveys$wf_surveys$preprocessed_surveys$file_prefix,
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
@@ -132,21 +132,21 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   validation_results <- list()
 
-  # Query wf_surveys_v1 (original asset)
+  # Query wf_surveys v1 (original asset)
   validation_results$v1 <- submission_ids %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys_v1$asset_id,
-      token = pars$surveys$wf_surveys_v1$token,
+      asset_id = pars$surveys$wf_surveys$versions$v1$asset_id,
+      token = pars$surveys$wf_surveys$token,
       .options = furrr::furrr_options(seed = TRUE)
     )
 
-  # Query wf_surveys_v2 (new asset)
+  # Query wf_surveys v2 (new asset)
   validation_results$v2 <- submission_ids %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys_v2$asset_id,
-      token = pars$surveys$wf_surveys_v2$token,
+      asset_id = pars$surveys$wf_surveys$versions$v2$asset_id,
+      token = pars$surveys$wf_surveys$token,
       .options = furrr::furrr_options(seed = TRUE)
     )
 
@@ -455,14 +455,14 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   upload_parquet_to_cloud(
     data = flags_combined,
-    prefix = pars$surveys$wf_surveys_v1$validation$flags$file_prefix,
+    prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
 
   upload_parquet_to_cloud(
     data = validated_data,
-    prefix = pars$surveys$wf_surveys_v1$validated_surveys$file_prefix,
+    prefix = pars$surveys$wf_surveys$validated_surveys$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
@@ -687,7 +687,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 
   validation_flags <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wf_surveys_v1$validation$flags$file_prefix,
+      prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
@@ -723,12 +723,12 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
   update_validation_both_assets <- function(submission_id, status, progress_fn = NULL) {
     updated <- FALSE
 
-    # Try wf_surveys_v1 first
+    # Try wf_surveys v1 first
     result_v1 <- tryCatch({
       update_validation_status(
         submission_id = submission_id,
-        asset_id = pars$surveys$wf_surveys_v1$asset_id,
-        token = pars$surveys$wf_surveys_v1$token,
+        asset_id = pars$surveys$wf_surveys$versions$v1$asset_id,
+        token = pars$surveys$wf_surveys$token,
         status = status
       )
     }, error = function(e) NULL)
@@ -737,12 +737,12 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       updated <- TRUE
     }
 
-    # Try wf_surveys_v2 (will silently fail if submission doesn't exist in this asset)
+    # Try wf_surveys v2 (will silently fail if submission doesn't exist in this asset)
     result_v2 <- tryCatch({
       update_validation_status(
         submission_id = submission_id,
-        asset_id = pars$surveys$wf_surveys_v2$asset_id,
-        token = pars$surveys$wf_surveys_v2$token,
+        asset_id = pars$surveys$wf_surveys$versions$v2$asset_id,
+        token = pars$surveys$wf_surveys$token,
         status = status
       )
     }, error = function(e) NULL)

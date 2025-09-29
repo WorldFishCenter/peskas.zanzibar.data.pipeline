@@ -71,8 +71,8 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
     unique(validated_surveys$submission_id) %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys_v1$asset_id,
-      token = pars$surveys$wf_surveys_v1$token,
+      asset_id = pars$surveys$wf_surveys$versions$v1$asset_id,
+      token = pars$surveys$wf_surveys$token,
       .options = furrr::furrr_options(seed = TRUE)
     ) |>
     dplyr::filter(.data$validation_status == "validation_status_approved") |>

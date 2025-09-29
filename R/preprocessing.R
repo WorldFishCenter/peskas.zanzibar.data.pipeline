@@ -193,7 +193,7 @@ preprocess_wf_surveys <- function(
 
       catch_surveys_raw_v1 <-
         download_parquet_from_cloud(
-          prefix = pars$surveys$wf_surveys_v1$raw_surveys$file_prefix,
+          prefix = pars$surveys$wf_surveys$versions$v1$raw_surveys$file_prefix,
           provider = pars$storage$google$key,
           options = pars$storage$google$options
         ) |>
@@ -224,7 +224,7 @@ preprocess_wf_surveys <- function(
 
       catch_surveys_raw_v2 <-
         download_parquet_from_cloud(
-          prefix = pars$surveys$wf_surveys_v2$raw_surveys$file_prefix,
+          prefix = pars$surveys$wf_surveys$versions$v2$raw_surveys$file_prefix,
           provider = pars$storage$google$key,
           options = pars$storage$google$options
         ) |>
@@ -272,7 +272,7 @@ preprocess_wf_surveys <- function(
 
   upload_parquet_to_cloud(
     data = preprocessed_data,
-    prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
+    prefix = pars$surveys$wf_surveys$preprocessed_surveys$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
