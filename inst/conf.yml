@@ -107,7 +107,7 @@ default:
           flags: surveys_flags
           enumerators_stats: enumerators_stats
       portal:
-        database_name: portal
+        database_name: portal-dev
         collection:
           monthly_summaries: monthly_summaries
           taxa_summaries: taxa_summaries
