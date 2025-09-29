@@ -6,6 +6,7 @@
 #' @param prefix The file prefix path in cloud storage
 #' @param provider The cloud storage provider key
 #' @param options Cloud storage provider options
+#' @param version The version to retrieve ("latest" or specific version string)
 #'
 #' @return A tibble containing the data from the parquet file
 #'
@@ -20,7 +21,12 @@
 #'
 #' @keywords storage
 #' @export
-download_parquet_from_cloud <- function(prefix, provider, options, version = "latest") {
+download_parquet_from_cloud <- function(
+  prefix,
+  provider,
+  options,
+  version = "latest"
+) {
   # Generate cloud object name
   parquet_file <- cloud_object_name(
     prefix = prefix,
@@ -67,8 +73,14 @@ download_parquet_from_cloud <- function(prefix, provider, options, version = "la
 #' )
 #' }
 #' @export
-upload_parquet_to_cloud <- function(data, prefix, provider, options,
-                                    compression = "lz4", compression_level = 12) {
+upload_parquet_to_cloud <- function(
+  data,
+  prefix,
+  provider,
+  options,
+  compression = "lz4",
+  compression_level = 12
+) {
   # Generate filename with version
   preprocessed_filename <- prefix %>%
     add_version(extension = "parquet")
@@ -160,7 +172,8 @@ upload_cloud_file <- function(file, provider, options, name = file) {
   if ("gcs" %in% provider) {
     # Iterate over multiple files (and names)
     google_output <- purrr::map2(
-      file, name,
+      file,
+      name,
       ~ googleCloudStorageR::gcs_upload(
         file = .x,
         bucket = options$bucket,
@@ -205,8 +218,14 @@ upload_cloud_file <- function(file, provider, options, name = file) {
 #' )
 #' #'
 #' }
-cloud_object_name <- function(prefix, version = "latest", extension = "",
-                              provider, exact_match = FALSE, options) {
+cloud_object_name <- function(
+  prefix,
+  version = "latest",
+  extension = "",
+  provider,
+  exact_match = FALSE,
+  options
+) {
   cloud_storage_authenticate(provider, options)
 
   if ("gcs" %in% provider) {
@@ -225,7 +244,8 @@ cloud_object_name <- function(prefix, version = "latest", extension = "",
         into = c("base_name", "version", "ext"),
         # Version is separated with the "__" string
         sep = "__",
-        remove = FALSE
+        remove = FALSE,
+        fill = "right" # Handle files without proper version format
       ) %>%
       dplyr::filter(stringr::str_detect(.data$ext, paste0(extension, "$"))) %>%
       dplyr::group_by(.data$base_name, .data$ext)
@@ -283,7 +303,8 @@ download_cloud_file <- function(name, provider, options, file = name) {
 
   if ("gcs" %in% provider) {
     purrr::map2(
-      name, file,
+      name,
+      file,
       ~ googleCloudStorageR::gcs_get_object(
         object_name = .x,
         bucket = options$bucket,
@@ -321,9 +342,23 @@ download_cloud_file <- function(name, provider, options, file = name) {
 #' }
 #'
 #' @export
-mdb_collection_pull <- function(connection_string = NULL, collection_name = NULL, db_name = NULL) {
+mdb_collection_pull <- function(
+  connection_string = NULL,
+  collection_name = NULL,
+  db_name = NULL
+) {
+  # Check if mongolite is available
+  if (!requireNamespace("mongolite", quietly = TRUE)) {
+    stop("Package 'mongolite' needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+
   # Connect to the MongoDB collection
-  collection <- mongolite::mongo(collection = collection_name, db = db_name, url = connection_string)
+  collection <- mongolite::mongo(
+    collection = collection_name,
+    db = db_name,
+    url = connection_string
+  )
 
   # Retrieve the metadata document
   metadata <- collection$find(query = '{"type": "metadata"}')
@@ -375,7 +410,18 @@ mdb_collection_pull <- function(connection_string = NULL, collection_name = NULL
 #' }
 #'
 #' @export
-mdb_collection_push <- function(data = NULL, connection_string = NULL, collection_name = NULL, db_name = NULL) {
+mdb_collection_push <- function(
+  data = NULL,
+  connection_string = NULL,
+  collection_name = NULL,
+  db_name = NULL
+) {
+  # Check if mongolite is available
+  if (!requireNamespace("mongolite", quietly = TRUE)) {
+    stop("Package 'mongolite' needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+
   # Connect to the MongoDB collection
   collection <- mongolite::mongo(
     collection = collection_name,
@@ -532,7 +578,9 @@ get_validated_surveys <- function(pars, sources = NULL) {
         all_surveys[[source]] <- surveys_df
       },
       error = function(e) {
-        logger::log_error("Failed to retrieve {validated_surveys_file}: {e$message}")
+        logger::log_error(
+          "Failed to retrieve {validated_surveys_file}: {e$message}"
+        )
       }
     )
   }
@@ -549,7 +597,9 @@ get_validated_surveys <- function(pars, sources = NULL) {
     common_cols <- Reduce(intersect, cols)
 
     if (length(common_cols) < 3) {
-      logger::log_warn("Sources have very few common columns, binding may create sparse data")
+      logger::log_warn(
+        "Sources have very few common columns, binding may create sparse data"
+      )
     }
 
     # Combine all dataframes, keeping all columns (dplyr bind_rows handles different column sets)
@@ -604,6 +654,13 @@ get_validated_surveys <- function(pars, sources = NULL) {
 #' }
 get_metadata <- function(table = NULL, log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
+
+  # Check if googlesheets4 is available
+  if (!requireNamespace("googlesheets4", quietly = TRUE)) {
+    stop("Package 'googlesheets4' needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+
   conf <- read_config()
 
   logger::log_info("Authenticating for google drive")
@@ -633,11 +690,13 @@ get_metadata <- function(table = NULL, log_threshold = logger::DEBUG) {
     logger::log_info("Downloading all metadata tables")
     tables <- conf$metadata$google_sheets$tables %>%
       rlang::set_names() %>%
-      purrr::map(~ googlesheets4::range_read(
-        ss = conf$metadata$google_sheets$sheet_id,
-        sheet = .x,
-        col_types = "c"
-      ))
+      purrr::map(
+        ~ googlesheets4::range_read(
+          ss = conf$metadata$google_sheets$sheet_id,
+          sheet = .x,
+          col_types = "c"
+        )
+      )
   }
 
   tables
@@ -677,16 +736,24 @@ get_metadata <- function(table = NULL, log_threshold = logger::DEBUG) {
 #' @export
 #'
 get_trips <- function(
-    token = NULL,
-    secret = NULL,
-    dateFrom = NULL,
-    dateTo = NULL,
-    imeis = NULL,
-    deviceInfo = FALSE,
-    withLastSeen = FALSE,
-    tags = NULL) {
+  token = NULL,
+  secret = NULL,
+  dateFrom = NULL,
+  dateTo = NULL,
+  imeis = NULL,
+  deviceInfo = FALSE,
+  withLastSeen = FALSE,
+  tags = NULL
+) {
   # Base URL
-  base_url <- paste0("https://analytics.pelagicdata.com/api/", token, "/v1/trips/", dateFrom, "/", dateTo)
+  base_url <- paste0(
+    "https://analytics.pelagicdata.com/api/",
+    token,
+    "/v1/trips/",
+    dateFrom,
+    "/",
+    dateTo
+  )
 
   # Build query parameters
   query_params <- list()
@@ -716,7 +783,12 @@ get_trips <- function(
 
   # Check for HTTP errors
   if (httr2::resp_status(resp) != 200) {
-    stop("Request failed with status: ", httr2::resp_status(resp), "\n", httr2::resp_body_string(resp))
+    stop(
+      "Request failed with status: ",
+      httr2::resp_status(resp),
+      "\n",
+      httr2::resp_body_string(resp)
+    )
   }
 
   # Read CSV content
@@ -725,7 +797,6 @@ get_trips <- function(
 
   return(trips_data)
 }
-
 
 
 #' Get Trip Points from Pelagic Data Systems API
@@ -788,18 +859,20 @@ get_trips <- function(
 #' @keywords ingestion
 #'
 #' @export
-get_trip_points <- function(token = NULL,
-                            secret = NULL,
-                            id = NULL,
-                            dateFrom = NULL,
-                            dateTo = NULL,
-                            path = NULL,
-                            imeis = NULL,
-                            deviceInfo = FALSE,
-                            errant = FALSE,
-                            withLastSeen = FALSE,
-                            tags = NULL,
-                            overwrite = TRUE) {
+get_trip_points <- function(
+  token = NULL,
+  secret = NULL,
+  id = NULL,
+  dateFrom = NULL,
+  dateTo = NULL,
+  path = NULL,
+  imeis = NULL,
+  deviceInfo = FALSE,
+  errant = FALSE,
+  withLastSeen = FALSE,
+  tags = NULL,
+  overwrite = TRUE
+) {
   # Build base URL based on whether ID is provided
   if (!is.null(id)) {
     base_url <- paste0(

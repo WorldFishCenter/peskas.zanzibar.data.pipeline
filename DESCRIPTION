@@ -28,18 +28,18 @@ Imports:
     rlang,
     lubridate,
     arrow,
-    cleaner,
     httr2,
     readr,
-    googlesheets4,
     digest,
     furrr,
     future,
-    mongolite,
-    rfishbase,
     progressr,
     sf
-Suggests: 
+Suggests:
+    cleaner,
+    googlesheets4,
+    mongolite,
+    rfishbase,
     covr,
     pkgdown,
     sessioninfo,

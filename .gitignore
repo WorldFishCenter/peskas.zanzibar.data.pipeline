@@ -2,6 +2,7 @@
 auth/*
 data/
 .env*
+.claude
 
 ## R & Rstudio
 .Rhistory

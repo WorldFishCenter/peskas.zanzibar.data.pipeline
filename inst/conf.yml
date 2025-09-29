@@ -20,12 +20,16 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
-    wf_surveys:
+    wf_surveys_v1:
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
       version:
         preprocess: latest
+      raw_surveys:
+        file_prefix: wf-surveys-raw
+        version: latest
       preprocessed_surveys:
         file_prefix: wf-surveys-preprocessed
         version: latest
@@ -41,17 +45,16 @@ default:
       aggregated:
         file_prefix: wf-aggregated
         version: latest
-      versions:
-        v1:
-          asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
-          raw_surveys:
-            file_prefix: wf-surveys-raw
-            version: latest
-        v2:
-          asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
-          raw_surveys:
-            file_prefix: wf-v2-surveys-raw
-            version: latest
+    wf_surveys_v2:
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
+      version:
+        preprocess: latest
+      raw_surveys:
+        file_prefix: wf-v2-surveys-raw
+        version: latest
     ba_surveys:
       asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
       username: !expr Sys.getenv('BA_SURVEYS_UNAME')
@@ -160,15 +163,16 @@ local:
       asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
       username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
       password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
-    wf_surveys:
+    wf_surveys_v1:
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
-      versions:
-        v1:
-          asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
-        v2:
-          asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
+    wf_surveys_v2:
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
     ba_surveys:
       asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
       username: !expr Sys.getenv('BA_SURVEYS_UNAME')
