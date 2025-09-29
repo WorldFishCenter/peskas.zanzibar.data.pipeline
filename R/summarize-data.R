@@ -71,8 +71,8 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
     unique(validated_surveys$submission_id) %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys$asset_id,
-      token = pars$surveys$wf_surveys$token,
+      asset_id = pars$surveys$wf_surveys_v1$asset_id,
+      token = pars$surveys$wf_surveys_v1$token,
       .options = furrr::furrr_options(seed = TRUE)
     ) |>
     dplyr::filter(.data$validation_status == "validation_status_approved") |>
@@ -105,6 +105,9 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
       "fuel_L",
       "trip_duration",
       "vessel_type",
+      "no_men_fishers",
+      "no_men_fishers",
+      "no_child_fishers",
       "n_fishers",
       "catch_taxon",
       "catch_price",
@@ -125,6 +128,9 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
           "trip_duration",
           "vessel_type",
           "n_fishers",
+          "no_men_fishers",
+          "no_men_fishers",
+          "no_child_fishers",
           "catch_price"
         ),
         ~ dplyr::first(.x)

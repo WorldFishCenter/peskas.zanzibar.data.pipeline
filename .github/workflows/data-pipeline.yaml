@@ -88,8 +88,8 @@ jobs:
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
       - name: Call preprocess_ba_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_ba_surveys()'
-      - name: Call preprocess_wf_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wf_surveys()'
+      # - name: Call preprocess_wf_surveys()
+      #   run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wf_surveys()'
         
 
   preprocess-pds-tracks:

@@ -20,7 +20,7 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
-    wf_surveys:
+    wf_surveys_v1:
       asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
@@ -44,7 +44,17 @@ default:
         version: latest
       aggregated:
         file_prefix: wf-aggregated
-        version: latest      
+        version: latest
+    wf_surveys_v2:
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+      version:
+        preprocess: latest
+      raw_surveys:
+        file_prefix: wf-v2-surveys-raw
+        version: latest
     ba_surveys:
       asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
       username: !expr Sys.getenv('BA_SURVEYS_UNAME')
@@ -88,19 +98,19 @@ default:
     mongodb:
       connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
       pipeline:
-        database_name: zanzibar-dev
+        database_name: zanzibar
         collection:
           monthly_metrics: monthly_metrics
           gear_metrics: gear_metrics
           taxa: taxa_proportions
           effort_map: effort_map
       validation:
-        database_name: zanzibar-dev
+        database_name: zanzibar
         collection:
           flags: surveys_flags
           enumerators_stats: enumerators_stats
       portal:
-        database_name: portal-dev
+        database_name: portal
         collection:
           monthly_summaries: monthly_summaries
           taxa_summaries: taxa_summaries
@@ -112,7 +122,7 @@ default:
       key: gcs
       options:
         project: peskas
-        bucket: pds-zanzibar-dev
+        bucket: pds-zanzibar
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
   metadata:
     google_sheets:
@@ -153,8 +163,13 @@ local:
       asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
       username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
       password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
-    wf_surveys:
+    wf_surveys_v1:
       asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+    wf_surveys_v2:
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')

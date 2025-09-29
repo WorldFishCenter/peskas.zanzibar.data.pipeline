@@ -1,0 +1,667 @@
+---
+title: "Zanzibar Fisheries Monitoring"
+subtitle: "Multi-District Characterization Analysis"
+author: "Lorenzo Longobardi (<a href='mailto:l.longobardi@cgiar.org'>l.longobardi@cgiar.org</a>)"
+date: today
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    code-fold: true
+    code-summary: "Show code"
+    smooth-scroll: true
+    fig-width: 10
+    fig-height: 6
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+  echo: false
+editor: visual
+---
+
+```{css}
+.metric-card {
+  text-align: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 0.5rem;
+  margin: 0.5rem;
+}
+
+.metric-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  display: block;
+}
+
+.metric-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.highlight-box {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.zanzibar-banner {
+  background: linear-gradient(135deg, #2E8B57 0%, #20B2AA 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+```
+
+::: zanzibar-banner
+# 🐟 ZANZIBAR FISHERIES
+
+## Multi-District Monitoring Analysis
+:::
+
+## Executive Summary {.highlight-box}
+
+This report provides a comprehensive analysis of fishing activity across **Zanzibar's key districts**, examining fishing effort patterns, gear usage, species targeting, and fisher demographics. The analysis encompasses multiple districts and provides critical insights into local fishing patterns, catch performance, and management needs across this important coastal fishing region.
+
+```{r setup}
+#| include: false
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+library(DT)
+library(scales)
+library(apexcharter)
+library(tidyr)
+
+# Custom theme
+theme_modern <- function() {
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold", margin = margin(b = 20)),
+    plot.subtitle = element_text(size = 12, color = "gray60", margin = margin(b = 20)),
+    axis.title = element_text(size = 11, face = "bold"),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    plot.background = element_rect(fill = "white", color = NA),
+    strip.text = element_text(size = 11, face = "bold")
+  )
+}
+
+theme_set(theme_modern())
+```
+
+```{r data-load}
+# Load data files
+indicators_df <- read_csv("indicators_df.csv", show_col_types = FALSE)
+fishery_metrics <- read_csv("fishery_metrics.csv", show_col_types = FALSE)
+fleet_metrics <- read_csv("fleet_metrics.csv", show_col_types = FALSE)
+
+# Clean and prepare main dataset - CORRECTED to preserve original district names
+zanzibar_data <- indicators_df %>%
+  filter(!is.na(district), !is.na(habitat), !is.na(gear)) %>%
+  mutate(
+    # Keep district names as-is (lowercase with underscores)
+    district_clean = case_when(
+      district == "urban" ~ "Urban",
+      district == "central" ~ "Central", 
+      district == "west_a" ~ "West A",
+      district == "west_b" ~ "West B", 
+      district == "north_a" ~ "North A",
+      district == "north_b" ~ "North B",
+      district == "south" ~ "South",
+      district == "chake_chake" ~ "Chake Chake",
+      district == "mkoani" ~ "Mkoani",
+      district == "micheweni" ~ "Micheweni",
+      district == "wete" ~ "Wete",
+      TRUE ~ str_to_title(district)
+    ),
+    habitat = str_to_title(habitat),
+    landing_date = as.Date(landing_date),
+    year_month = floor_date(landing_date, "month")
+  )
+
+# Calculate key overview metrics
+total_trips <- nrow(zanzibar_data)
+unique_districts <- length(unique(zanzibar_data$district))
+unique_sites <- length(unique(zanzibar_data$landing_site))
+date_range <- range(zanzibar_data$landing_date, na.rm = TRUE)
+avg_trip_duration <- round(mean(zanzibar_data$trip_duration, na.rm = TRUE), 1)
+total_fishers <- sum(zanzibar_data$n_fishers, na.rm = TRUE)
+avg_happiness <- round(mean(zanzibar_data$happiness_rating, na.rm = TRUE), 1)
+unique_species <- fishery_metrics %>% 
+  filter(!is.na(species)) %>% 
+  distinct(species) %>% 
+  nrow()
+```
+
+## Data Overview
+
+:::::::::: {style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0;"}
+### Zanzibar Fisheries Key Metrics
+
+::::::::: {style="display: flex; flex-wrap: wrap; justify-content: space-around;"}
+::: metric-card
+[`r comma(total_trips)`]{.metric-number} [Total Trips]{.metric-label}
+:::
+
+::: metric-card
+[`r unique_districts`]{.metric-number} [Districts]{.metric-label}
+:::
+
+::: metric-card
+[`r unique_sites`]{.metric-number} [Landing Sites]{.metric-label}
+:::
+
+::: metric-card
+[`r unique_species`]{.metric-number} [Species Recorded]{.metric-label}
+:::
+
+::: metric-card
+[`r comma(total_fishers)`]{.metric-number} [Fisher-Days]{.metric-label}
+:::
+
+::: metric-card
+[`r avg_happiness`]{.metric-number} [Avg Happiness]{.metric-label}
+:::
+:::::::::
+::::::::::
+
+**Data Collection Period:** `r date_range[1]` to `r date_range[2]`
+
+## 1. Fishing Effort Analysis
+
+```{r fishing-effort}
+# Trip duration by district
+effort_by_district <- zanzibar_data %>%
+  group_by(district, district_clean) %>%
+  summarise(
+    total_trips = n(),
+    avg_duration = mean(trip_duration, na.rm = TRUE),
+    avg_fishers = mean(n_fishers, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_trips))
+
+# District effort visualization
+effort_by_district %>%
+  apex(
+    type = "column",
+    mapping = aes(x = district_clean, y = total_trips)
+  ) %>%
+  ax_title(
+    text = "Fishing Activity by District",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) %>%
+  ax_colors("#2E8B57") %>%
+  ax_chart(toolbar = list(show = TRUE)) %>%
+  ax_xaxis(title = list(text = "District")) %>%
+  ax_yaxis(title = list(text = "Number of Trips"))
+
+# Trip duration comparison
+effort_by_district %>%
+  apex(
+    type = "bar",
+    mapping = aes(x = district_clean, y = avg_duration)
+  ) %>%
+  ax_title(
+    text = "Average Trip Duration by District",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) %>%
+  ax_colors("#FF6B35") %>%
+  ax_chart(toolbar = list(show = TRUE)) %>%
+  ax_plotOptions(
+    bar = list(horizontal = TRUE, borderRadius = 4)
+  ) %>%
+  ax_xaxis(title = list(text = "Average Duration (hours)")) %>%
+  ax_yaxis(title = list(text = "District"))
+```
+
+### Seasonal Patterns
+
+```{r seasonal-analysis}
+# Monthly patterns using fleet metrics if available
+if("date_month" %in% names(fleet_metrics)) {
+  seasonal_data <- fleet_metrics %>%
+    mutate(
+      date_month = as.Date(date_month),
+      month_name = month(date_month, label = TRUE, abbr = FALSE),
+      district = str_to_title(district)
+    ) %>%
+    group_by(month_name, district) %>%
+    summarise(
+      total_trips = sum(estimated_total_trips, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  seasonal_data %>%
+    apex(
+      type = "line",
+      mapping = aes(x = month_name, y = total_trips, group = district)
+    ) %>%
+    ax_title(
+      text = "Seasonal Fishing Patterns by District",
+      subtitle = list(text = "Estimated monthly trips"),
+      style = list(fontSize = "16px", fontWeight = "bold")
+    ) %>%
+    ax_colors(c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22")) %>%
+    ax_chart(toolbar = list(show = TRUE)) %>%
+    ax_xaxis(title = list(text = "Month")) %>%
+    ax_yaxis(title = list(text = "Estimated Total Trips")) %>%
+    ax_legend(position = "top")
+}
+```
+
+## 2. Fishing Gear Analysis
+
+```{r gear-analysis}
+# Gear usage by district - CORRECTED
+gear_usage <- zanzibar_data %>%
+  count(district_clean, gear, name = "trips") %>%
+  group_by(district_clean) %>%
+  mutate(
+    total_district_trips = sum(trips),
+    pct = round(trips / sum(trips) * 100, 1)
+  ) %>%
+  ungroup()
+
+# Verify that percentages sum to 100% for each district
+gear_check <- gear_usage %>%
+  group_by(district_clean) %>%
+  summarise(total_pct = sum(pct), .groups = "drop")
+print("Gear percentage check:")
+print(gear_check)
+
+# Gear distribution stacked bar chart - FIXED 
+gear_usage %>%
+  apex(
+    type = "column",
+    mapping = aes(x = district_clean, y = trips, fill = gear)
+  ) %>%
+  ax_title(
+    text = "Fishing Gear Distribution by District",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) %>%
+  ax_colors(c("#FF6B35", "#00BCD4", "#4CAF50", "#9C27B0", "#FF5722", "#FFC107", "#795548")) %>%
+  ax_chart(
+    toolbar = list(show = TRUE),
+    stacked = TRUE
+  ) %>%
+  ax_plotOptions(
+    column = list(
+      stacking = "percent"  # Automatically converts to percentages summing to 100%
+    )
+  ) %>%
+  ax_xaxis(title = list(text = "District")) %>%
+  ax_yaxis(
+    title = list(text = "Percentage of Trips"),
+    labels = list(formatter = JS("function(val) { return val.toFixed(0) + '%' }"))
+  ) %>%
+  ax_legend(position = "top")
+
+# CPUE by gear type (if available in fishery metrics)
+if("gear_type" %in% names(fishery_metrics) && "metric_type" %in% names(fishery_metrics)) {
+  cpue_data <- fishery_metrics %>%
+    filter(metric_type == "cpue", !is.na(gear_type), !is.na(metric_value)) %>%
+    group_by(gear_type) %>%
+    summarise(
+      avg_cpue = mean(metric_value, na.rm = TRUE),
+      median_cpue = median(metric_value, na.rm = TRUE),
+      n_observations = n(),
+      .groups = "drop"
+    ) %>%
+    filter(n_observations >= 5) %>%  # Only include gear with sufficient data
+    arrange(desc(avg_cpue))
+
+  if(nrow(cpue_data) > 0) {
+    cpue_data %>%
+      apex(
+        type = "bar",
+        mapping = aes(x = gear_type, y = avg_cpue)
+      ) %>%
+      ax_title(
+        text = "Catch Per Unit Effort (CPUE) by Gear Type",
+        subtitle = list(text = "Average kg per fisher"),
+        style = list(fontSize = "16px", fontWeight = "bold")
+      ) %>%
+      ax_colors("#8BC34A") %>%
+      ax_chart(toolbar = list(show = TRUE)) %>%
+      ax_plotOptions(
+        bar = list(horizontal = TRUE, borderRadius = 4)
+      ) %>%
+      ax_xaxis(title = list(text = "Average CPUE (kg per fisher)")) %>%
+      ax_yaxis(title = list(text = "Gear Type"))
+  }
+
+  # RPUE by gear type 
+  rpue_data <- fishery_metrics %>%
+    filter(metric_type == "rpue", !is.na(gear_type), !is.na(metric_value)) %>%
+    group_by(gear_type) %>%
+    summarise(
+      avg_rpue = mean(metric_value, na.rm = TRUE),
+      median_rpue = median(metric_value, na.rm = TRUE),
+      n_observations = n(),
+      .groups = "drop"
+    ) %>%
+    filter(n_observations >= 5) %>%
+    arrange(desc(avg_rpue))
+
+  if(nrow(rpue_data) > 0) {
+    rpue_data %>%
+      apex(
+        type = "bar",
+        mapping = aes(x = gear_type, y = avg_rpue)
+      ) %>%
+      ax_title(
+        text = "Revenue Per Unit Effort (RPUE) by Gear Type",
+        subtitle = list(text = "Average revenue per fisher"),
+        style = list(fontSize = "16px", fontWeight = "bold")
+      ) %>%
+      ax_colors("#FF5722") %>%
+      ax_chart(toolbar = list(show = TRUE)) %>%
+      ax_plotOptions(
+        bar = list(horizontal = TRUE, borderRadius = 4)
+      ) %>%
+      ax_xaxis(title = list(text = "Average RPUE (currency per fisher)")) %>%
+      ax_yaxis(title = list(text = "Gear Type"))
+  }
+}
+```
+
+## 3. Fishing Grounds (Habitat Analysis)
+
+```{r habitat-analysis}
+# Habitat usage by district - CORRECTED
+habitat_usage <- zanzibar_data %>%
+  count(district_clean, habitat, name = "trips") %>%
+  group_by(district_clean) %>%
+  mutate(
+    pct = round(trips / sum(trips) * 100, 1)
+  ) %>%
+  ungroup()
+
+# Verify percentages sum to 100
+habitat_check <- habitat_usage %>%
+  group_by(district_clean) %>%
+  summarise(total_pct = sum(pct), .groups = "drop")
+
+print("Habitat percentage totals by district:")
+print(habitat_check)
+
+# Use regular count data with proper stacking for percentages
+habitat_usage %>%
+  apex(
+    type = "column",
+    mapping = aes(x = district_clean, y = trips, fill = habitat)
+  ) %>%
+  ax_title(
+    text = "Fishing Habitat Distribution by District",
+    subtitle = list(text = "Number of trips by habitat type"),
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) %>%
+  ax_colors(c("#E91E63", "#9C27B0", "#673AB7", "#3F51B5", "#2196F3", "#03A9F4", "#00BCD4", "#009688")) %>%
+  ax_chart(
+    toolbar = list(show = TRUE),
+    stacked = TRUE
+  ) %>%
+  ax_plotOptions(
+    column = list(
+      stacking = "percent"  # This will automatically convert to percentages that sum to 100%
+    )
+  ) %>%
+  ax_xaxis(title = list(text = "District")) %>%
+  ax_yaxis(
+    title = list(text = "Percentage of Trips"),
+    labels = list(formatter = JS("function(val) { return val.toFixed(0) + '%' }"))
+  ) %>%
+  ax_legend(position = "top") %>%
+  ax_tooltip(
+    y = list(
+      formatter = JS("function(val, opts) { 
+        var total = opts.series[opts.seriesIndex].reduce((a,b) => a+b, 0);
+        var percent = ((val / total) * 100).toFixed(1);
+        return val + ' trips (' + percent + '%)';
+      }")
+    )
+  )
+```
+
+## 4. Species Composition & Targeting
+
+This section presents the most important species by district, based on their contribution to total catch composition.
+
+```{r species-analysis}
+# Top species by district using fishery metrics - CLEAN VERSION
+if("species" %in% names(fishery_metrics) && "metric_type" %in% names(fishery_metrics)) {
+  
+  # Extract district from landing_site and get rank 1 species only
+  species_data <- fishery_metrics %>%
+    filter(metric_type == "species_pct", !is.na(species), rank == 1) %>%
+    mutate(
+      district = str_extract(landing_site, "^[^_]+"),
+      district = str_to_title(district),
+      species = str_to_title(species)
+    ) %>%
+    filter(!is.na(district)) %>%
+    group_by(district, species) %>%
+    summarise(
+      avg_pct = mean(metric_value, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    arrange(district, desc(avg_pct))
+
+  # Simple bar chart showing top species per district
+  species_data %>%
+    apex(
+      type = "bar",
+      mapping = aes(x = district, y = avg_pct, fill = species)
+    ) %>%
+    ax_title(
+      text = "Primary Target Species by District",
+      subtitle = list(text = "Most important species as % of catch"),
+      style = list(fontSize = "16px", fontWeight = "bold")
+    ) %>%
+    ax_colors(c("#FF6B35", "#00BCD4", "#4CAF50", "#9C27B0", "#FF5722", "#FFC107", "#795548", "#607D8B")) %>%
+    ax_chart(toolbar = list(show = TRUE)) %>%
+    ax_plotOptions(
+      bar = list(horizontal = TRUE, borderRadius = 4)
+    ) %>%
+    ax_xaxis(title = list(text = "Average Percentage of Catch")) %>%
+    ax_yaxis(title = list(text = "District")) %>%
+    ax_legend(position = "top")
+    
+  # Species ranking table for detailed view
+  species_ranking <- fishery_metrics %>%
+    filter(metric_type == "species_pct", !is.na(species), !is.na(rank)) %>%
+    filter(rank <= 3) %>%  # Top 3 for detailed table
+    mutate(
+      district = str_extract(landing_site, "^[^_]+"),
+      district = str_to_title(district),
+      species = str_to_title(species)
+    ) %>%
+    filter(!is.na(district)) %>%
+    group_by(district, species, rank) %>%
+    summarise(
+      avg_pct = round(mean(metric_value, na.rm = TRUE), 1),
+      .groups = "drop"
+    ) %>%
+    arrange(district, rank)
+}
+```
+
+## 5. Fisher Demographics & Participation
+
+```{r demographics}
+# Demographics by district
+demo_summary <- zanzibar_data %>%
+  group_by(district) %>%
+  summarise(
+    total_trips = n(),
+    avg_fishers_per_trip = round(mean(n_fishers, na.rm = TRUE), 1),
+    total_fisher_days = sum(n_fishers, na.rm = TRUE),
+    men_fishers = sum(no_men_fishers, na.rm = TRUE),
+    child_fishers = sum(no_child_fishers, na.rm = TRUE),
+    avg_happiness = round(mean(happiness_rating, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pct_men = round(men_fishers / total_fisher_days * 100, 1),
+    pct_youth = round(child_fishers / total_fisher_days * 100, 1)
+  )
+
+# Fisher participation by district
+demo_summary %>%
+  apex(
+    type = "column",
+    mapping = aes(x = district, y = avg_fishers_per_trip)
+  ) %>%
+  ax_title(
+    text = "Average Fishers per Trip by District",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) %>%
+  ax_colors("#673AB7") %>%
+  ax_chart(toolbar = list(show = TRUE)) %>%
+  ax_xaxis(title = list(text = "District")) %>%
+  ax_yaxis(title = list(text = "Average Fishers per Trip"))
+
+# Gender composition
+demo_gender <- demo_summary %>%
+  select(district, pct_men, pct_youth) %>%
+  pivot_longer(cols = c(pct_men, pct_youth), names_to = "demographic", values_to = "percentage") %>%
+  mutate(
+    demographic = case_when(
+      demographic == "pct_men" ~ "Men",
+      demographic == "pct_youth" ~ "Youth"
+    )
+  )
+
+demo_gender %>%
+  apex(
+    type = "column",
+    mapping = aes(x = district, y = percentage, fill = demographic)
+  ) %>%
+  ax_title(
+    text = "Fisher Demographics by District",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) %>%
+  ax_colors(c("#2196F3", "#FF9800")) %>%
+  ax_chart(
+    toolbar = list(show = TRUE)
+  ) %>%
+  ax_xaxis(title = list(text = "District")) %>%
+  ax_yaxis(title = list(text = "Percentage of Fisher-Days")) %>%
+  ax_legend(position = "top")
+
+# Happiness scores
+demo_summary %>%
+  apex(
+    type = "bar",
+    mapping = aes(x = district, y = avg_happiness)
+  ) %>%
+  ax_title(
+    text = "Fisher Satisfaction by District",
+    subtitle = list(text = "Average happiness rating (1-5 scale)"),
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) %>%
+  ax_colors("#E91E63") %>%
+  ax_chart(toolbar = list(show = TRUE)) %>%
+  ax_plotOptions(
+    bar = list(horizontal = TRUE, borderRadius = 4)
+  ) %>%
+  ax_xaxis(title = list(text = "Average Happiness Score")) %>%
+  ax_yaxis(title = list(text = "District"))
+```
+
+## Summary Tables
+
+```{r summary-tables}
+# District overview table
+effort_by_district %>%
+  left_join(demo_summary, by = "district") %>%
+  select(district, total_trips.x, avg_duration, avg_fishers_per_trip, avg_happiness) %>%
+  rename(total_trips = total_trips.x) %>%
+  mutate(
+    avg_duration = round(avg_duration, 1),
+    avg_fishers_per_trip = round(avg_fishers_per_trip, 1),
+    avg_happiness = round(avg_happiness, 1)
+  ) %>%
+  DT::datatable(
+    caption = "District Summary Statistics",
+    options = list(pageLength = 10, scrollX = TRUE),
+    rownames = FALSE,
+    colnames = c("District", "Total Trips", "Avg Duration (hrs)", "Avg Fishers/Trip", "Avg Happiness")
+  ) %>%
+  DT::formatStyle(
+    "total_trips",
+    background = styleColorBar(c(1:nrow(effort_by_district)), "#E8F4FD"),
+    backgroundSize = "100% 90%",
+    backgroundRepeat = "no-repeat",
+    backgroundPosition = "center"
+  )
+
+# Species ranking table
+if(exists("species_ranking")) {
+  species_ranking %>%
+    DT::datatable(
+      caption = "Top 3 Species by District",
+      options = list(pageLength = 15, scrollX = TRUE),
+      rownames = FALSE,
+      colnames = c("District", "Species", "Rank", "% of Catch")
+    ) %>%
+    DT::formatRound("avg_pct", 1)
+}
+
+# Gear performance table (if CPUE/RPUE data exists)
+if(exists("cpue_data") && nrow(cpue_data) > 0) {
+  gear_table <- cpue_data %>%
+    select(gear_type, avg_cpue, n_observations) %>%
+    mutate(avg_cpue = round(avg_cpue, 2))
+    
+  # Add RPUE if available
+  if(exists("rpue_data") && nrow(rpue_data) > 0) {
+    gear_table <- gear_table %>%
+      left_join(
+        rpue_data %>% select(gear_type, avg_rpue) %>% mutate(avg_rpue = round(avg_rpue, 0)),
+        by = "gear_type"
+      )
+  }
+  
+  gear_table %>%
+    DT::datatable(
+      caption = "Gear Performance Metrics",
+      options = list(pageLength = 10, scrollX = TRUE),
+      rownames = FALSE
+    ) %>%
+    DT::formatRound("avg_cpue", 2)
+}
+```
+
+## Key Findings
+
+::: highlight-box
+### 🎣 **Zanzibar Fisheries Characteristics**
+
+**Fishing Effort:** Trip duration varies from `r min(effort_by_district$avg_duration, na.rm=TRUE)` to `r max(effort_by_district$avg_duration, na.rm=TRUE)` hours across districts, with clear seasonal patterns.
+
+**Gear Diversity:** `r length(unique(zanzibar_data$gear))` different gear types recorded, showing diverse fishing strategies across districts.
+
+**Species Targeting:** `r if(exists("species_data")) nrow(species_data) else "Multiple"` primary species identified, showing district-specific targeting patterns.
+
+**Fisher Satisfaction:** Average happiness score of `r avg_happiness`/5 with variations across districts.
+
+**Demographics:** Fishery shows `r round(sum(demo_summary$men_fishers)/sum(demo_summary$total_fisher_days)*100,1)`% male participation with `r round(sum(demo_summary$child_fishers)/sum(demo_summary$total_fisher_days)*100,1)`% youth involvement.
+:::
+
+------------------------------------------------------------------------
+
+*Report generated on `r Sys.Date()` using Quarto. Data source: Zanzibar Fisheries Monitoring System.*

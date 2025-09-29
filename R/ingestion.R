@@ -88,7 +88,7 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   # WF Survey
   logger::log_info("Downloading WF Fish Catch Survey Kobo data...")
   wf_files <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys$raw_surveys$file_prefix,
+    prefix = pars$surveys$wf_surveys_v1$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
     project_id = pars$surveys$wf_surveys$asset_id,
@@ -99,6 +99,22 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
 
   logger::log_info("Uploading WF files to cloud...")
   purrr::map(pars$storage, ~ upload_cloud_file(wf_files, .$key, .$options))
+  logger::log_success("WF files upload succeeded")
+
+  # WF Survey
+  logger::log_info("Downloading WF Fish Catch Survey Kobo data...")
+  wf_files_v2 <- retrieve_surveys(
+    prefix = pars$surveys$wf_surveys_v2$raw_surveys$file_prefix,
+    append_version = TRUE,
+    url = "eu.kobotoolbox.org",
+    project_id = pars$surveys$wf_surveys_v2$asset_id,
+    username = pars$surveys$wf_surveys_v2$username,
+    psswd = pars$surveys$wf_surveys_v2$password,
+    encoding = "UTF-8"
+  )
+
+  logger::log_info("Uploading WF files to cloud...")
+  purrr::map(pars$storage, ~ upload_cloud_file(wf_files_v2, .$key, .$options))
   logger::log_success("WF files upload succeeded")
 }
 
@@ -198,7 +214,7 @@ flatten_row <- function(x) {
     rlang::squash() %>%
     # Remove NULL values before creating tibble
     purrr::compact() %>%
-    tibble::as_tibble()
+    tibble::as_tibble(.name_repair = "unique")
 }
 
 #' Flatten Survey Data Fields

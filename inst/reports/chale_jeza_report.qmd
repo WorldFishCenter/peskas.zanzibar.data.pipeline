@@ -1,0 +1,1121 @@
+---
+title: "ABALOBI Kenya Fisheries Monitoring"
+subtitle: "Chale Beach Management Unit (BMU) Analysis"
+author: "Lorenzo Longobardi (<a href='mailto:l.longobardi@cgiar.org'>l.longobardi@cgiar.org</a>)"
+date: today
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    code-fold: true
+    code-summary: "Show code"
+    smooth-scroll: true
+    link-external-newwindow: true
+    citations-hover: true
+    footnotes-hover: true
+    fig-width: 10
+    fig-height: 6
+    df-print: paged
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+  echo: false
+editor: visual
+---
+
+```{css}
+.ai-disclaimer {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0 1rem 0;
+  border-radius: 0.25rem;
+  border-left: 3px solid #a71e2a;
+  box-shadow: 0 1px 3px rgba(220, 53, 69, 0.15);
+  font-size: 0.85rem;
+}
+
+.ai-disclaimer .ai-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.ai-disclaimer .ai-title::before {
+  content: "⚠️";
+  margin-right: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.ai-disclaimer .ai-text {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  margin: 0;
+  opacity: 0.95;
+}
+
+.card {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+}
+
+.metric-card {
+  text-align: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 0.5rem;
+  margin: 0.5rem;
+}
+
+.metric-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  display: block;
+}
+
+.metric-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.highlight-box {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.chale-banner {
+  background: linear-gradient(135deg, #2E8B57 0%, #20B2AA 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+```
+
+::::: ai-disclaimer
+::: ai-title
+AI-Generated Content Notice
+:::
+
+::: ai-text
+Parts of this report were generated using AI assistance and have been human reviewed and validated. All data analysis, interpretations, and conclusions have been verified for accuracy and relevance.
+:::
+:::::
+
+::: chale-banner
+# 🏝️ CHALE BMU
+
+## Multi-Site Fisheries Monitoring Analysis
+:::
+
+## Executive Summary {.highlight-box}
+
+This report provides a comprehensive analysis of fishing activity across the **Chale Beach Management Unit (BMU)**, encompassing three key landing sites: **Chale-Jeza**, **Chale Island**, and **Kinondo Ngwani**. Together, these sites represent the majority of monitored fishing activity in the region, providing critical insights into local fishing patterns, species composition, and management needs across this important coastal fishing area.
+
+## Data Overview
+
+```{r setup}
+#| include: false
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+library(DT)
+library(knitr)
+library(scales)
+library(viridis)
+library(patchwork)
+library(apexcharter)
+library(highcharter)
+library(tidyr)
+
+# Custom theme
+theme_modern <- function() {
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold", margin = margin(b = 20)),
+    plot.subtitle = element_text(size = 12, color = "gray60", margin = margin(b = 20)),
+    axis.title = element_text(size = 11, face = "bold"),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    plot.background = element_rect(fill = "white", color = NA),
+    strip.text = element_text(size = 11, face = "bold")
+  )
+}
+
+# Set default theme
+theme_set(theme_modern())
+```
+
+```{r data-load}
+# Load and process data
+abdat <- read_xlsx("data/ABALOBI Monitor_WCS All Communities_20-07-25.xlsx") |>
+  mutate(
+    tripstart = as_datetime(as.numeric(tripStartTimestamp) / 1000),
+    tripend = as_datetime(as.numeric(tripEndTimestamp) / 1000),
+    trip_duration_hrs = as.numeric((tripend - tripstart) / 3600),
+    fishername = paste(fisherFirstName, fisherLastName, sep = "_"),
+    TripLoggedDay = str_extract(TripLoggedDay, "[0-9]{4}-[0-9]{2}-[0-9]{2}"),
+    TripLoggedDay = as_date(TripLoggedDay),
+    trip_month = month(tripstart, label = TRUE),
+    trip_hour = hour(tripstart),
+    trip_day = wday(tripstart, label = TRUE)
+  )
+
+# Filter for Chale BMU (all 3 sites) and create processed dataset
+chale_bmu <- abdat |>
+  filter(monitoringSite_name_eng %in% c("Chale-Jeza", "Chale Island", "Kinondo Ngwani")) |>
+  select(
+    trip_id,
+    landing_site_en = monitoringSite_name_eng,
+    landing_site_loc = fishingSites_name_local,
+    landing_date = TripLoggedDay,
+    fisher_name = fishername,
+    gender = fisherGender,
+    trip_duration_hrs,
+    trip_type,
+    boat_type = isBoatType,
+    boat_crew = boatCrewTotal,
+    harvesterGroupTotal,
+    isGroup,
+    catch_taxon = catchList_name_eng,
+    catch_basket_weight = catchBasketWeight,
+    catch_weight = catchList_totalWeight,
+    tripstart,
+    trip_month,
+    trip_hour,
+    trip_day,
+    gear_type = `Gear type`
+  ) |>
+  mutate(
+    catch_weight = as.numeric(catch_weight),
+    catch_basket_weight = as.numeric(catch_basket_weight)
+  )
+
+# Calculate key metrics for Chale BMU
+total_records <- nrow(chale_bmu)
+unique_trips <- length(unique(chale_bmu$trip_id))
+unique_fishers <- length(unique(chale_bmu$fisher_name))
+unique_sites <- length(unique(chale_bmu$landing_site_en))
+date_range <- range(chale_bmu$landing_date, na.rm = TRUE)
+unique_species <- length(unique(chale_bmu$catch_taxon[!is.na(chale_bmu$catch_taxon)]))
+```
+
+::::::::: card
+### Chale BMU Key Metrics
+
+:::::::: {style="display: flex; flex-wrap: wrap; justify-content: space-around;"}
+::: metric-card
+[`r comma(total_records)`]{.metric-number} [Total Records]{.metric-label}
+:::
+
+::: metric-card
+[`r comma(unique_trips)`]{.metric-number} [Unique Trips]{.metric-label}
+:::
+
+::: metric-card
+[`r comma(unique_fishers)`]{.metric-number} [Active Fishers]{.metric-label}
+:::
+
+::: metric-card
+[`r unique_species`]{.metric-number} [Species Recorded]{.metric-label}
+:::
+
+::: metric-card
+[`r unique_sites`]{.metric-number} [Landing Sites]{.metric-label}
+:::
+::::::::
+:::::::::
+
+**Data Collection Period:** `r date_range[1]` to `r date_range[2]`
+
+## Landing Site Comparison within Chale BMU
+
+```{r site-analysis}
+# Landing site breakdown analysis
+site_summary <- chale_bmu |>
+  filter(!is.na(landing_site_en)) |>
+  group_by(landing_site_en) |>
+  summarise(
+    total_records = n(),
+    unique_trips = n_distinct(trip_id),
+    unique_fishers = n_distinct(fisher_name),
+    total_catch_weight = sum(catch_weight, na.rm = TRUE),
+    avg_catch_weight = mean(catch_weight, na.rm = TRUE),
+    species_count = n_distinct(catch_taxon, na.rm = TRUE),
+    shore_trips = sum(trip_type == "shore", na.rm = TRUE),
+    boat_trips = sum(trip_type == "boat", na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    percentage_records = round(total_records / sum(total_records) * 100, 1),
+    shore_percentage = round(shore_trips / (shore_trips + boat_trips) * 100, 1)
+  ) |>
+  arrange(desc(total_records))
+
+# Site comparison visualization
+site_summary |>
+  apex(
+    type = "column",
+    mapping = aes(x = landing_site_en, y = total_records)
+  ) |>
+  ax_title(
+    text = "Fishing Activity by Landing Site within Chale BMU",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors("#2E8B57") |>
+  ax_chart(toolbar = list(show = TRUE)) |>
+  ax_xaxis(title = list(text = "Landing Site")) |>
+  ax_yaxis(title = list(text = "Number of Records"))
+
+# Catch performance by site
+# site_summary |>
+#   apex(
+#     type = "scatter",
+#     mapping = aes(x = unique_trips, y = avg_catch_weight, size = total_catch_weight)
+#   ) |>
+#   ax_title(
+#     text = "Site Performance: Trip Volume vs Average Catch",
+#     subtitle = list(text = "Bubble size represents total catch weight"),
+#     style = list(fontSize = "16px", fontWeight = "bold")
+#   ) |>
+#   ax_colors("#20B2AA") |>
+#   ax_chart(toolbar = list(show = TRUE)) |>
+#   ax_xaxis(title = list(text = "Number of Unique Trips")) |>
+#   ax_yaxis(title = list(text = "Average Catch Weight (kg)"))
+
+# Site method preferences
+site_method_data <- chale_bmu |>
+  filter(!is.na(landing_site_en) & !is.na(trip_type)) |>
+  group_by(landing_site_en, trip_type) |>
+  summarise(trips = n_distinct(trip_id), .groups = "drop")
+
+site_method_data |>
+  apex(
+    type = "bar",
+    mapping = aes(x = landing_site_en, y = trips, fill = trip_type)
+  ) |>
+  ax_title(
+    text = "Fishing Method Preferences by Landing Site",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors(c("#FF5722", "#2196F3")) |>
+  ax_chart(toolbar = list(show = TRUE), stacked = TRUE) |>
+  ax_xaxis(title = list(text = "Landing Site")) |>
+  ax_yaxis(title = list(text = "Number of Trips")) |>
+  ax_legend(position = "top")
+```
+
+```{r site-table}
+# Site comparison summary table
+site_summary |>
+  select(-shore_trips, -boat_trips) |>
+  mutate(
+    avg_catch_weight = round(avg_catch_weight, 2),
+    total_catch_weight = round(total_catch_weight, 1)
+  ) |>
+  DT::datatable(
+    caption = "Landing Site Comparison within Chale BMU",
+    options = list(pageLength = 5, scrollX = TRUE),
+    rownames = FALSE
+  ) |>
+  DT::formatRound(c("avg_catch_weight", "total_catch_weight"), 2) |>
+  DT::formatStyle(
+    "percentage_records",
+    background = styleColorBar(site_summary$percentage_records, "#E8F4FD"),
+    backgroundSize = "100% 90%",
+    backgroundRepeat = "no-repeat",
+    backgroundPosition = "center"
+  )
+```
+
+## Fisher Demographics & Participation
+
+```{r demographics}
+# Gender analysis
+gender_summary <- chale_bmu |>
+  filter(!is.na(gender)) |>
+  group_by(gender) |>
+  summarise(
+    records = n(),
+    unique_fishers = n_distinct(fisher_name),
+    percentage = round(n() / nrow(filter(chale_bmu, !is.na(gender))) * 100, 1),
+    .groups = "drop"
+  )
+
+# Top active fishers
+top_fishers <- chale_bmu |>
+  count(fisher_name, sort = TRUE) |>
+  slice_head(n = 15) |>
+  mutate(fisher_name = str_replace(fisher_name, "_", " "))
+
+# Gender distribution pie chart
+gender_summary |>
+  apex(
+    type = "donut",
+    mapping = aes(x = gender, y = records)
+  ) |>
+  ax_title(
+    text = "Fisher Gender Distribution",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors(c("#E91E63", "#2196F3", "#FF9800", "#9C27B0")) |>
+  ax_chart(toolbar = list(show = TRUE)) |>
+  ax_legend(position = "bottom")
+
+```
+
+```{r demographics-table}
+# Gender summary table
+gender_summary |>
+  DT::datatable(
+    caption = "Fisher Gender Distribution Summary",
+    options = list(pageLength = 5, scrollX = TRUE),
+    rownames = FALSE
+  ) |>
+  DT::formatStyle(
+    "percentage",
+    background = styleColorBar(gender_summary$percentage, "#E8F5E8"),
+    backgroundSize = "100% 90%",
+    backgroundRepeat = "no-repeat",
+    backgroundPosition = "center"
+  )
+```
+
+## Temporal Fishing Patterns
+
+```{r temporal-analysis}
+# Monthly patterns
+monthly_summary <- chale_bmu |>
+  filter(!is.na(trip_month)) |>
+  group_by(trip_month) |>
+  summarise(
+    trips = n_distinct(trip_id),
+    records = n(),
+    avg_catch = mean(catch_weight, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Hourly patterns  
+hourly_summary <- chale_bmu |>
+  filter(!is.na(trip_hour)) |>
+  group_by(trip_hour) |>
+  summarise(
+    trips = n_distinct(trip_id),
+    records = n(),
+    .groups = "drop"
+  )
+
+# Weekly patterns
+weekly_summary <- chale_bmu |>
+  filter(!is.na(trip_day)) |>
+  group_by(trip_day) |>
+  summarise(
+    trips = n_distinct(trip_id),
+    records = n(),
+    .groups = "drop"
+  )
+
+# Monthly seasonal pattern
+monthly_summary |>
+  apex(
+    type = "column",
+    mapping = aes(x = trip_month, y = trips)
+  ) |>
+  ax_title(
+    text = "Seasonal Fishing Patterns in Chale BMU",
+    subtitle = list(text = "Number of fishing trips by month"),
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors("#FF6B35") |>
+  ax_chart(toolbar = list(show = TRUE)) |>
+  ax_plotOptions(
+    column = list(
+      borderRadius = 4,
+      columnWidth = "70%"
+    )
+  ) |>
+  ax_xaxis(title = list(text = "Month")) |>
+  ax_yaxis(title = list(text = "Number of Trips"))
+
+# Hourly activity pattern with area chart
+hourly_clean <- hourly_summary |> filter(trips > 5)
+highchart() |>
+  hc_add_series(
+    data = hourly_clean,
+    type = "area",
+    hcaes(x = trip_hour, y = trips),
+    name = "Trips",
+    color = "#00BCD4",
+    fillOpacity = 0.7
+  ) |>
+  hc_title(
+    text = "Daily Departure Times in Chale BMU",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  hc_subtitle(text = "Trip departure times throughout the day") |>
+  hc_xAxis(
+    title = list(text = "Hour of Day"),
+    tickInterval = 2,
+    min = 0,
+    max = 23
+  ) |>
+  hc_yAxis(title = list(text = "Number of Trips")) |>
+  hc_chart(zoomType = "x") |>
+  hc_exporting(enabled = TRUE)
+
+# Weekly pattern
+weekly_summary |>
+  apex(
+    type = "column",
+    mapping = aes(x = trip_day, y = trips)
+  ) |>
+  ax_title(
+    text = "Weekly Fishing Activity Patterns",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors("#4CAF50") |>
+  ax_chart(toolbar = list(show = TRUE))
+```
+
+## Fishing Methods & Techniques
+
+```{r fishing-methods}
+# Trip type analysis
+trip_type_summary <- chale_bmu |>
+  filter(!is.na(trip_type)) |>
+  group_by(trip_type) |>
+  summarise(
+    records = n(),
+    trips = n_distinct(trip_id),
+    percentage = round(n() / nrow(filter(chale_bmu, !is.na(trip_type))) * 100, 1),
+    avg_duration = mean(trip_duration_hrs, na.rm = TRUE),
+    avg_catch = mean(catch_weight, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Boat crew analysis
+crew_summary <- chale_bmu |>
+  filter(!is.na(boat_crew) & boat_crew > 0 & boat_crew < 15) |>
+  group_by(boat_crew) |>
+  summarise(
+    records = n(),
+    avg_catch = mean(catch_weight, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  filter(records >= 5)
+
+# Trip type distribution
+trip_type_summary |>
+  apex(
+    type = "donut",
+    mapping = aes(x = trip_type, y = records)
+  ) |>
+  ax_title(
+    text = "Fishing Method Distribution",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors(c("#FF5722", "#009688")) |>
+  ax_chart(toolbar = list(show = TRUE)) |>
+  ax_legend(position = "bottom")
+
+# Crew size vs catch performance
+if(nrow(crew_summary) > 0) {
+  highchart() |>
+    hc_add_series(
+      data = crew_summary,
+      type = "scatter",
+      hcaes(x = boat_crew, y = avg_catch, size = records),
+      name = "Crew Performance"
+    ) |>
+    hc_title(
+      text = "Crew Size vs Average Catch Performance",
+      style = list(fontSize = "16px", fontWeight = "bold")
+    ) |>
+    hc_subtitle(text = "Bubble size represents number of records") |>
+    hc_xAxis(title = list(text = "Boat Crew Size")) |>
+    hc_yAxis(title = list(text = "Average Catch Weight (kg)")) |>
+    hc_colors("#673AB7") |>
+    hc_tooltip(
+      pointFormat = "<b>Crew Size:</b> {point.x}<br><b>Avg Catch:</b> {point.y:.2f} kg<br><b>Records:</b> {point.z}"
+    ) |>
+    hc_exporting(enabled = TRUE)
+}
+```
+
+```{r methods-table}
+trip_type_summary |>
+  DT::datatable(
+    caption = "Fishing Methods Comparison in Chale BMU",
+    options = list(pageLength = 5, scrollX = TRUE),
+    rownames = FALSE
+  ) |>
+  DT::formatRound(c("avg_duration", "avg_catch"), 2) |>
+  DT::formatStyle(
+    "percentage",
+    background = styleColorBar(trip_type_summary$percentage, "#E3F2FD"),
+    backgroundSize = "100% 90%",
+    backgroundRepeat = "no-repeat",
+    backgroundPosition = "center"
+  )
+```
+
+## Species Composition & Catch Analysis
+
+The species analysis below presents two complementary perspectives: **frequency of catch** (how often species are caught) versus **total weight contribution** (biomass significance). These metrics can show different patterns - for example, a species might be caught frequently but in small quantities, while another might be caught less often but contribute significantly to total biomass.
+
+```{r species-analysis}
+# Species summary
+species_summary <- chale_bmu |>
+  filter(!is.na(catch_taxon) & !is.na(catch_weight)) |>
+  group_by(catch_taxon) |>
+  summarise(
+    records = n(),
+    total_weight = sum(catch_weight, na.rm = TRUE),
+    avg_weight = mean(catch_weight, na.rm = TRUE),
+    median_weight = median(catch_weight, na.rm = TRUE),
+    percentage = round(n() / nrow(filter(chale_bmu, !is.na(catch_taxon))) * 100, 1),
+    .groups = "drop"
+  ) |>
+  arrange(desc(records))
+
+# Top 15 species by records
+top_species <- species_summary |>
+  slice_head(n = 15)
+
+# Species frequency chart
+top_species |>
+  arrange(records) |>
+  apex(
+    type = "bar",
+    mapping = aes(x = catch_taxon, y = records)
+  ) |>
+  ax_title(
+    text = "Most Frequently Caught Species in Chale BMU",
+    subtitle = list(text = "Ranked by frequency (number of catch records)"),
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors("#8BC34A") |>
+  ax_chart(toolbar = list(show = TRUE)) |>
+  ax_plotOptions(
+    bar = list(
+      horizontal = TRUE,
+      borderRadius = 4
+    )
+  ) |>
+  ax_yaxis(title = list(text = "Number of Records"))
+
+# Species by total weight treemap
+species_treemap_data <- top_species |>
+  mutate(
+    value = total_weight,
+    name = catch_taxon,
+    colorValue = total_weight
+  ) |>
+  select(name, value, colorValue)
+
+highchart() |>
+  hc_add_series(
+    data = species_treemap_data,
+    type = "treemap",
+    name = "Total Weight"
+  ) |>
+  hc_title(
+    text = "Species by Total Catch Weight in Chale BMU",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  hc_subtitle(text = "Size represents total weight contribution") |>
+  hc_colorAxis(
+    minColor = "#E8F5E8",
+    maxColor = "#388E3C"
+  ) |>
+  hc_tooltip(
+    pointFormat = "<b>{point.name}</b><br>Total Weight: {point.value:.1f} kg"
+  ) |>
+  hc_exporting(enabled = TRUE)
+```
+
+```{r species-table}
+# Species summary table
+top_species |>
+  mutate(
+    avg_weight = round(avg_weight, 2),
+    median_weight = round(median_weight, 2),
+    total_weight = round(total_weight, 1)
+  ) |>
+  DT::datatable(
+    caption = "Top Species in Chale BMU",
+    options = list(pageLength = 10, scrollX = TRUE),
+    rownames = FALSE
+  ) |>
+  DT::formatRound(c("avg_weight", "median_weight", "total_weight"), 2) |>
+  DT::formatStyle(
+    "percentage",
+    background = styleColorBar(top_species$percentage, "#E8F4FD"),
+    backgroundSize = "100% 90%",
+    backgroundRepeat = "no-repeat",
+    backgroundPosition = "center"
+  )
+```
+
+## Catch Performance by Fishing Method
+
+```{r catch-by-method}
+# Compare catch performance between shore and boat fishing
+method_catch_analysis <- chale_bmu |>
+  filter(!is.na(trip_type) & !is.na(catch_weight) & catch_weight > 0) |>
+  group_by(trip_type) |>
+  summarise(
+    total_records = n(),
+    unique_trips = n_distinct(trip_id),
+    total_catch = sum(catch_weight, na.rm = TRUE),
+    avg_catch_per_record = mean(catch_weight, na.rm = TRUE),
+    median_catch = median(catch_weight, na.rm = TRUE),
+    avg_trip_duration = mean(trip_duration_hrs, na.rm = TRUE),
+    catch_per_hour = total_catch / sum(trip_duration_hrs, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    catch_efficiency = total_catch / unique_trips,
+    across(where(is.numeric), ~round(.x, 2))
+  )
+
+# Species composition by fishing method
+species_by_method <- chale_bmu |>
+  filter(!is.na(trip_type) & !is.na(catch_taxon) & !is.na(catch_weight)) |>
+  group_by(trip_type, catch_taxon) |>
+  summarise(
+    records = n(),
+    total_weight = sum(catch_weight, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(trip_type) |>
+  slice_max(records, n = 8) |>
+  ungroup()
+
+# Shore vs boat catch performance comparison
+method_catch_analysis |>
+  pivot_longer(cols = c(avg_catch_per_record, catch_per_hour, catch_efficiency), 
+               names_to = "metric", 
+               values_to = "value") |>
+  mutate(
+    metric_label = case_when(
+      metric == "avg_catch_per_record" ~ "Avg Catch per Record (kg)",
+      metric == "catch_per_hour" ~ "Catch per Hour (kg/hr)",
+      metric == "catch_efficiency" ~ "Catch per Trip (kg)"
+    )
+  ) |>
+  apex(
+    type = "column",
+    mapping = aes(x = trip_type, y = value, fill = metric_label)
+  ) |>
+  ax_title(
+    text = "Catch Performance: Shore vs Boat Fishing",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors(c("#FF6B35", "#00BCD4", "#4CAF50")) |>
+  ax_chart(toolbar = list(show = TRUE)) |>
+  ax_xaxis(title = list(text = "Fishing Method")) |>
+  ax_yaxis(title = list(text = "Performance Metric")) |>
+  ax_legend(position = "top")
+
+# Top species by fishing method - Stacked bar chart
+species_method_summary <- species_by_method |>
+  group_by(catch_taxon) |>
+  summarise(
+    shore_records = sum(records[trip_type == "shore"], na.rm = TRUE),
+    boat_records = sum(records[trip_type == "boat"], na.rm = TRUE),
+    total_records = shore_records + boat_records,
+    .groups = "drop"
+  ) |>
+  filter(total_records >= 20) |>
+  arrange(desc(total_records)) |>
+  slice_head(n = 10) |>
+  pivot_longer(cols = c(shore_records, boat_records), 
+               names_to = "method", 
+               values_to = "records") |>
+  mutate(method = str_replace(method, "_records", ""))
+
+species_method_summary |>
+  apex(
+    type = "bar",
+    mapping = aes(x = catch_taxon, y = records, fill = method)
+  ) |>
+  ax_title(
+    text = "Top Species by Fishing Method",
+    subtitle = list(text = "Shore vs boat fishing preferences"),
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  ax_colors(c("#FF5722", "#2196F3")) |>
+  ax_chart(
+    toolbar = list(show = TRUE),
+    stacked = TRUE
+  ) |>
+  ax_plotOptions(
+    bar = list(horizontal = TRUE)
+  ) |>
+  ax_xaxis(title = list(text = "Number of Records")) |>
+  ax_yaxis(title = list(text = "Species")) |>
+  ax_legend(position = "top")
+```
+
+```{r method-comparison-table}
+# Method comparison summary table
+method_catch_analysis |>
+  DT::datatable(
+    caption = "Fishing Method Performance Comparison",
+    options = list(pageLength = 5, scrollX = TRUE),
+    rownames = FALSE
+  ) |>
+  DT::formatRound(c("avg_catch_per_record", "median_catch", "avg_trip_duration", "catch_per_hour", "catch_efficiency"), 2) |>
+  DT::formatStyle(
+    "catch_efficiency",
+    background = styleColorBar(method_catch_analysis$catch_efficiency, "#E3F2FD"),
+    backgroundSize = "100% 90%",
+    backgroundRepeat = "no-repeat",
+    backgroundPosition = "center"
+  )
+```
+
+## Gear-Specific Duration Analysis & Data Quality
+
+```{r outlier-detection}
+# Function to detect outliers using IQR method by gear type
+detect_outliers_by_gear <- function(data, duration_col, gear_col, k = 1.5) {
+  data |>
+    group_by({{gear_col}}) |>
+    mutate(
+      q1 = quantile({{duration_col}}, 0.25, na.rm = TRUE),
+      q3 = quantile({{duration_col}}, 0.75, na.rm = TRUE),
+      iqr = q3 - q1,
+      lower = q1 - k * iqr,
+      upper = q3 + k * iqr,
+      is_outlier = {{duration_col}} < lower | {{duration_col}} > upper,
+      # For traps and nets, use more lenient thresholds as they can operate for days
+      is_outlier = case_when(
+        str_detect(tolower({{gear_col}}), "trap|net|seine") ~ {{duration_col}} > (q3 + 3 * iqr) | {{duration_col}} < (q1 - 3 * iqr),
+        TRUE ~ is_outlier
+      )
+    ) |>
+    ungroup() |>
+    select(-q1, -q3, -iqr, -lower, -upper)
+}
+
+# Trip duration analysis considering gear types
+trip_duration_clean <- chale_bmu |>
+  filter(!is.na(trip_duration_hrs) & trip_duration_hrs >= 0 & trip_duration_hrs < 200) # Increased threshold for traps
+
+# Analyze duration patterns by gear type
+gear_duration_summary <- chale_bmu |>
+  filter(!is.na(trip_duration_hrs) & trip_duration_hrs >= 0 & !is.na(gear_type)) |>
+  group_by(gear_type) |>
+  summarise(
+    records = n(),
+    median_duration = median(trip_duration_hrs, na.rm = TRUE),
+    q75_duration = quantile(trip_duration_hrs, 0.75, na.rm = TRUE),
+    max_duration = max(trip_duration_hrs, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(median_duration))
+
+# Detect outliers considering gear type
+duration_outliers <- chale_bmu |>
+  filter(!is.na(trip_duration_hrs) & trip_duration_hrs >= 0 & !is.na(gear_type)) |>
+  detect_outliers_by_gear(trip_duration_hrs, gear_type) |>
+  filter(is_outlier) |>
+  arrange(desc(trip_duration_hrs))
+
+# Simple outlier detection function for catch weights
+detect_outliers <- function(x, k = 1.5) {
+  q1 <- quantile(x, 0.25, na.rm = TRUE)
+  q3 <- quantile(x, 0.75, na.rm = TRUE)
+  iqr <- q3 - q1
+  lower <- q1 - k * iqr
+  upper <- q3 + k * iqr
+  return(x < lower | x > upper)
+}
+
+# Catch weight outlier analysis
+weight_outliers <- chale_bmu |>
+  filter(!is.na(catch_weight) & catch_weight > 0) |>
+  mutate(is_outlier = detect_outliers(catch_weight)) |>
+  filter(is_outlier) |>
+  arrange(desc(catch_weight))
+
+# Gear duration summary visualization
+if(nrow(gear_duration_summary) > 0) {
+  gear_duration_summary |>
+    apex(
+      type = "bar",
+      mapping = aes(x = gear_type, y = median_duration)
+    ) |>
+    ax_title(
+      text = "Gear Operational Duration Patterns",
+      subtitle = list(text = "Median duration by gear type (hours)"),
+      style = list(fontSize = "16px", fontWeight = "bold")
+    ) |>
+    ax_colors("#FF5722") |>
+    ax_plotOptions(
+      bar = list(horizontal = TRUE)
+    ) |>
+    ax_xaxis(title = list(text = "Median Duration (hours)")) |>
+    ax_yaxis(title = list(text = "Gear Type"))
+}
+
+# Trip duration distribution by gear type
+duration_by_gear <- chale_bmu |>
+  filter(!is.na(trip_duration_hrs) & trip_duration_hrs >= 0 & !is.na(gear_type) & trip_duration_hrs < 100) |>
+  group_by(gear_type) |>
+  filter(n() >= 10) |> # Only include gear types with sufficient data
+  ungroup()
+
+if(nrow(duration_by_gear) > 0) {
+  duration_by_gear |>
+    apex(
+      type = "boxplot", 
+      mapping = aes(x = gear_type, y = trip_duration_hrs)
+    ) |>
+    ax_title(
+      text = "Gear Operational Duration Distribution",
+      subtitle = list(text = "Duration patterns vary significantly by gear type"),
+      style = list(fontSize = "16px", fontWeight = "bold")
+    ) |>
+    ax_colors("#FF5722") |>
+    ax_xaxis(title = list(text = "Gear Type")) |>
+    ax_yaxis(title = list(text = "Duration (hours)"))
+}
+
+# Catch weight distribution histogram
+weight_data <- chale_bmu$catch_weight[!is.na(chale_bmu$catch_weight) & chale_bmu$catch_weight > 0]
+weight_hist <- hist(log10(weight_data), breaks = 30, plot = FALSE)
+
+highchart() |>
+  hc_add_series(
+    data = data.frame(
+      x = weight_hist$mids,
+      y = weight_hist$counts
+    ),
+    type = "column",
+    hcaes(x = x, y = y),
+    name = "Frequency"
+  ) |>
+  hc_title(
+    text = "Catch Weight Distribution in Chale BMU",
+    style = list(fontSize = "16px", fontWeight = "bold")
+  ) |>
+  hc_subtitle(text = "Log10 scale distribution") |>
+  hc_xAxis(
+    title = list(text = "Log10(Catch Weight)")
+  ) |>
+  hc_yAxis(title = list(text = "Frequency")) |>
+  hc_colors("#00BCD4") |>
+  hc_chart(zoomType = "x") |>
+  hc_exporting(enabled = TRUE)
+```
+
+### Gear-Adjusted Duration Analysis
+
+::: highlight-box
+**Gear Duration Patterns:** - **Different gear types** have naturally different operational durations - **Traps/Nets:** Can operate for days (24-72+ hours is normal) - **Hooks/Lines:** Typically shorter operations (2-12 hours) - **`r nrow(duration_outliers)`** records flagged as unusual even considering gear type
+
+**Gear-Adjusted Outliers:** - **Longest unusual duration:** `r if(nrow(duration_outliers) > 0) paste(round(max(duration_outliers$trip_duration_hrs, na.rm = TRUE), 1), "hours") else "None"` - **Analysis:** Outliers now consider gear-specific normal ranges
+
+**Catch Weight Outliers:** - **`r nrow(weight_outliers)`** records with extreme catch weights - **Heaviest catch:** `r max(weight_outliers$catch_weight, na.rm = TRUE)` kg - **Analysis:** Large catches should be verified against typical species sizes
+:::
+
+```{r outlier-tables}
+# Gear duration summary table
+if(nrow(gear_duration_summary) > 0) {
+  gear_duration_summary |>
+    mutate(
+      median_duration = round(median_duration, 1),
+      q75_duration = round(q75_duration, 1),
+      max_duration = round(max_duration, 1)
+    ) |>
+    DT::datatable(
+      caption = "Gear Type Duration Patterns",
+      options = list(pageLength = 10, scrollX = TRUE),
+      rownames = FALSE
+    ) |>
+    DT::formatStyle(
+      "median_duration",
+      background = styleColorBar(gear_duration_summary$median_duration, "#E8F4FD"),
+      backgroundSize = "100% 90%",
+      backgroundRepeat = "no-repeat",
+      backgroundPosition = "center"
+    )
+}
+
+# Gear-adjusted duration outliers
+if(nrow(duration_outliers) > 0) {
+  duration_outliers |>
+    select(trip_id, fisher_name, gear_type, trip_duration_hrs, catch_weight, trip_type) |>
+    slice_head(n = 10) |>
+    mutate(
+      trip_duration_hrs = round(trip_duration_hrs, 2),
+      fisher_name = str_replace(fisher_name, "_", " ")
+    ) |>
+    DT::datatable(
+      caption = "Gear-Adjusted Duration Outliers",
+      options = list(pageLength = 5, scrollX = TRUE),
+      rownames = FALSE
+    )
+}
+
+# Top weight outliers  
+if(nrow(weight_outliers) > 0) {
+  weight_outliers |>
+    select(trip_id, fisher_name, catch_taxon, catch_weight, trip_type) |>
+    slice_head(n = 10) |>
+    mutate(fisher_name = str_replace(fisher_name, "_", " ")) |>
+    DT::datatable(
+      caption = "Top 10 Catch Weight Outliers in Chale BMU", 
+      options = list(pageLength = 5, scrollX = TRUE),
+      rownames = FALSE
+    )
+}
+```
+
+## Data Completeness Assessment
+
+```{r data-quality}
+# Missing data analysis for Chale BMU
+missing_summary <- 
+  chale_bmu |>
+    dplyr::mutate(boat_type = dplyr::case_when(trip_type == "shore" & is.na(boat_type) ~ "foot", TRUE ~ boat_type)) |> 
+  summarise_all(~sum(is.na(.))) |>
+  pivot_longer(everything(), names_to = "variable", values_to = "missing_count") |>
+  mutate(
+    missing_percent = round(missing_count / nrow(chale_bmu) * 100, 2),
+    data_quality = case_when(
+      missing_percent == 0 ~ "Excellent",
+      missing_percent < 5 ~ "Good", 
+      missing_percent < 20 ~ "Fair",
+      TRUE ~ "Poor"
+    )
+  ) |>
+  arrange(desc(missing_percent))
+
+# Data quality visualization
+missing_chart_data <- missing_summary |>
+  filter(missing_count > 0) |>
+  arrange(desc(missing_percent)) |>
+  mutate(
+    color = case_when(
+      data_quality == "Excellent" ~ "#4CAF50",
+      data_quality == "Good" ~ "#FF9800", 
+      data_quality == "Fair" ~ "#FF5722",
+      data_quality == "Poor" ~ "#9C27B0"
+    )
+  )
+
+if(nrow(missing_chart_data) > 0) {
+  highchart() |>
+    hc_add_series(
+      data = missing_chart_data,
+      type = "bar",
+      hcaes(x = variable, y = missing_percent, color = color),
+      name = "Missing Data %"
+    ) |>
+    hc_title(
+      text = "Data Completeness in Chale BMU",
+      style = list(fontSize = "16px", fontWeight = "bold")
+    ) |>
+    hc_subtitle(text = "Percentage of missing values by variable") |>
+    hc_xAxis(
+      title = list(text = "Variable"),
+      categories = missing_chart_data$variable
+    ) |>
+    hc_yAxis(
+      title = list(text = "Missing Data (%)"),
+      min = 0
+    ) |>
+    hc_tooltip(
+      pointFormat = "<b>{point.category}</b><br>Missing: {point.y:.1f}%"
+    ) |>
+    hc_legend(enabled = FALSE) |>
+    hc_exporting(enabled = TRUE)
+}
+```
+
+::: card
+### Data Quality Summary for Chale BMU
+
+```{r quality-table}
+missing_summary |>
+  DT::datatable(
+    caption = "Missing Data Analysis",
+    options = list(pageLength = 10),
+    rownames = FALSE
+  ) |>
+  DT::formatStyle(
+    "data_quality",
+    backgroundColor = styleEqual(
+      c("Excellent", "Good", "Fair", "Poor"),
+      c("#d4edda", "#fff3cd", "#f8d7da", "#e2e3f4")
+    )
+  )
+```
+:::
+
+## Key Insights & Recommendations
+
+::: highlight-box
+### 🎣 **Chale BMU Fishing Characteristics**
+
+-   **Multi-Site Activity:** Three landing sites: Chale-Jeza (45%), Chale Island (34.5%), Kinondo Ngwani (20.6%)
+-   **Method Variations:** Chale Island almost exclusively shore-based (99.3%), while Chale-Jeza (71% shore) and Kinondo Ngwani (65.4% shore) have more mixed approaches
+-   **Peak Activity:** Early morning departures (4-8 AM) account for 82% of all BMU trips
+-   **Gender Participation:** Overwhelmingly male-dominated (98.7%) with minimal female participation
+-   **Fisher Population:** 693 unique fishers across the BMU with 443 at Chale-Jeza alone
+
+### 🏝️ **Inter-Site Variations**
+
+-   **Activity Concentration:** Chale-Jeza dominates with 45% of all records, nearly twice Chale Island's activity
+-   **Method Specialization:** Chale Island is almost purely shore-based, contrasting with mixed methods at other sites
+-   **Fisher Density:** Highest fisher numbers at Chale-Jeza (443), moderate at Chale Island (251), lowest at Kinondo Ngwani (89)
+-   **Trip Patterns:** Different trip-to-record ratios suggest varying catch logging practices between sites
+
+### 🐟 **BMU-Wide Species Composition**
+
+-   **Dual Species Dynamics:** Octopus dominates by frequency (41.2% of records) while marbled parrotfish dominates by biomass (35,898 kg total weight)
+-   **Fishing Strategy Patterns:** Frequent small octopus catches vs less frequent but larger parrotfish catches reflect different targeting strategies
+-   **Biomass vs Activity:** Octopus shows highest fishing activity but marbled parrotfish contributes most to total catch weight
+-   **Diverse Portfolio:** "Other" category (12.4%) and Rabbitfish (10.5%) show significant catch diversity
+-   **Reef Ecosystem Health:** Multiple parrotfish and surgeonfish species indicate healthy reef fish targeting across BMU
+
+### 📊 **Data Quality & Coverage**
+
+-   **Multi-Site Coverage:** Comprehensive monitoring across BMU landing sites
+-   **Temporal Consistency:** Reliable timing data across all sites
+-   **Some Anomalies:** Extreme values requiring validation across sites
+-   **Good Completeness:** Strong data coverage for most core variables
+
+### 💡 **BMU-Level Recommendations**
+
+1.  **Implement BMU-wide management** considering inter-site variations
+2.  **Site-specific monitoring** tailored to each landing site's characteristics\
+3.  **Cross-site fisher mobility** analysis to understand movement patterns
+4.  **Coordinated data validation** for extreme values across all sites
+5.  **BMU-wide sustainability** monitoring for key species like octopus
+6.  **Gender inclusion initiatives** across all landing sites
+:::
+
+------------------------------------------------------------------------
+
+*Report generated on `r Sys.Date()` using Quarto. Data source: ABALOBI Monitor App, Chale Beach Management Unit (BMU) analysis.*
