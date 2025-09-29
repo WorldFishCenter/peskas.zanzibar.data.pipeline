@@ -20,12 +20,13 @@
 #'
 #' @keywords storage
 #' @export
-download_parquet_from_cloud <- function(prefix, provider, options) {
+download_parquet_from_cloud <- function(prefix, provider, options, version = "latest") {
   # Generate cloud object name
   parquet_file <- cloud_object_name(
     prefix = prefix,
     provider = provider,
     extension = "parquet",
+    version = version,
     options = options
   )
 

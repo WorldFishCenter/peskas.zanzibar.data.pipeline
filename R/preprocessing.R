@@ -195,8 +195,16 @@ preprocess_wf_surveys <- function(
         download_parquet_from_cloud(
           prefix = pars$surveys$wf_surveys$versions$v1$raw_surveys$file_prefix,
           provider = pars$storage$google$key,
-          options = pars$storage$google$options
-        ) |>
+          options = pars$storage$google$options,
+          version = pars$surveys$wf_surveys$versions$v1$raw_surveys$version
+        )
+
+      # Ensure we have a data frame, not a file path
+      if (is.character(catch_surveys_raw_v1)) {
+        catch_surveys_raw_v1 <- arrow::read_parquet(catch_surveys_raw_v1)
+      }
+
+      catch_surveys_raw_v1 <- catch_surveys_raw_v1 |>
         dplyr::select(-dplyr::starts_with("_att")) |>
         dplyr::rename(submission_id = "_id")
 
@@ -226,8 +234,16 @@ preprocess_wf_surveys <- function(
         download_parquet_from_cloud(
           prefix = pars$surveys$wf_surveys$versions$v2$raw_surveys$file_prefix,
           provider = pars$storage$google$key,
-          options = pars$storage$google$options
-        ) |>
+          options = pars$storage$google$options,
+          version = pars$surveys$wf_surveys$versions$v2$raw_surveys$version
+        )
+
+      # Ensure we have a data frame, not a file path
+      if (is.character(catch_surveys_raw_v2)) {
+        catch_surveys_raw_v2 <- arrow::read_parquet(catch_surveys_raw_v2)
+      }
+
+      catch_surveys_raw_v2 <- catch_surveys_raw_v2 |>
         dplyr::select(-dplyr::starts_with("_att")) |>
         dplyr::rename(submission_id = "_id")
 
