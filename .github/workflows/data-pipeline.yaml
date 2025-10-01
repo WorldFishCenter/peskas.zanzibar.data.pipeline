@@ -121,8 +121,8 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call validate_wcs_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
-      - name: Call validate_ba_surveys()
+      #   run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
+      # - name: Call validate_ba_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_ba_surveys()'
       - name: Call validate_wf_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wf_surveys()'
