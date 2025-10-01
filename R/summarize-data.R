@@ -66,18 +66,44 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
     workers = future::availableCores() - 2
   ) # Use available cores minus 2
 
-  # get validation table
-  valid_ids <-
-    unique(validated_surveys$submission_id) %>%
+  # get validation table and store approved ids from both assets
+  submission_ids <- unique(validated_surveys$submission_id)
+
+  # Query validation status from both survey versions using same credentials
+  logger::log_info(
+    "Querying validation status from both wf_surveys_v1 and wf_surveys_v2 assets"
+  )
+
+  validation_results <- list()
+
+  # Query wf_surveys v1 (original asset)
+  validation_results$v1 <- submission_ids %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys$versions$v1$asset_id,
-      token = pars$surveys$wf_surveys$token,
+      asset_id = pars$surveys$wf_surveys_v1$asset_id,
+      token = pars$surveys$wf_surveys_v1$token,
       .options = furrr::furrr_options(seed = TRUE)
-    ) |>
-    dplyr::filter(.data$validation_status == "validation_status_approved") |>
-    dplyr::pull(.data$submission_id) |>
+    )
+
+  # Query wf_surveys v2 (new asset)
+  validation_results$v2 <- submission_ids %>%
+    furrr::future_map_dfr(
+      get_validation_status,
+      asset_id = pars$surveys$wf_surveys_v2$asset_id,
+      token = pars$surveys$wf_surveys_v2$token,
+      .options = furrr::furrr_options(seed = TRUE)
+    )
+
+  # Combine validation results and extract approved IDs
+  valid_ids <- validation_results %>%
+    dplyr::bind_rows() %>%
+    dplyr::filter(.data$validation_status == "validation_status_approved") %>%
+    dplyr::pull(.data$submission_id) %>%
     unique()
+
+  logger::log_info(
+    "Found {length(valid_ids)} approved submissions across both assets"
+  )
 
   clean_data <-
     validated_surveys |>

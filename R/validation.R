@@ -138,8 +138,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   validation_results$v1 <- submission_ids %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys$versions$v1$asset_id,
-      token = pars$surveys$wf_surveys$token,
+      asset_id = pars$surveys$wf_surveys_v1$asset_id,
+      token = pars$surveys$wf_surveys_v1$token,
       .options = furrr::furrr_options(seed = TRUE)
     )
 
@@ -147,8 +147,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   validation_results$v2 <- submission_ids %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys$versions$v2$asset_id,
-      token = pars$surveys$wf_surveys$token,
+      asset_id = pars$surveys$wf_surveys_v2$asset_id,
+      token = pars$surveys$wf_surveys_v2$token,
       .options = furrr::furrr_options(seed = TRUE)
     )
 
@@ -736,8 +736,8 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       {
         update_validation_status(
           submission_id = submission_id,
-          asset_id = pars$surveys$wf_surveys$versions$v1$asset_id,
-          token = pars$surveys$wf_surveys$token,
+          asset_id = pars$surveys$wf_surveys_v1$asset_id,
+          token = pars$surveys$wf_surveys_v1$token,
           status = status
         )
       },
@@ -757,8 +757,8 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       {
         update_validation_status(
           submission_id = submission_id,
-          asset_id = pars$surveys$wf_surveys$versions$v2$asset_id,
-          token = pars$surveys$wf_surveys$token,
+          asset_id = pars$surveys$wf_surveys_v2$asset_id,
+          token = pars$surveys$wf_surveys_v2$token,
           status = status
         )
       },
