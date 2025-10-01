@@ -114,7 +114,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   # 1. Load and preprocess survey data
   preprocessed_surveys <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wf_surveys$preprocessed_surveys$file_prefix,
+      prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
@@ -128,7 +128,9 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   submission_ids <- unique(preprocessed_surveys$submission_id)
 
   # Query validation status from both survey versions using same credentials
-  logger::log_info("Querying validation status from both wf_surveys_v1 and wf_surveys_v2 assets")
+  logger::log_info(
+    "Querying validation status from both wf_surveys_v1 and wf_surveys_v2 assets"
+  )
 
   validation_results <- list()
 
@@ -157,7 +159,9 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::pull(.data$submission_id) %>%
     unique()
 
-  logger::log_info("Found {length(approved_ids)} approved submissions across both assets")
+  logger::log_info(
+    "Found {length(approved_ids)} approved submissions across both assets"
+  )
 
   max_bucket_weight_kg <- 50
   max_n_buckets <- 300
@@ -720,39 +724,61 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
   )
 
   # Helper function to update validation status across both assets
-  update_validation_both_assets <- function(submission_id, status, progress_fn = NULL) {
+  update_validation_both_assets <- function(
+    submission_id,
+    status,
+    progress_fn = NULL
+  ) {
     updated <- FALSE
 
     # Try wf_surveys v1 first
-    result_v1 <- tryCatch({
-      update_validation_status(
-        submission_id = submission_id,
-        asset_id = pars$surveys$wf_surveys$versions$v1$asset_id,
-        token = pars$surveys$wf_surveys$token,
-        status = status
-      )
-    }, error = function(e) NULL)
+    result_v1 <- tryCatch(
+      {
+        update_validation_status(
+          submission_id = submission_id,
+          asset_id = pars$surveys$wf_surveys$versions$v1$asset_id,
+          token = pars$surveys$wf_surveys$token,
+          status = status
+        )
+      },
+      error = function(e) NULL
+    )
 
-    if (!is.null(result_v1) && !is.na(result_v1$update_success) && result_v1$update_success) {
+    if (
+      !is.null(result_v1) &&
+        !is.na(result_v1$update_success) &&
+        result_v1$update_success
+    ) {
       updated <- TRUE
     }
 
     # Try wf_surveys v2 (will silently fail if submission doesn't exist in this asset)
-    result_v2 <- tryCatch({
-      update_validation_status(
-        submission_id = submission_id,
-        asset_id = pars$surveys$wf_surveys$versions$v2$asset_id,
-        token = pars$surveys$wf_surveys$token,
-        status = status
-      )
-    }, error = function(e) NULL)
+    result_v2 <- tryCatch(
+      {
+        update_validation_status(
+          submission_id = submission_id,
+          asset_id = pars$surveys$wf_surveys$versions$v2$asset_id,
+          token = pars$surveys$wf_surveys$token,
+          status = status
+        )
+      },
+      error = function(e) NULL
+    )
 
-    if (!is.null(result_v2) && !is.na(result_v2$update_success) && result_v2$update_success) {
+    if (
+      !is.null(result_v2) &&
+        !is.na(result_v2$update_success) &&
+        result_v2$update_success
+    ) {
       updated <- TRUE
     }
 
     if (!is.null(progress_fn)) {
-      status_text <- if (status == "validation_status_not_approved") "not approved" else "approved"
+      status_text <- if (status == "validation_status_not_approved") {
+        "not approved"
+      } else {
+        "approved"
+      }
       progress_fn(message = paste("Marked", status_text, ":", submission_id))
     }
 

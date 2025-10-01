@@ -88,12 +88,12 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   # WF Survey - Version 1
   logger::log_info("Downloading WF Fish Catch Survey Kobo data (v1)...")
   wf_files_v1 <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys$versions$v1$raw_surveys$file_prefix,
+    prefix = pars$surveys$wf_surveys_v1$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
-    project_id = pars$surveys$wf_surveys$versions$v1$asset_id,
-    username = pars$surveys$wf_surveys$username,
-    psswd = pars$surveys$wf_surveys$password,
+    project_id = pars$surveys$wf_surveys_v1$asset_id,
+    username = pars$surveys$wf_surveys_v1$username,
+    psswd = pars$surveys$wf_surveys_v1$password,
     encoding = "UTF-8"
   )
 
@@ -104,12 +104,12 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   # WF Survey - Version 2
   logger::log_info("Downloading WF Fish Catch Survey Kobo data (v2)...")
   wf_files_v2 <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys$versions$v2$raw_surveys$file_prefix,
+    prefix = pars$surveys$wf_surveys_v2$raw_surveys$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
-    project_id = pars$surveys$wf_surveys$versions$v2$asset_id,
-    username = pars$surveys$wf_surveys$username,
-    psswd = pars$surveys$wf_surveys$password,
+    project_id = pars$surveys$wf_surveys_v2$asset_id,
+    username = pars$surveys$wf_surveys_v2$username,
+    psswd = pars$surveys$wf_surveys_v2$password,
     encoding = "UTF-8"
   )
 
