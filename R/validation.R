@@ -690,7 +690,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 
   validation_flags <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
+      prefix = pars$surveys$wf_surveys_v1$validation$flags$file_prefix,
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
