@@ -446,7 +446,6 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       by = "submission_id"
     ) |>
     dplyr::relocate("submitted_by", .after = "submission_id") |>
-    dplyr::relocate("fishing_days_week", .after = "survey_activity") |>
     dplyr::distinct() |>
     # keep approved submissions untouched
     dplyr::mutate(

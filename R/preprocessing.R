@@ -279,7 +279,9 @@ preprocess_wf_surveys <- function(
   }
 
   # Sort final combined data
-  preprocessed_data <- preprocessed_data |>
+  preprocessed_data <-
+    preprocessed_data |>
+    dplyr::relocate("fishing_days_week", .after = "survey_activity") |>
     dplyr::arrange(.data$submission_id, .data$n_catch)
 
   logger::log_info(
