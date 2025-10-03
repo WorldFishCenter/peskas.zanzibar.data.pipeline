@@ -492,10 +492,18 @@ get_preprocessed_surveys <- function(pars, prefix = NULL) {
 #' This function fetches data stored in Parquet format from sources defined in the configuration.
 #'
 #' @param pars A list representing the configuration settings, typically obtained from a YAML configuration file.
-#' @param sources Character vector specifying which survey sources to retrieve (e.g., "wcs", "wf", "ba").
-#'                If NULL (default), retrieves data from all available sources.
+#'             The configuration should include:
+#'             - `surveys.<source>_surveys.validated_surveys.file_prefix`: File prefix for validated surveys
+#'             - `surveys.<source>_surveys.validated_surveys.version`: Version to retrieve (optional, defaults to `version.preprocess` or "latest")
+#'             - `storage.google.key`: Storage provider key
+#'             - `storage.google.options`: Storage provider options (bucket, project, service_account_key)
+#' @param sources Character vector specifying which survey sources to retrieve.
+#'                Accepts short names ("wcs", "wf", "ba") or full config keys ("wcs_surveys", "wf_surveys_v1", etc.).
+#'                The "wf" alias maps to "wf_surveys_v1" for backward compatibility.
+#'                If NULL (default), retrieves data from all available sources with validated_surveys configuration.
 #'
 #' @return A dataframe of validated survey landings from all requested sources, loaded from Parquet files.
+#'         Each row includes a 'source' column indicating the data origin.
 #' @keywords storage
 #' @export
 #' @examples
@@ -504,26 +512,49 @@ get_preprocessed_surveys <- function(pars, prefix = NULL) {
 #' # Get all available validated surveys
 #' all_validated <- get_validated_surveys(config)
 #'
-#' # Get only WCS and BA validated surveys
+#' # Get only WCS and BA validated surveys (using short names)
 #' some_validated <- get_validated_surveys(config, sources = c("wcs", "ba"))
+#'
+#' # Get WF validated surveys (maps to wf_surveys_v1)
+#' wf_validated <- get_validated_surveys(config, sources = "wf")
 #' }
 #'
 get_validated_surveys <- function(pars, sources = NULL) {
   # Identify available survey sources from config
   available_sources <- names(pars$surveys)
-  available_sources <- gsub("_surveys$", "", available_sources)
 
-  # If no sources specified, use all available
+  # Create a mapping for source aliases
+  # wf -> wf_surveys_v1 (default for backward compatibility)
+  source_mapping <- list(
+    "wcs" = "wcs_surveys",
+    "wf" = "wf_surveys_v1",
+    "ba" = "ba_surveys"
+  )
+
+  # If no sources specified, use all available that have validated_surveys
   if (is.null(sources)) {
-    sources <- available_sources
+    sources <- available_sources[sapply(available_sources, function(s) {
+      !is.null(pars$surveys[[s]]$validated_surveys)
+    })]
   } else {
+    # Map source aliases to full names
+    sources <- sapply(sources, function(s) {
+      if (s %in% names(source_mapping)) {
+        source_mapping[[s]]
+      } else if (s %in% available_sources) {
+        s
+      } else {
+        s  # Return as-is for error reporting
+      }
+    })
+
     # Validate requested sources
     invalid_sources <- setdiff(sources, available_sources)
     if (length(invalid_sources) > 0) {
       warning(sprintf(
         "Invalid source(s): %s. Available sources: %s",
         paste(invalid_sources, collapse = ", "),
-        paste(available_sources, collapse = ", ")
+        paste(c(names(source_mapping), available_sources), collapse = ", ")
       ))
       # Keep only valid sources
       sources <- intersect(sources, available_sources)
@@ -537,12 +568,16 @@ get_validated_surveys <- function(pars, sources = NULL) {
   all_surveys <- list()
 
   # Loop through each source and retrieve data
-  for (source in sources) {
-    source_key <- paste0(source, "_surveys")
-
+  for (source_key in sources) {
     # Skip if the source configuration doesn't exist
     if (!source_key %in% names(pars$surveys)) {
       logger::log_warn("Configuration for {source_key} not found, skipping")
+      next
+    }
+
+    # Skip if no validated_surveys configuration exists
+    if (is.null(pars$surveys[[source_key]]$validated_surveys)) {
+      logger::log_warn("No validated_surveys configuration for {source_key}, skipping")
       next
     }
 
@@ -551,7 +586,9 @@ get_validated_surveys <- function(pars, sources = NULL) {
       prefix = pars$surveys[[source_key]]$validated_surveys$file_prefix,
       provider = pars$storage$google$key,
       extension = "parquet",
-      version = pars$surveys[[source_key]]$version$preprocess,
+      version = pars$surveys[[source_key]]$validated_surveys$version %||%
+                pars$surveys[[source_key]]$version$preprocess %||%
+                "latest",
       options = pars$storage$google$options
     )
 
@@ -569,13 +606,16 @@ get_validated_surveys <- function(pars, sources = NULL) {
         # Read the parquet file
         surveys_df <- arrow::read_parquet(validated_surveys_file)
 
+        # Extract simple source name (remove _surveys suffix for labeling)
+        source_label <- gsub("_surveys.*$", "", source_key)
+
         # Add source column if it doesn't exist
         if (!"source" %in% names(surveys_df)) {
-          surveys_df$source <- source
+          surveys_df$source <- source_label
         }
 
         # Add to list
-        all_surveys[[source]] <- surveys_df
+        all_surveys[[source_key]] <- surveys_df
       },
       error = function(e) {
         logger::log_error(

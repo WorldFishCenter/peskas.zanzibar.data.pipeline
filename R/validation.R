@@ -458,14 +458,14 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   upload_parquet_to_cloud(
     data = flags_combined,
-    prefix = pars$surveys$wf_surveys$validation$flags$file_prefix,
+    prefix = pars$surveys$wf_surveys_v1$validation$flags$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
 
   upload_parquet_to_cloud(
     data = validated_data,
-    prefix = pars$surveys$wf_surveys$validated_surveys$file_prefix,
+    prefix = pars$surveys$wf_surveys_v1$validated_surveys$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
