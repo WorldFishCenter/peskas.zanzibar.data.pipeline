@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,33 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.1.0" id="peskaszanzibardatapipeline-410">peskas.zanzibar.data.pipeline 4.1.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-410"></a></h2>
+<div class="section level4">
+<h4 id="major-changes-4-1-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-4-1-0"></a></h4>
+<ul><li>
+<strong>Integration of New KoBoToolbox Survey Form Version:</strong> Added support for a new version of the WorldFish survey form (<code>wf_surveys_v2</code>) alongside the existing form (<code>wf_surveys_v1</code>). Data from both survey versions is now processed together in the preprocessing pipeline and handled properly throughout the validation workflow.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="improvements-4-1-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-4-1-0"></a></h4>
+<ul><li>
+<strong>Multi-Asset Validation Support:</strong>
+<ul><li>Updated validation system to query approval statuses from both survey form versions</li>
+<li>Enhanced <code><a href="../reference/validate_wf_surveys.html">validate_wf_surveys()</a></code> and <code><a href="../reference/sync_validation_submissions.html">sync_validation_submissions()</a></code> to handle submissions from multiple KoBoToolbox assets</li>
+<li>Ensured manually approved submissions from either form version are protected from automated flagging</li>
+</ul></li>
+<li>
+<strong>Configuration Updates:</strong>
+<ul><li>Added configuration for the new survey form version with shared credentials</li>
+<li>Cleaned up redundant configuration entries</li>
+<li>Updated code references to use versioned asset configurations</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="bug-fixes-4-1-0">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-4-1-0"></a></h4>
+<ul><li>Fixed validation logic that was only checking approval status from the original survey form, causing incorrect flagging of valid submissions from the new form version</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.0.0" id="peskaszanzibardatapipeline-400">peskas.zanzibar.data.pipeline 4.0.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-400"></a></h2>
 <div class="section level4">
