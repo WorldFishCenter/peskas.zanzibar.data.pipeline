@@ -10,6 +10,7 @@ env:
   WCS_SURVEYS_UNAME: ${{ secrets.WCS_SURVEYS_UNAME }}
   WCS_SURVEYS_PSSW: ${{ secrets.WCS_SURVEYS_PSSW }}
   WF_SURVEYS_ID: ${{ secrets.WF_SURVEYS_ID }}
+  WF_SURVEYS_ID_V2: ${{ secrets.WF_SURVEYS_ID_V2 }}
   WF_SURVEYS_UNAME: ${{ secrets.WF_SURVEYS_UNAME }}
   WF_SURVEYS_PSSW: ${{ secrets.WF_SURVEYS_PSSW }}
   WF_SURVEYS_TOKEN: ${{ secrets.WF_SURVEYS_TOKEN }}
@@ -84,8 +85,6 @@ jobs:
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
-      - name: Call preprocess_wcs_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
       - name: Call preprocess_ba_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_ba_surveys()'
       - name: Call preprocess_wf_surveys()
@@ -121,8 +120,8 @@ jobs:
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
-      - name: Call validate_wcs_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
+      # - name: Call validate_wcs_surveys()
+      #   run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
       - name: Call validate_ba_surveys()
         run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_ba_surveys()'
       - name: Call validate_wf_surveys()

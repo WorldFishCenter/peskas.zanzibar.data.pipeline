@@ -20,11 +20,11 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
-    wf_surveys:
-      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
+    wf_surveys_v1:
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
       version:
         preprocess: latest
       raw_surveys:
@@ -44,7 +44,17 @@ default:
         version: latest
       aggregated:
         file_prefix: wf-aggregated
-        version: latest      
+        version: latest
+    wf_surveys_v2:
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
+      version:
+        preprocess: latest
+      raw_surveys:
+        file_prefix: wf-v2-surveys-raw
+        version: latest
     ba_surveys:
       asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
       username: !expr Sys.getenv('BA_SURVEYS_UNAME')
@@ -88,14 +98,14 @@ default:
     mongodb:
       connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
       pipeline:
-        database_name: zanzibar-dev
+        database_name: zanzibar
         collection:
           monthly_metrics: monthly_metrics
           gear_metrics: gear_metrics
           taxa: taxa_proportions
           effort_map: effort_map
       validation:
-        database_name: zanzibar-dev
+        database_name: zanzibar
         collection:
           flags: surveys_flags
           enumerators_stats: enumerators_stats
@@ -112,7 +122,7 @@ default:
       key: gcs
       options:
         project: peskas
-        bucket: pds-zanzibar-dev
+        bucket: pds-zanzibar
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
   metadata:
     google_sheets:
@@ -150,29 +160,38 @@ local:
   inherits: development
   surveys:
     wcs_surveys:
-      asset_id: !expr readLines('auth/wcs_surveys_ID')
-      username: !expr readLines('auth/wcs_surveys_USNAME')
-      password: !expr readLines('auth/wcs_surveys_PSSW')
-    wf_surveys:
-      asset_id: !expr readLines('auth/wf_surveys_ID')
-      username: !expr readLines('auth/wf_surveys_USNAME')
-      password: !expr readLines('auth/wf_surveys_PSSW')
-      token: !expr readLines('auth/wf_surveys_TOKEN')
+      asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
+      username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
+    wf_surveys_v1:
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
+    wf_surveys_v2:
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
+    ba_surveys:
+      asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
+      username: !expr Sys.getenv('BA_SURVEYS_UNAME')
+      password: !expr Sys.getenv('BA_SURVEYS_PSSW')
   pds:
-    token: !expr readLines('auth/pds-token')
-    secret: !expr readLines('auth/pds-secret')
+    token: !expr Sys.getenv('PDS_TOKEN')
+    secret: !expr Sys.getenv('PDS_SECRET')
   storage:
     google:
       options:
-        service_account_key: !expr readLines("auth/gcp-sa-peskas_ingestion-key.json")
+        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
       options_coasts:
-        service_account_key: !expr readLines("auth/gcp-sa-peskas_ingestion-key.json")
+        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
     mongodb:
-      connection_string: !expr readLines("auth/mongodb_connection_string")
+      connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
   pds_storage:
     google:
       options:
-        service_account_key: !expr readLines("auth/gcp-sa-peskas_ingestion-key.json")
+        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
   metadata:
     google_sheets:
-      sheet_id: !expr readLines("auth/metadata-sheet-id")
+      sheet_id: !expr Sys.getenv("GOOGLE_SHEET_ID")

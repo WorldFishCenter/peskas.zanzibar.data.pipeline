@@ -4,7 +4,7 @@
 \alias{download_parquet_from_cloud}
 \title{#' Download Parquet File from Cloud Storage}
 \usage{
-download_parquet_from_cloud(prefix, provider, options)
+download_parquet_from_cloud(prefix, provider, options, version = "latest")
 }
 \arguments{
 \item{prefix}{The file prefix path in cloud storage}
@@ -12,6 +12,8 @@ download_parquet_from_cloud(prefix, provider, options)
 \item{provider}{The cloud storage provider key}
 
 \item{options}{Cloud storage provider options}
+
+\item{version}{The version to retrieve ("latest" or specific version string)}
 }
 \value{
 A tibble containing the data from the parquet file

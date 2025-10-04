@@ -1,3 +1,22 @@
+# peskas.zanzibar.data.pipeline 4.1.0
+
+### Major Changes
+- **Integration of New KoBoToolbox Survey Form Version:**
+  Added support for a new version of the WorldFish survey form (`wf_surveys_v2`) alongside the existing form (`wf_surveys_v1`). Data from both survey versions is now processed together in the preprocessing pipeline and handled properly throughout the validation workflow.
+
+### Improvements
+- **Multi-Asset Validation Support:**
+  - Updated validation system to query approval statuses from both survey form versions
+  - Enhanced `validate_wf_surveys()` and `sync_validation_submissions()` to handle submissions from multiple KoBoToolbox assets
+  - Ensured manually approved submissions from either form version are protected from automated flagging
+- **Configuration Updates:**
+  - Added configuration for the new survey form version with shared credentials
+  - Cleaned up redundant configuration entries
+  - Updated code references to use versioned asset configurations
+
+### Bug Fixes
+- Fixed validation logic that was only checking approval status from the original survey form, causing incorrect flagging of valid submissions from the new form version
+
 # peskas.zanzibar.data.pipeline 4.0.0
 
 ### Major Changes

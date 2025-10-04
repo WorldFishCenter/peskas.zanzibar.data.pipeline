@@ -63,6 +63,12 @@ add_version <- function(filename, extension = "", sha_nchar = 7, sep = "__") {
 read_config <- function() {
   logger::log_info("Loading configuration file...")
 
+  # Load .env file if it exists (for local development)
+  if (file.exists(".env")) {
+    logger::log_info("Loading environment variables from .env file")
+    dotenv::load_dot_env(".env")
+  }
+
   pars <- config::get(
     config = Sys.getenv("R_CONFIG_ACTIVE", "default"),
     file = system.file("conf.yml", package = "peskas.zanzibar.data.pipeline")

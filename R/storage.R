@@ -6,6 +6,7 @@
 #' @param prefix The file prefix path in cloud storage
 #' @param provider The cloud storage provider key
 #' @param options Cloud storage provider options
+#' @param version The version to retrieve ("latest" or specific version string)
 #'
 #' @return A tibble containing the data from the parquet file
 #'
@@ -20,12 +21,18 @@
 #'
 #' @keywords storage
 #' @export
-download_parquet_from_cloud <- function(prefix, provider, options) {
+download_parquet_from_cloud <- function(
+  prefix,
+  provider,
+  options,
+  version = "latest"
+) {
   # Generate cloud object name
   parquet_file <- cloud_object_name(
     prefix = prefix,
     provider = provider,
     extension = "parquet",
+    version = version,
     options = options
   )
 
@@ -66,8 +73,14 @@ download_parquet_from_cloud <- function(prefix, provider, options) {
 #' )
 #' }
 #' @export
-upload_parquet_to_cloud <- function(data, prefix, provider, options,
-                                    compression = "lz4", compression_level = 12) {
+upload_parquet_to_cloud <- function(
+  data,
+  prefix,
+  provider,
+  options,
+  compression = "lz4",
+  compression_level = 12
+) {
   # Generate filename with version
   preprocessed_filename <- prefix %>%
     add_version(extension = "parquet")
@@ -159,7 +172,8 @@ upload_cloud_file <- function(file, provider, options, name = file) {
   if ("gcs" %in% provider) {
     # Iterate over multiple files (and names)
     google_output <- purrr::map2(
-      file, name,
+      file,
+      name,
       ~ googleCloudStorageR::gcs_upload(
         file = .x,
         bucket = options$bucket,
@@ -204,8 +218,14 @@ upload_cloud_file <- function(file, provider, options, name = file) {
 #' )
 #' #'
 #' }
-cloud_object_name <- function(prefix, version = "latest", extension = "",
-                              provider, exact_match = FALSE, options) {
+cloud_object_name <- function(
+  prefix,
+  version = "latest",
+  extension = "",
+  provider,
+  exact_match = FALSE,
+  options
+) {
   cloud_storage_authenticate(provider, options)
 
   if ("gcs" %in% provider) {
@@ -224,7 +244,8 @@ cloud_object_name <- function(prefix, version = "latest", extension = "",
         into = c("base_name", "version", "ext"),
         # Version is separated with the "__" string
         sep = "__",
-        remove = FALSE
+        remove = FALSE,
+        fill = "right" # Handle files without proper version format
       ) %>%
       dplyr::filter(stringr::str_detect(.data$ext, paste0(extension, "$"))) %>%
       dplyr::group_by(.data$base_name, .data$ext)
@@ -282,7 +303,8 @@ download_cloud_file <- function(name, provider, options, file = name) {
 
   if ("gcs" %in% provider) {
     purrr::map2(
-      name, file,
+      name,
+      file,
       ~ googleCloudStorageR::gcs_get_object(
         object_name = .x,
         bucket = options$bucket,
@@ -320,9 +342,23 @@ download_cloud_file <- function(name, provider, options, file = name) {
 #' }
 #'
 #' @export
-mdb_collection_pull <- function(connection_string = NULL, collection_name = NULL, db_name = NULL) {
+mdb_collection_pull <- function(
+  connection_string = NULL,
+  collection_name = NULL,
+  db_name = NULL
+) {
+  # Check if mongolite is available
+  if (!requireNamespace("mongolite", quietly = TRUE)) {
+    stop("Package 'mongolite' needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+
   # Connect to the MongoDB collection
-  collection <- mongolite::mongo(collection = collection_name, db = db_name, url = connection_string)
+  collection <- mongolite::mongo(
+    collection = collection_name,
+    db = db_name,
+    url = connection_string
+  )
 
   # Retrieve the metadata document
   metadata <- collection$find(query = '{"type": "metadata"}')
@@ -374,7 +410,18 @@ mdb_collection_pull <- function(connection_string = NULL, collection_name = NULL
 #' }
 #'
 #' @export
-mdb_collection_push <- function(data = NULL, connection_string = NULL, collection_name = NULL, db_name = NULL) {
+mdb_collection_push <- function(
+  data = NULL,
+  connection_string = NULL,
+  collection_name = NULL,
+  db_name = NULL
+) {
+  # Check if mongolite is available
+  if (!requireNamespace("mongolite", quietly = TRUE)) {
+    stop("Package 'mongolite' needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+
   # Connect to the MongoDB collection
   collection <- mongolite::mongo(
     collection = collection_name,
@@ -445,10 +492,18 @@ get_preprocessed_surveys <- function(pars, prefix = NULL) {
 #' This function fetches data stored in Parquet format from sources defined in the configuration.
 #'
 #' @param pars A list representing the configuration settings, typically obtained from a YAML configuration file.
-#' @param sources Character vector specifying which survey sources to retrieve (e.g., "wcs", "wf", "ba").
-#'                If NULL (default), retrieves data from all available sources.
+#'             The configuration should include:
+#'             - `surveys.<source>_surveys.validated_surveys.file_prefix`: File prefix for validated surveys
+#'             - `surveys.<source>_surveys.validated_surveys.version`: Version to retrieve (optional, defaults to `version.preprocess` or "latest")
+#'             - `storage.google.key`: Storage provider key
+#'             - `storage.google.options`: Storage provider options (bucket, project, service_account_key)
+#' @param sources Character vector specifying which survey sources to retrieve.
+#'                Accepts short names ("wcs", "wf", "ba") or full config keys ("wcs_surveys", "wf_surveys_v1", etc.).
+#'                The "wf" alias maps to "wf_surveys_v1" for backward compatibility.
+#'                If NULL (default), retrieves data from all available sources with validated_surveys configuration.
 #'
 #' @return A dataframe of validated survey landings from all requested sources, loaded from Parquet files.
+#'         Each row includes a 'source' column indicating the data origin.
 #' @keywords storage
 #' @export
 #' @examples
@@ -457,26 +512,49 @@ get_preprocessed_surveys <- function(pars, prefix = NULL) {
 #' # Get all available validated surveys
 #' all_validated <- get_validated_surveys(config)
 #'
-#' # Get only WCS and BA validated surveys
+#' # Get only WCS and BA validated surveys (using short names)
 #' some_validated <- get_validated_surveys(config, sources = c("wcs", "ba"))
+#'
+#' # Get WF validated surveys (maps to wf_surveys_v1)
+#' wf_validated <- get_validated_surveys(config, sources = "wf")
 #' }
 #'
 get_validated_surveys <- function(pars, sources = NULL) {
   # Identify available survey sources from config
   available_sources <- names(pars$surveys)
-  available_sources <- gsub("_surveys$", "", available_sources)
 
-  # If no sources specified, use all available
+  # Create a mapping for source aliases
+  # wf -> wf_surveys_v1 (default for backward compatibility)
+  source_mapping <- list(
+    "wcs" = "wcs_surveys",
+    "wf" = "wf_surveys_v1",
+    "ba" = "ba_surveys"
+  )
+
+  # If no sources specified, use all available that have validated_surveys
   if (is.null(sources)) {
-    sources <- available_sources
+    sources <- available_sources[sapply(available_sources, function(s) {
+      !is.null(pars$surveys[[s]]$validated_surveys)
+    })]
   } else {
+    # Map source aliases to full names
+    sources <- sapply(sources, function(s) {
+      if (s %in% names(source_mapping)) {
+        source_mapping[[s]]
+      } else if (s %in% available_sources) {
+        s
+      } else {
+        s  # Return as-is for error reporting
+      }
+    })
+
     # Validate requested sources
     invalid_sources <- setdiff(sources, available_sources)
     if (length(invalid_sources) > 0) {
       warning(sprintf(
         "Invalid source(s): %s. Available sources: %s",
         paste(invalid_sources, collapse = ", "),
-        paste(available_sources, collapse = ", ")
+        paste(c(names(source_mapping), available_sources), collapse = ", ")
       ))
       # Keep only valid sources
       sources <- intersect(sources, available_sources)
@@ -490,12 +568,16 @@ get_validated_surveys <- function(pars, sources = NULL) {
   all_surveys <- list()
 
   # Loop through each source and retrieve data
-  for (source in sources) {
-    source_key <- paste0(source, "_surveys")
-
+  for (source_key in sources) {
     # Skip if the source configuration doesn't exist
     if (!source_key %in% names(pars$surveys)) {
       logger::log_warn("Configuration for {source_key} not found, skipping")
+      next
+    }
+
+    # Skip if no validated_surveys configuration exists
+    if (is.null(pars$surveys[[source_key]]$validated_surveys)) {
+      logger::log_warn("No validated_surveys configuration for {source_key}, skipping")
       next
     }
 
@@ -504,7 +586,9 @@ get_validated_surveys <- function(pars, sources = NULL) {
       prefix = pars$surveys[[source_key]]$validated_surveys$file_prefix,
       provider = pars$storage$google$key,
       extension = "parquet",
-      version = pars$surveys[[source_key]]$version$preprocess,
+      version = pars$surveys[[source_key]]$validated_surveys$version %||%
+                pars$surveys[[source_key]]$version$preprocess %||%
+                "latest",
       options = pars$storage$google$options
     )
 
@@ -522,16 +606,21 @@ get_validated_surveys <- function(pars, sources = NULL) {
         # Read the parquet file
         surveys_df <- arrow::read_parquet(validated_surveys_file)
 
+        # Extract simple source name (remove _surveys suffix for labeling)
+        source_label <- gsub("_surveys.*$", "", source_key)
+
         # Add source column if it doesn't exist
         if (!"source" %in% names(surveys_df)) {
-          surveys_df$source <- source
+          surveys_df$source <- source_label
         }
 
         # Add to list
-        all_surveys[[source]] <- surveys_df
+        all_surveys[[source_key]] <- surveys_df
       },
       error = function(e) {
-        logger::log_error("Failed to retrieve {validated_surveys_file}: {e$message}")
+        logger::log_error(
+          "Failed to retrieve {validated_surveys_file}: {e$message}"
+        )
       }
     )
   }
@@ -548,7 +637,9 @@ get_validated_surveys <- function(pars, sources = NULL) {
     common_cols <- Reduce(intersect, cols)
 
     if (length(common_cols) < 3) {
-      logger::log_warn("Sources have very few common columns, binding may create sparse data")
+      logger::log_warn(
+        "Sources have very few common columns, binding may create sparse data"
+      )
     }
 
     # Combine all dataframes, keeping all columns (dplyr bind_rows handles different column sets)
@@ -603,6 +694,13 @@ get_validated_surveys <- function(pars, sources = NULL) {
 #' }
 get_metadata <- function(table = NULL, log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
+
+  # Check if googlesheets4 is available
+  if (!requireNamespace("googlesheets4", quietly = TRUE)) {
+    stop("Package 'googlesheets4' needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+
   conf <- read_config()
 
   logger::log_info("Authenticating for google drive")
@@ -632,11 +730,13 @@ get_metadata <- function(table = NULL, log_threshold = logger::DEBUG) {
     logger::log_info("Downloading all metadata tables")
     tables <- conf$metadata$google_sheets$tables %>%
       rlang::set_names() %>%
-      purrr::map(~ googlesheets4::range_read(
-        ss = conf$metadata$google_sheets$sheet_id,
-        sheet = .x,
-        col_types = "c"
-      ))
+      purrr::map(
+        ~ googlesheets4::range_read(
+          ss = conf$metadata$google_sheets$sheet_id,
+          sheet = .x,
+          col_types = "c"
+        )
+      )
   }
 
   tables
@@ -676,16 +776,24 @@ get_metadata <- function(table = NULL, log_threshold = logger::DEBUG) {
 #' @export
 #'
 get_trips <- function(
-    token = NULL,
-    secret = NULL,
-    dateFrom = NULL,
-    dateTo = NULL,
-    imeis = NULL,
-    deviceInfo = FALSE,
-    withLastSeen = FALSE,
-    tags = NULL) {
+  token = NULL,
+  secret = NULL,
+  dateFrom = NULL,
+  dateTo = NULL,
+  imeis = NULL,
+  deviceInfo = FALSE,
+  withLastSeen = FALSE,
+  tags = NULL
+) {
   # Base URL
-  base_url <- paste0("https://analytics.pelagicdata.com/api/", token, "/v1/trips/", dateFrom, "/", dateTo)
+  base_url <- paste0(
+    "https://analytics.pelagicdata.com/api/",
+    token,
+    "/v1/trips/",
+    dateFrom,
+    "/",
+    dateTo
+  )
 
   # Build query parameters
   query_params <- list()
@@ -715,7 +823,12 @@ get_trips <- function(
 
   # Check for HTTP errors
   if (httr2::resp_status(resp) != 200) {
-    stop("Request failed with status: ", httr2::resp_status(resp), "\n", httr2::resp_body_string(resp))
+    stop(
+      "Request failed with status: ",
+      httr2::resp_status(resp),
+      "\n",
+      httr2::resp_body_string(resp)
+    )
   }
 
   # Read CSV content
@@ -724,7 +837,6 @@ get_trips <- function(
 
   return(trips_data)
 }
-
 
 
 #' Get Trip Points from Pelagic Data Systems API
@@ -787,18 +899,20 @@ get_trips <- function(
 #' @keywords ingestion
 #'
 #' @export
-get_trip_points <- function(token = NULL,
-                            secret = NULL,
-                            id = NULL,
-                            dateFrom = NULL,
-                            dateTo = NULL,
-                            path = NULL,
-                            imeis = NULL,
-                            deviceInfo = FALSE,
-                            errant = FALSE,
-                            withLastSeen = FALSE,
-                            tags = NULL,
-                            overwrite = TRUE) {
+get_trip_points <- function(
+  token = NULL,
+  secret = NULL,
+  id = NULL,
+  dateFrom = NULL,
+  dateTo = NULL,
+  path = NULL,
+  imeis = NULL,
+  deviceInfo = FALSE,
+  errant = FALSE,
+  withLastSeen = FALSE,
+  tags = NULL,
+  overwrite = TRUE
+) {
   # Build base URL based on whether ID is provided
   if (!is.null(id)) {
     base_url <- paste0(

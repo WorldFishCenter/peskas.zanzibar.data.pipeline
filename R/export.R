@@ -61,7 +61,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
   )
 
   for (name in table_names) {
-    prefix <- pars$surveys$wf_surveys$summaries$file_prefix %>%
+    prefix <- pars$surveys$wf_surveys_v1$summaries$file_prefix %>%
       paste0("_", name)
 
     data_summaries[[name]] <- download_parquet_from_cloud(
@@ -79,10 +79,10 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
 
   logger::log_info("Downloading aggregated catch data from cloud storage...")
   aggregated_filename <- cloud_object_name(
-    prefix = pars$surveys$wf_surveys$aggregated$file_prefix,
+    prefix = pars$surveys$wf_surveys_v1$aggregated$file_prefix,
     provider = pars$storage$google$key,
     extension = "rds",
-    version = pars$pds$pds_tracks$version,
+    version = pars$surveys$wf_surveys_v1$aggregated$version,
     options = pars$storage$google$options
   )
 

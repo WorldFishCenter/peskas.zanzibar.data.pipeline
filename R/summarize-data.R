@@ -66,22 +66,50 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
     workers = future::availableCores() - 2
   ) # Use available cores minus 2
 
-  # get validation table
-  valid_ids <-
-    unique(validated_surveys$submission_id) %>%
+  # get validation table and store approved ids from both assets
+  submission_ids <- unique(validated_surveys$submission_id)
+
+  # Query validation status from both survey versions using same credentials
+  logger::log_info(
+    "Querying validation status from both wf_surveys_v1 and wf_surveys_v2 assets"
+  )
+
+  validation_results <- list()
+
+  # Query wf_surveys v1 (original asset)
+  validation_results$v1 <- submission_ids %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys$asset_id,
-      token = pars$surveys$wf_surveys$token,
+      asset_id = pars$surveys$wf_surveys_v1$asset_id,
+      token = pars$surveys$wf_surveys_v1$token,
       .options = furrr::furrr_options(seed = TRUE)
-    ) |>
-    dplyr::filter(.data$validation_status == "validation_status_approved") |>
-    dplyr::pull(.data$submission_id) |>
+    )
+
+  # Query wf_surveys v2 (new asset)
+  validation_results$v2 <- submission_ids %>%
+    furrr::future_map_dfr(
+      get_validation_status,
+      asset_id = pars$surveys$wf_surveys_v2$asset_id,
+      token = pars$surveys$wf_surveys_v2$token,
+      .options = furrr::furrr_options(seed = TRUE)
+    )
+
+  # Combine validation results and extract approved IDs
+  valid_ids <- validation_results %>%
+    dplyr::bind_rows() %>%
+    dplyr::filter(.data$validation_status == "validation_status_approved") %>%
+    dplyr::pull(.data$submission_id) %>%
     unique()
+
+  logger::log_info(
+    "Found {length(valid_ids)} approved submissions across both assets"
+  )
 
   clean_data <-
     validated_surveys |>
     dplyr::filter(.data$submission_id %in% valid_ids)
+
+  f_metrics <- calculate_fishery_metrics(data = clean_data)
 
   indicators_df <-
     clean_data |>
@@ -103,6 +131,9 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
       "fuel_L",
       "trip_duration",
       "vessel_type",
+      "no_men_fishers",
+      "no_men_fishers",
+      "no_child_fishers",
       "n_fishers",
       "catch_taxon",
       "catch_price",
@@ -123,6 +154,9 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
           "trip_duration",
           "vessel_type",
           "n_fishers",
+          "no_men_fishers",
+          "no_men_fishers",
+          "no_child_fishers",
           "catch_price"
         ),
         ~ dplyr::first(.x)
@@ -377,7 +411,6 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
-
   # Dataframes to upload
   dataframes_to_upload <- list(
     monthly_summaries = monthly_summaries,
@@ -389,7 +422,7 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
 
   # Write each data frame to its own parquet file with versioning and upload
   for (name in names(dataframes_to_upload)) {
-    filename <- pars$surveys$wf_surveys$summaries$file_prefix %>%
+    filename <- pars$surveys$wf_surveys_v1$summaries$file_prefix %>%
       paste0("_", name) %>% # Add the table name to distinguish files
       add_version(extension = "parquet")
 
@@ -407,4 +440,11 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
       options = pars$storage$google$options
     )
   }
+
+  upload_parquet_to_cloud(
+    data = f_metrics,
+    prefix = "zanzibar_fishery_metrics",
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options_coasts
+  )
 }
