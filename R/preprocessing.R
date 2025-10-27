@@ -268,14 +268,10 @@ preprocess_wf_surveys <- function(
   if (!is.null(v1_data) && !is.null(v2_data)) {
     logger::log_info("Combining Version 1 and Version 2 datasets")
     preprocessed_data <- dplyr::bind_rows(v1_data, v2_data)
-  } else if (!is.null(v1_data)) {
-    logger::log_info("Using only Version 1 data")
-    preprocessed_data <- v1_data
-  } else if (!is.null(v2_data)) {
-    logger::log_info("Using only Version 2 data")
-    preprocessed_data <- v2_data
   } else {
-    stop("No survey data could be processed from either version")
+    stop(
+      "Versions can't be combined because at least one version is unavailable"
+    )
   }
 
   # Sort final combined data
