@@ -693,3 +693,61 @@ update_validation_status <- function(
     }
   )
 }
+
+#' Process Submissions with Rate-Limited Parallel API Calls
+#'
+#' @description
+#' Helper function to process multiple submissions in parallel with rate limiting,
+#' progress tracking, and error logging. This function is designed to handle
+#' KoboToolbox API calls efficiently while respecting rate limits.
+#'
+#' @param submission_ids Character vector of submission IDs to process
+#' @param process_fn Function to apply to each submission ID. Should return a data frame.
+#' @param description Character string describing what's being processed (for logging)
+#' @param rate_limit Numeric delay in seconds between requests (default: 0.2)
+#'
+#' @return Data frame with results from process_fn for all submissions
+#'
+#' @keywords internal
+#' @export
+process_submissions_parallel <- function(
+  submission_ids,
+  process_fn,
+  description = "submissions",
+  rate_limit = 0.2
+) {
+  logger::log_info("Processing {length(submission_ids)} {description}")
+
+  progressr::with_progress({
+    p <- progressr::progressor(along = submission_ids)
+
+    results <- furrr::future_map_dfr(
+      submission_ids,
+      function(id) {
+        # Add delay to respect rate limits
+        Sys.sleep(rate_limit)
+
+        result <- process_fn(id)
+        p()
+        result
+      },
+      .options = furrr::furrr_options(seed = TRUE)
+    )
+
+    # Log failures if update_success column exists
+    if ("update_success" %in% names(results)) {
+      failures <- results %>% dplyr::filter(!.data$update_success)
+      if (nrow(failures) > 0) {
+        logger::log_warn(
+          "Failed to update {nrow(failures)} {description}: {paste(failures$submission_id, collapse = ', ')}"
+        )
+      } else {
+        logger::log_info(
+          "Successfully processed all {length(submission_ids)} {description}"
+        )
+      }
+    }
+
+    results
+  })
+}

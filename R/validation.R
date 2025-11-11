@@ -638,18 +638,20 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
 #'
 #' @description
 #' Synchronizes validation statuses between the local system and KoboToolbox by processing
-#' validation flags and updating submission statuses accordingly. This function handles
-#' both flagged (not approved) and clean (approved) submissions in parallel.
+#' validation flags and updating submission statuses accordingly. This function respects
+#' manual human approvals and handles both flagged and clean submissions in parallel with rate limiting.
 #'
 #' @details
 #' The function follows these steps:
 #' 1. Downloads the current validation flags from cloud storage
-#' 2. Sets up parallel processing using the future package
-#' 3. Processes submissions with alert flags (marking them as not approved in KoboToolbox)
-#' 4. Processes submissions without alert flags (marking them as approved in KoboToolbox)
-#' 5. Pushes all validation flags to MongoDB for record-keeping
+#' 2. Fetches current validation status from KoboToolbox to identify manual approvals
+#' 3. Identifies manually approved submissions (preserves human decisions)
+#' 4. Processes submissions with alert flags (marking them as not approved in KoboToolbox)
+#' 5. Processes submissions without alert flags (marking them as approved in KoboToolbox)
+#' 6. Pushes all validation flags with KoboToolbox status to MongoDB for record-keeping
 #'
-#' Progress reporting is enabled to track the status of submissions being processed.
+#' The function processes both wf_surveys_v1 and wf_surveys_v2 assets, attempting to
+#' update submissions in both locations. Rate limiting is applied to protect the API.
 #'
 #' @param log_threshold The logging level threshold for the logger package (e.g., DEBUG, INFO).
 #'        Default is logger::DEBUG.
@@ -660,10 +662,14 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
 #' The function uses the future and furrr packages for parallel processing, with the number
 #' of workers set to system cores minus 2 to prevent resource exhaustion.
 #'
+#' @section Rate Limiting:
+#' API calls are rate-limited with delays between requests to avoid overwhelming the
+#' KoboToolbox server. Max 4 workers with 0.1-0.2s delays between requests.
+#'
 #' @note
 #' This function requires proper configuration in the config file, including:
 #' - MongoDB connection parameters
-#' - KoboToolbox asset ID and token
+#' - KoboToolbox asset IDs and tokens for both v1 and v2
 #' - Google cloud storage parameters
 #'
 #' @examples
@@ -676,10 +682,9 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
 #' }
 #'
 #' @importFrom logger log_threshold log_info
-#' @importFrom dplyr filter pull
-#' @importFrom future plan multicore availableCores
-#' @importFrom progressr handlers handler_progress with_progress progressor
-#' @importFrom furrr future_walk
+#' @importFrom dplyr filter pull bind_rows
+#' @importFrom future plan multisession availableCores
+#' @importFrom progressr handlers handler_progress
 #'
 #' @keywords workflow validation
 #' @export
@@ -688,6 +693,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 
   pars <- read_config()
 
+  # Download validation flags
   validation_flags <-
     download_parquet_from_cloud(
       prefix = pars$surveys$wf_surveys_v1$validation$flags$file_prefix,
@@ -695,21 +701,11 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       options = pars$storage$google$options
     )
 
-  validation_flags_long <-
-    validation_flags |>
-    dplyr::mutate(alert_flag = as.character(.data$alert_flag)) %>%
-    tidyr::separate_rows("alert_flag", sep = ",\\s*")
-
-  # 1. First handle submissions with alert flags (mark as not approved)
-  flagged_submissions <-
-    validation_flags %>%
-    dplyr::filter(!is.na(.data$alert_flag)) %>%
-    dplyr::pull(.data$submission_id) %>%
-    unique()
-
+  # Set up limited parallel processing with rate limiting
+  # Max 4 workers to avoid overwhelming the server
   future::plan(
     strategy = future::multisession,
-    workers = future::availableCores() - 2
+    workers = min(4, future::availableCores() - 2)
   )
 
   # Enable progress reporting globally
@@ -717,24 +713,96 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     format = "[:bar] :current/:total (:percent) eta: :eta"
   ))
 
+  # 1. Fetch current validation status to identify manual approvals
+  all_submission_ids <- unique(validation_flags$submission_id)
+
   logger::log_info(
-    "Processing {} submissions with alert flags",
-    length(flagged_submissions)
+    "Fetching current validation status for {length(all_submission_ids)} submissions to identify manual approvals"
   )
 
-  # Helper function to update validation status across both assets
-  update_validation_both_assets <- function(
-    submission_id,
-    status,
-    progress_fn = NULL
-  ) {
-    updated <- FALSE
+  # Helper function to get validation status from both assets
+  get_validation_status_both_assets <- function(id) {
+    # Try v1 first
+    result_v1 <- tryCatch(
+      {
+        get_validation_status(
+          submission_id = id,
+          asset_id = pars$surveys$wf_surveys_v1$asset_id,
+          token = pars$surveys$wf_surveys_v1$token
+        )
+      },
+      error = function(e) NULL
+    )
 
+    # Try v2
+    result_v2 <- tryCatch(
+      {
+        get_validation_status(
+          submission_id = id,
+          asset_id = pars$surveys$wf_surveys_v2$asset_id,
+          token = pars$surveys$wf_surveys_v2$token
+        )
+      },
+      error = function(e) NULL
+    )
+
+    # Return the first successful result
+    if (!is.null(result_v1) && nrow(result_v1) > 0) {
+      return(result_v1)
+    } else if (!is.null(result_v2) && nrow(result_v2) > 0) {
+      return(result_v2)
+    } else {
+      # Return empty tibble if both failed
+      return(dplyr::tibble(
+        submission_id = id,
+        validation_status = "not_validated",
+        validated_at = lubridate::as_datetime(NA),
+        validated_by = NA_character_
+      ))
+    }
+  }
+
+  current_kobo_status <- process_submissions_parallel(
+    submission_ids = all_submission_ids,
+    process_fn = get_validation_status_both_assets,
+    description = "current validation statuses",
+    rate_limit = 0.1
+  )
+
+  # 2. Identify manually approved submissions (preserve human decisions)
+  # Get username from either v1 or v2 config
+  system_username <- pars$surveys$wf_surveys_v1$username
+
+  manual_approved_ids <- current_kobo_status %>%
+    dplyr::filter(
+      .data$validation_status == "validation_status_approved" &
+        !is.na(.data$validated_by) &
+        .data$validated_by != "" &
+        .data$validated_by != system_username
+    ) %>%
+    dplyr::pull(.data$submission_id)
+
+  if (length(manual_approved_ids) > 0) {
+    logger::log_info(
+      "Found {length(manual_approved_ids)} manually approved submissions - these will be preserved"
+    )
+  }
+
+  # 3. Process submissions with alert flags (mark as not approved)
+  # EXCLUDE manually approved submissions
+  flagged_submissions <- validation_flags %>%
+    dplyr::filter(!is.na(.data$alert_flag)) %>%
+    dplyr::pull(.data$submission_id) %>%
+    unique() %>%
+    setdiff(manual_approved_ids)
+
+  # Helper function to update validation status across both assets
+  update_validation_both_assets <- function(id, status) {
     # Try wf_surveys v1 first
     result_v1 <- tryCatch(
       {
         update_validation_status(
-          submission_id = submission_id,
+          submission_id = id,
           asset_id = pars$surveys$wf_surveys_v1$asset_id,
           token = pars$surveys$wf_surveys_v1$token,
           status = status
@@ -743,19 +811,11 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       error = function(e) NULL
     )
 
-    if (
-      !is.null(result_v1) &&
-        !is.na(result_v1$update_success) &&
-        result_v1$update_success
-    ) {
-      updated <- TRUE
-    }
-
     # Try wf_surveys v2 (will silently fail if submission doesn't exist in this asset)
     result_v2 <- tryCatch(
       {
         update_validation_status(
-          submission_id = submission_id,
+          submission_id = id,
           asset_id = pars$surveys$wf_surveys_v2$asset_id,
           token = pars$surveys$wf_surveys_v2$token,
           status = status
@@ -764,73 +824,140 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       error = function(e) NULL
     )
 
-    if (
-      !is.null(result_v2) &&
-        !is.na(result_v2$update_success) &&
-        result_v2$update_success
-    ) {
-      updated <- TRUE
+    # Return the first successful result, or create a failure record
+    if (!is.null(result_v1) && nrow(result_v1) > 0) {
+      return(result_v1)
+    } else if (!is.null(result_v2) && nrow(result_v2) > 0) {
+      return(result_v2)
+    } else {
+      return(dplyr::tibble(
+        submission_id = id,
+        validation_status = NA_character_,
+        validated_at = lubridate::as_datetime(NA),
+        validated_by = NA_character_,
+        update_success = FALSE
+      ))
     }
-
-    if (!is.null(progress_fn)) {
-      status_text <- if (status == "validation_status_not_approved") {
-        "not approved"
-      } else {
-        "approved"
-      }
-      progress_fn(message = paste("Marked", status_text, ":", submission_id))
-    }
-
-    return(updated)
   }
 
-  progressr::with_progress({
-    p_flagged <- progressr::progressor(along = flagged_submissions)
+  flagged_results <- if (length(flagged_submissions) > 0) {
+    process_submissions_parallel(
+      submission_ids = flagged_submissions,
+      process_fn = function(id) {
+        update_validation_both_assets(
+          id = id,
+          status = "validation_status_not_approved"
+        )
+      },
+      description = "flagged submissions",
+      rate_limit = 0.1
+    )
+  } else {
+    logger::log_info(
+      "No flagged submissions to update (excluding manual approvals)"
+    )
+    dplyr::tibble()
+  }
 
-    flagged_submissions %>%
-      furrr::future_walk(
-        function(id) {
-          update_validation_both_assets(
-            submission_id = id,
-            status = "validation_status_not_approved",
-            progress_fn = p_flagged
-          )
-        },
-        .options = furrr::furrr_options(seed = TRUE)
-      )
-  })
-
-  # 2. Now handle submissions without alert flags (mark as approved)
-  clean_submissions <-
-    validation_flags %>%
+  # 4. Process submissions without alert flags (mark as approved)
+  # Skip submissions that are already approved to avoid redundant API calls
+  clean_submissions <- validation_flags %>%
     dplyr::filter(is.na(.data$alert_flag)) %>%
     dplyr::pull(.data$submission_id) %>%
     unique()
 
-  logger::log_info(
-    "Processing {} submissions without alert flags",
-    length(clean_submissions)
+  # Filter out submissions that are already approved
+  clean_to_update <- clean_submissions %>%
+    setdiff(
+      current_kobo_status %>%
+        dplyr::filter(
+          .data$validation_status == "validation_status_approved"
+        ) %>%
+        dplyr::pull(.data$submission_id)
+    )
+
+  clean_results <- if (length(clean_to_update) > 0) {
+    process_submissions_parallel(
+      submission_ids = clean_to_update,
+      process_fn = function(id) {
+        update_validation_both_assets(
+          id = id,
+          status = "validation_status_approved"
+        )
+      },
+      description = "clean submissions",
+      rate_limit = 0.2
+    )
+  } else {
+    logger::log_info(
+      "No clean submissions need updating (all already approved)"
+    )
+    dplyr::tibble()
+  }
+
+  # For submissions we didn't update (already approved), get their current status
+  already_approved_clean <- current_kobo_status %>%
+    dplyr::filter(
+      .data$submission_id %in%
+        clean_submissions &
+        .data$validation_status == "validation_status_approved" &
+        !.data$submission_id %in% manual_approved_ids # Don't duplicate manual approvals
+    ) %>%
+    dplyr::select(
+      "submission_id",
+      "validation_status",
+      "validated_at",
+      "validated_by"
+    )
+
+  # 5. Combine validation statuses from all sources
+  logger::log_info("Combining validation status results")
+
+  current_kobo_status <- dplyr::bind_rows(
+    flagged_results %>%
+      dplyr::select(
+        "submission_id",
+        "validation_status",
+        "validated_at",
+        "validated_by"
+      ),
+    clean_results %>%
+      dplyr::select(
+        "submission_id",
+        "validation_status",
+        "validated_at",
+        "validated_by"
+      ),
+    current_kobo_status %>%
+      dplyr::filter(.data$submission_id %in% manual_approved_ids) %>%
+      dplyr::select(
+        "submission_id",
+        "validation_status",
+        "validated_at",
+        "validated_by"
+      ),
+    already_approved_clean
   )
 
-  progressr::with_progress({
-    p_clean <- progressr::progressor(along = clean_submissions)
+  # Add current KoboToolbox validation status to validation_flags
+  validation_flags_with_kobo_status <-
+    validation_flags %>%
+    dplyr::left_join(
+      current_kobo_status,
+      by = "submission_id",
+      suffix = c("", "_kobo")
+    )
 
-    clean_submissions %>%
-      furrr::future_walk(
-        function(id) {
-          update_validation_both_assets(
-            submission_id = id,
-            status = "validation_status_approved",
-            progress_fn = p_clean
-          )
-        },
-        .options = furrr::furrr_options(seed = TRUE)
-      )
-  })
+  # Create long format for enumerators statistics
+  validation_flags_long <-
+    validation_flags_with_kobo_status |>
+    dplyr::mutate(alert_flag = as.character(.data$alert_flag)) %>%
+    tidyr::separate_rows("alert_flag", sep = ",\\s*") |>
+    dplyr::select(-c(dplyr::starts_with("valid")))
 
-  # Push the validation flags to MongoDB
+  # Push the validation flags with KoboToolbox status to MongoDB
   mdb_collection_push(
-    data = validation_flags,
+    data = validation_flags_with_kobo_status,
     connection_string = pars$storage$mongodb$connection_string,
     collection_name = pars$storage$mongodb$validation$collection$flags,
     db_name = pars$storage$mongodb$validation$database_name

@@ -48,3 +48,6 @@ docs
 *.tsv
 *.parquet
 *.geojson
+
+## Other
+CLAUDE.md

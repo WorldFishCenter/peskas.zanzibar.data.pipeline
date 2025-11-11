@@ -15,26 +15,28 @@ None. The function performs status updates and database operations as side effec
 }
 \description{
 Synchronizes validation statuses between the local system and KoboToolbox by processing
-validation flags and updating submission statuses accordingly. This function handles
-both flagged (not approved) and clean (approved) submissions in parallel.
+validation flags and updating submission statuses accordingly. This function respects
+manual human approvals and handles both flagged and clean submissions in parallel with rate limiting.
 }
 \details{
 The function follows these steps:
 \enumerate{
 \item Downloads the current validation flags from cloud storage
-\item Sets up parallel processing using the future package
+\item Fetches current validation status from KoboToolbox to identify manual approvals
+\item Identifies manually approved submissions (preserves human decisions)
 \item Processes submissions with alert flags (marking them as not approved in KoboToolbox)
 \item Processes submissions without alert flags (marking them as approved in KoboToolbox)
-\item Pushes all validation flags to MongoDB for record-keeping
+\item Pushes all validation flags with KoboToolbox status to MongoDB for record-keeping
 }
 
-Progress reporting is enabled to track the status of submissions being processed.
+The function processes both wf_surveys_v1 and wf_surveys_v2 assets, attempting to
+update submissions in both locations. Rate limiting is applied to protect the API.
 }
 \note{
 This function requires proper configuration in the config file, including:
 \itemize{
 \item MongoDB connection parameters
-\item KoboToolbox asset ID and token
+\item KoboToolbox asset IDs and tokens for both v1 and v2
 \item Google cloud storage parameters
 }
 }
@@ -42,6 +44,12 @@ This function requires proper configuration in the config file, including:
 
 The function uses the future and furrr packages for parallel processing, with the number
 of workers set to system cores minus 2 to prevent resource exhaustion.
+}
+
+\section{Rate Limiting}{
+
+API calls are rate-limited with delays between requests to avoid overwhelming the
+KoboToolbox server. Max 4 workers with 0.1-0.2s delays between requests.
 }
 
 \examples{
