@@ -1,0 +1,105 @@
+# Estimate Fleet-Wide Activity from Sample Data
+
+Estimates total fleet activity by scaling sample-based trip statistics
+using boat registry data. Calculates sampling rates and confidence
+levels for the estimates.
+
+## Usage
+
+``` r
+estimate_fleet_activity(monthly_stats, boat_registry)
+```
+
+## Arguments
+
+- monthly_stats:
+
+  Data frame from
+  [`calculate_monthly_trip_stats()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_monthly_trip_stats.md)
+  containing:
+
+  - district: District name
+
+  - date_month: Month as date
+
+  - sample_total_trips: Total trips from tracked boats
+
+  - sample_boats_tracked: Number of tracked boats
+
+  - avg_trip_duration_hrs: Average trip duration
+
+  - avg_trips_per_boat_per_month: Average trips per boat
+
+- boat_registry:
+
+  Data frame with columns:
+
+  - district: District name (must match monthly_stats)
+
+  - total_boats: Total number of boats registered in district
+
+## Value
+
+A data frame combining monthly statistics with fleet estimates:
+
+- district: District name
+
+- date_month: Month as date
+
+- sample_total_trips: Total trips from tracked boats
+
+- sample_boats_tracked: Number of tracked boats
+
+- avg_trip_duration_hrs: Average trip duration
+
+- avg_trips_per_boat_per_month: Average trips per boat
+
+- estimated_total_trips: Estimated trips for entire fleet
+
+- sampling_rate: Proportion of fleet tracked (0-1)
+
+- estimate_confidence: Confidence level ("High", "Medium", "Low")
+
+## Details
+
+This function combines monthly trip statistics from GPS-tracked boats
+with boat registry data to estimate fleet-wide fishing activity. It
+calculates:
+
+- Estimated total trips if all boats were tracked
+
+- Sampling rate (tracked boats / total boats)
+
+- Confidence levels based on sampling coverage
+
+Confidence levels are assigned as:
+
+- High: ≥30% of fleet tracked
+
+- Medium: 10-29% of fleet tracked
+
+- Low: \<10% of fleet tracked
+
+## See also
+
+- [`calculate_monthly_trip_stats()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_monthly_trip_stats.md)
+  for generating input monthly statistics
+
+- [`calculate_district_totals()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_district_totals.md)
+  for combining with catch/revenue data
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# First calculate monthly stats
+monthly_stats <- calculate_monthly_trip_stats(trips_data)
+
+# Then estimate fleet activity
+fleet_estimates <- estimate_fleet_activity(monthly_stats, boat_registry)
+
+# Check confidence levels
+fleet_estimates |>
+  dplyr::count(estimate_confidence)
+} # }
+```

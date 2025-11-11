@@ -1,0 +1,84 @@
+# Synchronize Validation Statuses with KoboToolbox
+
+Synchronizes validation statuses between the local system and
+KoboToolbox by processing validation flags and updating submission
+statuses accordingly. This function respects manual human approvals and
+handles both flagged and clean submissions in parallel with rate
+limiting.
+
+## Usage
+
+``` r
+sync_validation_submissions(log_threshold = logger::DEBUG)
+```
+
+## Arguments
+
+- log_threshold:
+
+  The logging level threshold for the logger package (e.g., DEBUG,
+  INFO). Default is logger::DEBUG.
+
+## Value
+
+None. The function performs status updates and database operations as
+side effects.
+
+## Details
+
+The function follows these steps:
+
+1.  Downloads the current validation flags from cloud storage
+
+2.  Fetches current validation status from KoboToolbox to identify
+    manual approvals
+
+3.  Identifies manually approved submissions (preserves human decisions)
+
+4.  Processes submissions with alert flags (marking them as not approved
+    in KoboToolbox)
+
+5.  Processes submissions without alert flags (marking them as approved
+    in KoboToolbox)
+
+6.  Pushes all validation flags with KoboToolbox status to MongoDB for
+    record-keeping
+
+The function processes both wf_surveys_v1 and wf_surveys_v2 assets,
+attempting to update submissions in both locations. Rate limiting is
+applied to protect the API.
+
+## Note
+
+This function requires proper configuration in the config file,
+including:
+
+- MongoDB connection parameters
+
+- KoboToolbox asset IDs and tokens for both v1 and v2
+
+- Google cloud storage parameters
+
+## Parallel Processing
+
+The function uses the future and furrr packages for parallel processing,
+with the number of workers set to system cores minus 2 to prevent
+resource exhaustion.
+
+## Rate Limiting
+
+API calls are rate-limited with delays between requests to avoid
+overwhelming the KoboToolbox server. Max 4 workers with 0.1-0.2s delays
+between requests.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Run with default DEBUG logging
+sync_validation_submissions()
+
+# Run with INFO level logging
+sync_validation_submissions(log_threshold = logger::INFO)
+} # }
+```
