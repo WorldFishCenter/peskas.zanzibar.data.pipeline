@@ -3,11 +3,8 @@ name: Peskas Zanzibar Data Pipeline
 on:
   push:
   schedule:
-    - cron: "0 0 */4 * *"
-
-permissions:
-  contents: read
-  packages: write
+    # every 4 days at 00:00 UTC
+    - cron: '0 0 */4 * *'
 
 env:
   WCS_SURVEYS_ID: ${{ secrets.WCS_SURVEYS_ID }}
@@ -27,42 +24,35 @@ env:
 jobs:
   build-container:
     name: Build R container
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to GHCR
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image name
-        id: meta
-        run: |
-          IMAGE=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile.prod
           push: true
-          tags: |
-            ${{ steps.meta.outputs.image }}:latest
-            ${{ steps.meta.outputs.image }}:${{ github.sha }}
-          cache-from: type=registry,ref=${{ steps.meta.outputs.image }}:buildcache
-          cache-to: type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
+          tags: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
+          cache-from: type=registry,ref=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:buildcache
+          cache-to: type=registry,ref=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:buildcache,mode=max
 
   ingest-preprocess-surveys:
     name: Ingest and preprocess Kobo surveys
     needs: build-container
-    runs-on: ubuntu-24.04
-    permissions:
-      packages: read
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
       credentials:
@@ -73,18 +63,16 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_surveys()'
       - name: Call preprocess_ba_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_ba_surveys()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_ba_surveys()'
       - name: Call preprocess_wf_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_wf_surveys()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_wf_surveys()'
 
   ingest-preprocess-pds-data:
     name: Ingest and preprocess GPS data
     needs: build-container
-    runs-on: ubuntu-24.04
-    permissions:
-      packages: read
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
       credentials:
@@ -95,18 +83,16 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_pds_trips()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_pds_trips()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_pds_trips()'
       - name: Call ingest_pds_tracks()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::ingest_pds_tracks()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_pds_tracks()'
       - name: Call preprocess_pds_tracks()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::preprocess_pds_tracks()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_pds_tracks()'
 
   validate-sync-surveys:
     name: Validate and sync Kobo submissions
     needs: ingest-preprocess-surveys
-    runs-on: ubuntu-24.04
-    permissions:
-      packages: read
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
       credentials:
@@ -117,20 +103,18 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       # - name: Call validate_wcs_surveys()
-      #   run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
+      #   run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_wcs_surveys()'
       - name: Call validate_ba_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_ba_surveys()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_ba_surveys()'
       - name: Call validate_wf_surveys()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::validate_wf_surveys()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_wf_surveys()'
       - name: Call sync_validation_submissions()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::sync_validation_submissions()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::sync_validation_submissions()'
 
   summarize-model-wf-data:
     name: Summarize and model validated data
-    needs: [validate-sync-surveys, ingest-preprocess-pds-data]  
-    runs-on: ubuntu-24.04
-    permissions:
-      packages: read
+    needs: [validate-sync-surveys, ingest-preprocess-pds-data]
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
       credentials:
@@ -141,16 +125,14 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call summarize_data()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::summarize_data()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::summarize_data()'
       - name: Call generate_fleet_analysis()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::generate_fleet_analysis()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::generate_fleet_analysis()'
 
   export-wf-surveys:
     name: Export aggregated data
     needs: summarize-model-wf-data
-    runs-on: ubuntu-24.04
-    permissions:
-      packages: read
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
       credentials:
@@ -161,4 +143,4 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call export_wf_data()
-        run: Rscript --vanilla -e 'peskas.zanzibar.data.pipeline::export_wf_data()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::export_wf_data()'
