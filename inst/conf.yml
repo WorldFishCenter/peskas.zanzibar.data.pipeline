@@ -105,7 +105,8 @@ default:
           taxa: taxa_proportions
           effort_map: effort_map
       validation:
-        database_name: zanzibar
+        connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING_VALIDATION')
+        database_name: validation-dev
         collection:
           flags: surveys_flags
           enumerators_stats: enumerators_stats
@@ -148,7 +149,7 @@ production:
       pipeline:
         database_name: zanzibar-prod
       validation:
-        database_name: zanzibar-prod
+        database_name: validation-prod
       portal:
         database_name: portal-prod
   pds_storage:
