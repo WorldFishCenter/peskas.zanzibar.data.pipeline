@@ -955,11 +955,16 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     tidyr::separate_rows("alert_flag", sep = ",\\s*") |>
     dplyr::select(-c(dplyr::starts_with("valid")))
 
+  asset_id <- pars$surveys$wf_surveys_v2$asset_id
   # Push the validation flags with KoboToolbox status to MongoDB
   mdb_collection_push(
     data = validation_flags_with_kobo_status,
     connection_string = pars$storage$mongodb$validation$connection_string,
-    collection_name = pars$storage$mongodb$validation$collection$flags,
+    collection_name = paste(
+      pars$storage$mongodb$validation$collection$flags,
+      asset_id,
+      sep = "-"
+    ),
     db_name = pars$storage$mongodb$validation$database_name
   )
 
@@ -967,7 +972,11 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
   mdb_collection_push(
     data = validation_flags_long,
     connection_string = pars$storage$mongodb$validation$connection_string,
-    collection_name = pars$storage$mongodb$validation$collection$enumerators_stats,
+    collection_name = paste(
+      pars$storage$mongodb$validation$collection$enumerators_stats,
+      asset_id,
+      sep = "-"
+    ),
     db_name = pars$storage$mongodb$validation$database_name
   )
 

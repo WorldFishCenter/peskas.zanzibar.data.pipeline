@@ -158,41 +158,5 @@ production:
         bucket: pds-zanzibar
 
 local:
-  inherits: development
-  surveys:
-    wcs_surveys:
-      asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
-      username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
-      password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
-    wf_surveys_v1:
-      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
-      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
-      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
-      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
-    wf_surveys_v2:
-      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
-      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
-      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
-      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
-    ba_surveys:
-      asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
-      username: !expr Sys.getenv('BA_SURVEYS_UNAME')
-      password: !expr Sys.getenv('BA_SURVEYS_PSSW')
-  pds:
-    token: !expr Sys.getenv('PDS_TOKEN')
-    secret: !expr Sys.getenv('PDS_SECRET')
-  storage:
-    google:
-      options:
-        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
-      options_coasts:
-        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
-    mongodb:
-      connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
-  pds_storage:
-    google:
-      options:
-        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
-  metadata:
-    google_sheets:
-      sheet_id: !expr Sys.getenv("GOOGLE_SHEET_ID")
+  # Local configuration inherits everything from default
+  # Add only local-specific overrides here if needed
