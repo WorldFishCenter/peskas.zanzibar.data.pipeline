@@ -77,7 +77,10 @@ calculate_catch <- function(catch_data = NULL, lwcoeffs = NULL) {
       # Calculate weight in grams for records with length measurements
       catch_length_gr = dplyr::case_when(
         # Specific case for Octopus cyanea (OCZ) - using length conversion
-        !is.na(.data$length) & !is.na(.data$a_6) & !is.na(.data$b_6) & .data$catch_taxon == "OCZ" ~
+        !is.na(.data$length) &
+          !is.na(.data$a_6) &
+          !is.na(.data$b_6) &
+          .data$catch_taxon == "OCZ" ~
           .data$a_6 * ((.data$length / 5.5)^.data$b_6),
         # General case for other species - direct calculation
         !is.na(.data$length) & !is.na(.data$a_6) & !is.na(.data$b_6) ~
@@ -95,10 +98,18 @@ calculate_catch <- function(catch_data = NULL, lwcoeffs = NULL) {
         TRUE ~ NA_real_
       )
     ) |>
-    dplyr::mutate(catch_kg = dplyr::coalesce(.data$catch_length_kg, .data$catch_bucket_kg)) |>
+    dplyr::mutate(
+      catch_kg = dplyr::coalesce(.data$catch_length_kg, .data$catch_bucket_kg)
+    ) |>
     dplyr::select(
-      "submission_id", "n_catch", "catch_taxon", "individuals", "length", "n_buckets",
-      "weight_bucket", "catch_kg"
+      "submission_id",
+      "n_catch",
+      "catch_taxon",
+      "individuals",
+      "length",
+      "n_buckets",
+      "weight_bucket",
+      "catch_kg"
     )
 }
 
@@ -163,7 +174,10 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
     dplyr::filter(.data$area_code == 51)
 
   # 5. Get length-weight parameters
-  lw_data <- get_length_weight_batch(species_areas_filtered, include_morphology = TRUE)
+  lw_data <- get_length_weight_batch(
+    species_areas_filtered,
+    include_morphology = TRUE
+  )
 
   # 6. Format output
   lw <-
@@ -192,12 +206,16 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
       n = dplyr::n(),
       min_length = min(.data$CommonLength, na.rm = TRUE),
       max_length_75 = stats::quantile(.data$Length, 0.75, na.rm = TRUE),
-      max_weightkg_75 = stats::quantile(.data$Weight, 0.75, na.rm = TRUE) / 1000,
+      max_weightkg_75 = stats::quantile(.data$Weight, 0.75, na.rm = TRUE) /
+        1000,
       .groups = "drop"
     ) %>%
     dplyr::mutate(
-      max_length_75 = dplyr::case_when(.data$a3_code == "IAX" ~ 100, TRUE ~ .data$max_length_75),
-      min_length = .data$min_length - 0.25 * .data$min_length,
+      max_length_75 = dplyr::case_when(
+        .data$a3_code == "IAX" ~ 100,
+        TRUE ~ .data$max_length_75
+      ),
+      min_length = .data$min_length - 0.5 * .data$min_length, #(make it more permissive, we don't know the exact value from fishbase)
       min_length = dplyr::case_when(
         .data$a3_code %in% c("OCZ", "IAX") ~ 15,
         .data$a3_code == "PEZ" ~ 5,
@@ -350,7 +368,8 @@ process_species_list <- function(fao_codes, asfis_list) {
         grepl(" spp$", .data$scientific_name) ~ "Genus",
         grepl("idae$", .data$scientific_name) ~ "Family",
         grepl("formes$", .data$scientific_name) ~ "Order",
-        grepl(" ", .data$scientific_name) & !grepl(" spp$|nei$", .data$scientific_name) ~ "Species",
+        grepl(" ", .data$scientific_name) &
+          !grepl(" spp$|nei$", .data$scientific_name) ~ "Species",
         TRUE ~ NA_character_
       ),
       scientific_name = gsub(" spp$", "", .data$scientific_name)
@@ -386,7 +405,8 @@ match_species_from_taxa <- function(species_list, taxa_data) {
     row <- species_list[i, ]
     taxa <- taxa_data[[row$database]]
 
-    matched_species <- switch(row$rank,
+    matched_species <- switch(
+      row$rank,
       "Genus" = taxa %>% dplyr::filter(.data$Genus == row$scientific_name),
       "Family" = taxa %>% dplyr::filter(.data$Family == row$scientific_name),
       "Order" = taxa %>% dplyr::filter(.data$Order == row$scientific_name),
@@ -450,12 +470,20 @@ get_species_areas_batch <- function(matched_species) {
     dplyr::pull(.data$species)
 
   areas_fishbase <- if (length(fishbase_species) > 0) {
-    rfishbase::faoareas(fishbase_species, fields = "AreaCode", server = "fishbase") %>%
+    rfishbase::faoareas(
+      fishbase_species,
+      fields = "AreaCode",
+      server = "fishbase"
+    ) %>%
       dplyr::mutate(database = "fishbase")
   }
 
   areas_sealifebase <- if (length(sealifebase_species) > 0) {
-    rfishbase::faoareas(sealifebase_species, fields = "AreaCode", server = "sealifebase") %>%
+    rfishbase::faoareas(
+      sealifebase_species,
+      fields = "AreaCode",
+      server = "sealifebase"
+    ) %>%
       dplyr::mutate(database = "sealifebase")
   }
 
@@ -526,7 +554,10 @@ get_species_areas_batch <- function(matched_species) {
 #' @keywords mining preprocessing
 #' @export
 #'
-get_length_weight_batch <- function(species_areas_filtered, include_morphology = FALSE) {
+get_length_weight_batch <- function(
+  species_areas_filtered,
+  include_morphology = FALSE
+) {
   fishbase_species <- species_areas_filtered %>%
     dplyr::filter(.data$database == "fishbase") %>%
     dplyr::pull(.data$species)
@@ -640,35 +671,90 @@ get_length_weight_batch <- function(species_areas_filtered, include_morphology =
 expand_taxa <- function(data = NULL) {
   taxa_expanded <-
     data %>%
-    dplyr::mutate(species_list = stringr::str_split(.data$species_catch, pattern = " ")) %>%
+    dplyr::mutate(
+      species_list = stringr::str_split(.data$species_catch, pattern = " ")
+    ) %>%
     tidyr::unnest(.data$species_list) %>%
     dplyr::mutate(
-      species_list = stringr::str_replace(.data$species_list, pattern = "_", replacement = " "),
-      species_list = stringr::str_replace(.data$species_list, pattern = "_", replacement = " "),
+      species_list = stringr::str_replace(
+        .data$species_list,
+        pattern = "_",
+        replacement = " "
+      ),
+      species_list = stringr::str_replace(
+        .data$species_list,
+        pattern = "_",
+        replacement = " "
+      ),
       words = stringi::stri_count_words(.data$species_list),
       genus_species = dplyr::case_when(
-        .data$words == 3 ~ stringr::str_extract(.data$species_list, "\\S+\\s+\\S+$"),
+        .data$words == 3 ~ stringr::str_extract(
+          .data$species_list,
+          "\\S+\\s+\\S+$"
+        ),
         TRUE ~ NA_character_
       ),
-      species_list = ifelse(.data$words == 3, NA_character_, .data$species_list),
+      species_list = ifelse(
+        .data$words == 3,
+        NA_character_,
+        .data$species_list
+      ),
       catch_group = dplyr::coalesce(.data$species_list, .data$genus_species),
-      catch_group = stringr::str_replace(.data$catch_group, pattern = " spp.", replacement = ""),
-      catch_group = stringr::str_replace(.data$catch_group, pattern = " spp", replacement = ""),
-      catch_group = stringr::str_replace(.data$catch_group, pattern = "_spp", replacement = ""),
-      catch_group = ifelse(.data$catch_group == "acanthocybium solandiri", "acanthocybium solandri", .data$catch_group),
-      catch_group = ifelse(.data$catch_group == "panaeidae", "penaeidae", .data$catch_group),
-      catch_group = ifelse(.data$catch_group == "mulidae", "mullidae", .data$catch_group),
-      catch_group = ifelse(.data$catch_group == "casio xanthonotus", "caesio xanthonotus", .data$catch_group),
+      catch_group = stringr::str_replace(
+        .data$catch_group,
+        pattern = " spp.",
+        replacement = ""
+      ),
+      catch_group = stringr::str_replace(
+        .data$catch_group,
+        pattern = " spp",
+        replacement = ""
+      ),
+      catch_group = stringr::str_replace(
+        .data$catch_group,
+        pattern = "_spp",
+        replacement = ""
+      ),
+      catch_group = ifelse(
+        .data$catch_group == "acanthocybium solandiri",
+        "acanthocybium solandri",
+        .data$catch_group
+      ),
+      catch_group = ifelse(
+        .data$catch_group == "panaeidae",
+        "penaeidae",
+        .data$catch_group
+      ),
+      catch_group = ifelse(
+        .data$catch_group == "mulidae",
+        "mullidae",
+        .data$catch_group
+      ),
+      catch_group = ifelse(
+        .data$catch_group == "casio xanthonotus",
+        "caesio xanthonotus",
+        .data$catch_group
+      ),
     ) %>%
     dplyr::select(-c(.data$species_list, .data$genus_species, .data$words))
 
   groups_rank <-
-    taxize::classification(unique(taxa_expanded$catch_group), db = "gbif", rows = 1) %>%
-    purrr::imap(~ .x %>%
-      dplyr::as_tibble() %>%
-      dplyr::mutate(catch_group = .y)) %>%
+    taxize::classification(
+      unique(taxa_expanded$catch_group),
+      db = "gbif",
+      rows = 1
+    ) %>%
+    purrr::imap(
+      ~ .x %>%
+        dplyr::as_tibble() %>%
+        dplyr::mutate(catch_group = .y)
+    ) %>%
     dplyr::bind_rows() %>%
-    tidyr::pivot_wider(id_cols = .data$catch_group, names_from = .data$rank, values_from = .data$name) %>%
+    tidyr::pivot_wider(
+      id_cols = .data$catch_group,
+      names_from = .data$rank,
+      values_from = .data$name
+    ) %>%
     dplyr::select(dplyr::everything(), -dplyr::any_of(c("class", "NA")))
 
   dplyr::left_join(taxa_expanded, groups_rank, by = "catch_group") |>
