@@ -693,6 +693,15 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 
   pars <- read_config()
 
+  submissions_versions <-
+    download_parquet_from_cloud(
+      prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options
+    ) |>
+    dplyr::select("survey_version", "submission_id") %>%
+    split(.$survey_version)
+
   # Download validation flags
   validation_flags <-
     download_parquet_from_cloud(
@@ -702,10 +711,9 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     )
 
   # Set up limited parallel processing with rate limiting
-  # Max 4 workers to avoid overwhelming the server
   future::plan(
     strategy = future::multisession,
-    workers = min(4, future::availableCores() - 2)
+    workers = future::availableCores() - 2
   )
 
   # Enable progress reporting globally
@@ -939,46 +947,56 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     already_approved_clean
   )
 
-  # Add current KoboToolbox validation status to validation_flags
-  validation_flags_with_kobo_status <-
-    validation_flags %>%
-    dplyr::left_join(
-      current_kobo_status,
-      by = "submission_id",
-      suffix = c("", "_kobo")
+  # Define version-specific info
+  versions <- list(
+    list(key = "1", asset_id = pars$surveys$wf_surveys_v1$asset_id),
+    list(key = "2", asset_id = pars$surveys$wf_surveys_v2$asset_id)
+  )
+
+  for (v in versions) {
+    # Add KoboToolbox validation status and filter by version
+    validation_flags_with_kobo_status <-
+      validation_flags %>%
+      dplyr::left_join(
+        current_kobo_status,
+        by = "submission_id",
+        suffix = c("", "_kobo")
+      ) |>
+      dplyr::filter(
+        .data$submission_id %in%
+          unique(submissions_versions[[v$key]]$submission_id)
+      )
+
+    # Create long format for enumerators statistics
+    validation_flags_long <-
+      validation_flags_with_kobo_status |>
+      dplyr::mutate(alert_flag = as.character(.data$alert_flag)) %>%
+      tidyr::separate_rows("alert_flag", sep = ",\\s*") |>
+      dplyr::select(-c(dplyr::starts_with("valid")))
+
+    # Push validation flags to MongoDB
+    mdb_collection_push(
+      data = validation_flags_with_kobo_status,
+      connection_string = pars$storage$mongodb$validation$connection_string,
+      collection_name = paste(
+        pars$storage$mongodb$validation$collection$flags,
+        v$asset_id,
+        sep = "-"
+      ),
+      db_name = pars$storage$mongodb$validation$database_name
     )
 
-  # Create long format for enumerators statistics
-  validation_flags_long <-
-    validation_flags_with_kobo_status |>
-    dplyr::mutate(alert_flag = as.character(.data$alert_flag)) %>%
-    tidyr::separate_rows("alert_flag", sep = ",\\s*") |>
-    dplyr::select(-c(dplyr::starts_with("valid")))
-
-  asset_id <- pars$surveys$wf_surveys_v2$asset_id
-  # Push the validation flags with KoboToolbox status to MongoDB
-  mdb_collection_push(
-    data = validation_flags_with_kobo_status,
-    connection_string = pars$storage$mongodb$validation$connection_string,
-    collection_name = paste(
-      pars$storage$mongodb$validation$collection$flags,
-      asset_id,
-      sep = "-"
-    ),
-    db_name = pars$storage$mongodb$validation$database_name
-  )
-
-  # Push enumerators statistics to MongoDB
-  mdb_collection_push(
-    data = validation_flags_long,
-    connection_string = pars$storage$mongodb$validation$connection_string,
-    collection_name = paste(
-      pars$storage$mongodb$validation$collection$enumerators_stats,
-      asset_id,
-      sep = "-"
-    ),
-    db_name = pars$storage$mongodb$validation$database_name
-  )
-
+    # Push enumerators statistics to MongoDB
+    mdb_collection_push(
+      data = validation_flags_long,
+      connection_string = pars$storage$mongodb$validation$connection_string,
+      collection_name = paste(
+        pars$storage$mongodb$validation$collection$enumerators_stats,
+        v$asset_id,
+        sep = "-"
+      ),
+      db_name = pars$storage$mongodb$validation$database_name
+    )
+  }
   logger::log_info("Validation synchronization completed successfully")
 }
