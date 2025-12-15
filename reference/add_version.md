@@ -49,5 +49,5 @@ methods fail, no sha versioning is added.
 if (git2r::in_repository()) {
   add_version("my_file", "csv")
 }
-#> [1] "my_file__20251211213904_82b8e25__.csv"
+#> [1] "my_file__20251215155904_f1e27b7__.csv"
 ```
