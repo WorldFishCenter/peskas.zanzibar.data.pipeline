@@ -719,6 +719,7 @@ preprocess_catch <- function(data = NULL, version = NULL) {
         "submission_id",
         "n_catch",
         count_method = "counting_method",
+        "fish_group",
         catch_taxon = "species",
         "n_buckets",
         "weight_bucket",

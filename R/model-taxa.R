@@ -102,14 +102,17 @@ calculate_catch <- function(catch_data = NULL, lwcoeffs = NULL) {
       catch_kg = dplyr::coalesce(.data$catch_length_kg, .data$catch_bucket_kg)
     ) |>
     dplyr::select(
-      "submission_id",
-      "n_catch",
-      "catch_taxon",
-      "individuals",
-      "length",
-      "n_buckets",
-      "weight_bucket",
-      "catch_kg"
+      dplyr::any_of(c(
+        "submission_id",
+        "n_catch",
+        "fish_group",
+        "catch_taxon",
+        "individuals",
+        "length",
+        "n_buckets",
+        "weight_bucket",
+        "catch_kg"
+      ))
     )
 }
 
