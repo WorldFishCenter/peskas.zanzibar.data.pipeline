@@ -12,6 +12,8 @@ storage.
   : Calculate Monthly Trip Statistics by District
 - [`estimate_fleet_activity()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/estimate_fleet_activity.md)
   : Estimate Fleet-Wide Activity from Sample Data
+- [`export_validation_flags()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_validation_flags.md)
+  : Export Validation Flags to MongoDB
 - [`export_wf_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_wf_data.md)
   : Export WorldFish Summary Data to MongoDB
 - [`generate_fleet_analysis()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/generate_fleet_analysis.md)
@@ -201,6 +203,8 @@ rules.
   : Aggregate survey data and calculate metrics
 - [`calculate_catch_revenue()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_catch_revenue.md)
   : Calculate catch revenue from validated data
+- [`export_validation_flags()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_validation_flags.md)
+  : Export Validation Flags to MongoDB
 - [`extract_trips_info()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/extract_trips_info.md)
   : Extract trip information from preprocessed surveys
 - [`get_catch_bounds()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_catch_bounds.md)

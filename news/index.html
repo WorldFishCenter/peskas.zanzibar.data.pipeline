@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,31 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.1.1" id="peskaszanzibardatapipeline-411">peskas.zanzibar.data.pipeline 4.1.1<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-411"></a></h2>
+<div class="section level3">
+<h3 id="major-changes-4-1-1">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-4-1-1"></a></h3>
+<ul><li>
+<strong>Streamlined Validation Workflow</strong>: Replaced KoboToolbox API updates with direct MongoDB storage to improve performance.
+<ul><li>New <code><a href="../reference/export_validation_flags.html">export_validation_flags()</a></code> function exports validation flags directly to MongoDB</li>
+<li>Validation status queries now only identify manually edited submissions, not update them</li>
+<li>Disabled <code><a href="../reference/sync_validation_submissions.html">sync_validation_submissions()</a></code> workflow steps in GitHub Actions</li>
+<li>Significantly reduced pipeline execution time by avoiding slow KoboToolbox API calls</li>
+</ul></li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-4-1-1">Improvements<a class="anchor" aria-label="anchor" href="#improvements-4-1-1"></a></h3>
+<ul><li>
+<p><strong>Validation System</strong>:</p>
+<ul><li>Validation functions now preserve manual human approvals while updating system-generated statuses</li>
+</ul></li>
+<li>
+<p><strong>Code Quality</strong>:</p>
+<ul><li>Fixed SeaLifeBase API calls by pinning to version 24.07 to avoid server errors</li>
+<li>Standardized function parameter formatting across validation and preprocessing modules</li>
+</ul></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.1.0" id="peskaszanzibardatapipeline-410">peskas.zanzibar.data.pipeline 4.1.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-410"></a></h2>
 <div class="section level4">
