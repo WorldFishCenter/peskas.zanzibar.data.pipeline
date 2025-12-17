@@ -109,8 +109,8 @@ jobs:
         run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_ba_surveys()'
       - name: Call validate_wf_surveys()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_wf_surveys()'
-      - name: Call sync_validation_submissions()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::sync_validation_submissions()'
+      # - name: Call sync_validation_submissions()
+      #   run: Rscript -e 'peskas.zanzibar.data.pipeline::sync_validation_submissions()'
 
   summarize-model-wf-data:
     name: Summarize and model validated data
