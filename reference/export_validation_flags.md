@@ -135,7 +135,7 @@ if (FALSE) { # \dontrun{
 # Called internally by validate_surveys_adnap()
 export_validation_flags(
   conf = conf,
-  asset_id = "adnap",
+  asset_id = "surveys_v1",
   all_flags = flags_combined,
   validation_statuses = validation_statuses
 )
