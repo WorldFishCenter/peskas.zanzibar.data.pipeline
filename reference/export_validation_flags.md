@@ -115,19 +115,6 @@ The function pushes to two MongoDB collections:
   Long format with one row per flag per submission for enumerator
   statistics
 
-## See also
-
-- `validate_surveys_adnap()` for the main validation workflow
-
-- [`get_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_validation_status.md)
-  for fetching KoboToolbox validation status
-
-- [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
-  for the deprecated approach that updates KoboToolbox
-
-- [`mdb_collection_push()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/mdb_collection_push.md)
-  for MongoDB operations
-
 ## Examples
 
 ``` r
@@ -140,4 +127,5 @@ export_validation_flags(
   validation_statuses = validation_statuses
 )
 } # }
+
 ```
