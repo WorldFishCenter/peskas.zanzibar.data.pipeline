@@ -119,13 +119,33 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       options = pars$storage$google$options
     )
 
+  # check for manual validates submissions (only possible among not approved submissions)
+  not_approved_ids <-
+    purrr::map(
+      .x = c(
+        v1 = pars$surveys$wf_surveys_v1$asset_id,
+        v2 = pars$surveys$wf_surveys_v2$asset_id
+      ),
+      .f = ~ mdb_collection_pull(
+        connection_string = pars$storage$mongodb$validation$connection_string,
+        db_name = pars$storage$mongodb$validation$database_name,
+        collection_name = paste(
+          pars$storage$mongodb$validation$collection$flags,
+          .x,
+          sep = "-"
+        )
+      ) |>
+        dplyr::filter(
+          .data$validation_status == "validation_status_not_approved"
+        ) |>
+        dplyr::pull("submission_id") |>
+        unique()
+    )
+
   future::plan(
     strategy = future::multisession,
     workers = future::availableCores() - 2
   )
-
-  # get validation table and store approved ids from both assets
-  submission_ids <- unique(preprocessed_surveys$submission_id)
 
   # Query validation status from both survey versions using same credentials
   logger::log_info(
@@ -135,7 +155,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   validation_statuses <- list()
 
   # Query wf_surveys v1 (original asset)
-  validation_statuses$v1 <- submission_ids %>%
+  validation_statuses$v1 <- not_approved_ids$v1 %>%
     furrr::future_map_dfr(
       get_validation_status,
       asset_id = pars$surveys$wf_surveys_v1$asset_id,
@@ -144,7 +164,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     )
 
   # Query wf_surveys v2 (new asset)
-  validation_statuses$v2 <- submission_ids %>%
+  validation_statuses$v2 <- not_approved_ids$v2 %>%
     furrr::future_map_dfr(
       get_validation_status,
       asset_id = pars$surveys$wf_surveys_v2$asset_id,
@@ -1099,6 +1119,13 @@ export_validation_flags <- function(
     all_flags |>
     dplyr::full_join(validation_statuses, by = "submission_id") |>
     dplyr::mutate(
+      validated_by = dplyr::if_else(
+        is.na(
+          .data$alert_flag
+        ),
+        conf$surveys$wf_surveys_v1$username,
+        .data$validated_by
+      ),
       validation_status = dplyr::case_when(
         # Preserve existing status if validated by someone else (not pipeline account user and not NA)
         !is.na(.data$validated_by) &
