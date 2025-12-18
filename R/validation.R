@@ -152,6 +152,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       .options = furrr::furrr_options(seed = TRUE)
     )
 
+  future::plan(strategy = future::sequential)
+
   max_bucket_weight_kg <- 50
   max_n_buckets <- 300
   max_n_individuals <- 200
@@ -457,6 +459,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     preprocessed_surveys |>
     dplyr::select("submission_id", "survey_version") |>
     dplyr::right_join(flags_combined, by = "submission_id") %>%
+    dplyr::distinct() %>%
     split(.$survey_version)
 
   purrr::walk(
@@ -1071,19 +1074,12 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 #' # Called internally by validate_surveys_adnap()
 #' export_validation_flags(
 #'   conf = conf,
-#'   asset_id = "adnap",
+#'   asset_id = "surveys_v1",
 #'   all_flags = flags_combined,
 #'   validation_statuses = validation_statuses
 #' )
 #' }
 #'
-#' @seealso
-#' \itemize{
-#'   \item \code{\link[=validate_surveys_adnap]{validate_surveys_adnap()}} for the main validation workflow
-#'   \item \code{\link[=get_validation_status]{get_validation_status()}} for fetching KoboToolbox validation status
-#'   \item \code{\link[=sync_validation_submissions]{sync_validation_submissions()}} for the deprecated approach that updates KoboToolbox
-#'   \item \code{\link[=mdb_collection_push]{mdb_collection_push()}} for MongoDB operations
-#' }
 #'
 #' @keywords validation workflow
 #' @export
