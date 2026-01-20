@@ -1,3 +1,44 @@
+# peskas.zanzibar.data.pipeline 4.2.0
+
+## New Features
+
+- **API Data Export Pipeline**: Added new `export_api_raw()` function to export raw preprocessed survey data in API-friendly format
+  - Exports raw/preprocessed trip data (before validation) to cloud storage
+  - Part of a two-stage API export pipeline (raw and validated exports)
+  - Transforms nested survey data into flat structure with standardized trip-level records
+  - Generates unique trip IDs using xxhash64 algorithm
+  - Integrates with Airtable metadata for form-specific asset lookups
+  - Exports versioned parquet files to `zanzibar/raw/` path for external API consumption
+  - Includes comprehensive output schema with 14 standardized fields (trip_id, landing_date, gear, catch metrics, etc.)
+
+- **Airtable Integration**: New helper functions for managing Airtable metadata and form configurations
+  - `get_airtable_form_id()`: Retrieves Airtable record IDs from KoBoToolbox asset IDs
+  - `airtable_to_df()`: Downloads complete Airtable tables with automatic pagination handling
+  - `get_writable_fields()`: Identifies updatable fields in Airtable tables (excludes computed fields)
+  - `update_airtable_record()`: Updates individual records with field validation
+  - `bulk_update_airtable()`: Batch updates multiple records efficiently (up to 10 records per request)
+  - `device_sync()`: Synchronizes GPS device metadata between Airtable and MongoDB
+
+## Improvements
+
+- **Configuration Enhancements**:
+  - Added `api` configuration section for trip data exports with separate raw/validated paths
+  - Configured cloud storage paths for API exports (zanzibar/raw, zanzibar/validated)
+  - Added Airtable base ID and token configuration for metadata management
+  - Enhanced `options_api` storage configuration for peskas-coasts bucket
+
+- **GitHub Actions Workflow**:
+  - Added new `export-api-data` job to automated pipeline workflow
+  - Integrated Airtable authentication with GitHub Secrets (AIRTABLE_TOKEN, AIRTABLE_BASE_ID_FRAME, AIRTABLE_BASE_ID_ASSETS)
+  - Configured API export job to run after survey preprocessing step
+  - Added production environment configuration for API data exports
+
+- **Code Quality**:
+  - Improved documentation with comprehensive roxygen2 comments for all new functions
+  - Added detailed examples and cross-references in function documentation
+  - Enhanced error handling and input validation in Airtable operations
+  - Implemented proper cleanup of temporary local files after cloud uploads
+
 # peskas.zanzibar.data.pipeline 4.1.1
 
 ## Major Changes

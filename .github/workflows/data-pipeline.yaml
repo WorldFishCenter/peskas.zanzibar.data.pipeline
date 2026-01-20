@@ -21,6 +21,9 @@ env:
   GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
   PDS_TOKEN: ${{ secrets.PDS_TOKEN }}
   PDS_SECRET: ${{ secrets.PDS_SECRET }}
+  AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+  AIRTABLE_BASE_ID_FRAME: ${{ secrets.AIRTABLE_BASE_ID_FRAME }}
+  AIRTABLE_BASE_ID_ASSETS: ${{ secrets.AIRTABLE_BASE_ID_ASSETS }}
 
 jobs:
   build-container:
@@ -145,3 +148,19 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call export_wf_data()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::export_wf_data()'
+
+  export-api-data:
+    name: Export API formatted data
+    needs: ingest-preprocess-surveys
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call export_api_raw()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::export_api_raw()'

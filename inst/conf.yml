@@ -84,6 +84,14 @@ default:
     pds_tracks:
       file_prefix: pds-tracks
       version: latest
+  api:
+    trips:
+      raw:
+        file_prefix: trips-raw
+        cloud_path: zanzibar/raw
+      validated:
+        file_prefix: trips-validated
+        cloud_path: zanzibar/validated
   storage:
     google:
       key: gcs
@@ -95,6 +103,8 @@ default:
         project: peskas
         bucket: peskas-coasts
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
+      options_api:
+         bucket: peskas-api-dev  
     mongodb:
       connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
       pipeline:
@@ -137,14 +147,20 @@ default:
         - communities
   validation:
     k_MAD_catch: 7
-
+  airtable:
+    assets: assets
+    token: !expr Sys.getenv('AIRTABLE_TOKEN')
+    frame:
+      base_id: !expr Sys.getenv('AIRTABLE_BASE_ID_FRAME')
 production:
   storage:
     google:
       options:
         bucket: zanzibar-prod
       options_coasts:
-        bucket: peskas-coasts       
+        bucket: peskas-coasts  
+      options_api:
+         bucket: peskas-api-prod    
     mongodb:
       pipeline:
         database_name: zanzibar-prod
