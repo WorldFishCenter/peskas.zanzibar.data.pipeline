@@ -141,7 +141,6 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         dplyr::pull("submission_id") |>
         unique()
     )
-
   future::plan(
     strategy = future::multisession,
     workers = future::availableCores() - 2
@@ -170,6 +169,16 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       asset_id = pars$surveys$wf_surveys_v2$asset_id,
       token = pars$surveys$wf_surveys_v2$token,
       .options = furrr::furrr_options(seed = TRUE)
+    )
+
+  # fix fields column
+  validation_statuses <-
+    validation_statuses |>
+    purrr::map(
+      .f = ~ dplyr::mutate(
+        .,
+        submission_id = as.integer(.$submission_id)
+      )
     )
 
   future::plan(strategy = future::sequential)
