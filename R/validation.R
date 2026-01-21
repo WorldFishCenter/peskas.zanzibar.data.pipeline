@@ -479,8 +479,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   flags_ids <-
     flags_combined |>
-    dplyr::filter(!is.na(.data$alert_flag))
-  dplyr::select("submission_id") |>
+    dplyr::filter(!is.na(.data$alert_flag)) |>
+    dplyr::select("submission_id") |>
     dplyr::distinct()
 
   clean_data <-
