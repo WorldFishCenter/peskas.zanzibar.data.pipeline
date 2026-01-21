@@ -149,8 +149,8 @@ jobs:
       - name: Call export_wf_data()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::export_wf_data()'
 
-  export-api-data:
-    name: Export API formatted data
+  export-api-raw:
+    name: Export raw API formatted data
     needs: ingest-preprocess-surveys
     runs-on: ubuntu-latest
     container:
@@ -164,3 +164,20 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call export_api_raw()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::export_api_raw()'
+
+
+  export-api-validated:
+    name: Export validated API formatted data
+    needs: validate-sync-surveys
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call export_api_validated()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::export_api_validated()'

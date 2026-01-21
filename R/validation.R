@@ -477,8 +477,18 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::relocate("submitted_by", .after = "submission_id") |>
     dplyr::distinct()
 
+  flags_ids <-
+    flags_combined |>
+    dplyr::filter(!is.na(.data$alert_flag))
+  dplyr::select("submission_id") |>
+    dplyr::distinct()
+
+  clean_data <-
+    validated_data |>
+    dplyr::filter(!.data$submission_id %in% flags_ids$submission_id)
+
   upload_parquet_to_cloud(
-    data = validated_data,
+    data = clean_data,
     prefix = pars$surveys$wf_surveys_v1$validated_surveys$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
