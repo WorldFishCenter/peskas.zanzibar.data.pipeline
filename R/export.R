@@ -600,9 +600,9 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
         "TRIP_",
         substr(digest::digest(.data$submission_id, algo = "xxhash64"), 1, 12)
       ),
-      survey_id = paste0(
-        "SURVEY_",
-        substr(digest::digest(.data$survey_version, algo = "xxhash64"), 1, 8)
+      survey_id = dplyr::case_when(
+        .data$survey_version == "1" ~ pars$surveys$wf_surveys_v1$asset_id,
+        .data$survey_version == "2" ~ pars$surveys$wf_surveys_v2$asset_id
       )
     ) |>
     dplyr::ungroup() |>
@@ -793,9 +793,9 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
         "TRIP_",
         substr(digest::digest(.data$submission_id, algo = "xxhash64"), 1, 12)
       ),
-      survey_id = paste0(
-        "SURVEY_",
-        substr(digest::digest(.data$survey_version, algo = "xxhash64"), 1, 8)
+      survey_id = dplyr::case_when(
+        .data$survey_version == "1" ~ pars$surveys$wf_surveys_v1$asset_id,
+        .data$survey_version == "2" ~ pars$surveys$wf_surveys_v2$asset_id
       )
     ) |>
     dplyr::ungroup() |>
