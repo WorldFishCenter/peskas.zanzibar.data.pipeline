@@ -110,7 +110,7 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
     purrr::map(
       ~ dplyr::select(.x, -"form_id")
     )
-  api_preprocessed |> View()
+
   logger::log_info("Transforming surveys to API format...")
   api_preprocessed <- preprocessed_surveys |>
     dplyr::rowwise() |>
