@@ -1,0 +1,406 @@
+#' Export Raw API-Ready Trip Data
+#'
+#' @description
+#' Processes WorldFish preprocessed survey data into a simplified API-friendly format
+#' and exports it to cloud storage for external consumption. This function exports the
+#' **raw/preprocessed** version of trip data without validation filters. For validated
+#' API exports, see the companion function that will process validated surveys.
+#'
+#' @details
+#' The function performs the following operations:
+#' - Downloads **preprocessed** (not validated) WF survey data from cloud storage
+#' - Loads form-specific assets (taxa, geography, gear, vessels) from Airtable metadata
+#' - Generates unique trip IDs using xxhash64 algorithm
+#' - Transforms nested survey structure to flat API format
+#' - Joins with standardized lookup tables (districts, gear types, vessel types)
+#' - Exports to the **raw** cloud storage path (before validation)
+#'
+#' **Data Pipeline Context**:
+#' This function exports raw preprocessed data and is part of a two-stage API export pipeline:
+#' 1. `export_api_raw()` - Exports raw/preprocessed data (this function)
+#' 2. (Future) `export_api_validated()` - Will export quality-controlled validated data
+#'
+#' **Output Schema**:
+#' The exported dataset includes the following fields:
+#' - `trip_id`: Unique identifier (TRIP_xxxxxxxxxxxx format)
+#' - `landing_date`: Date of landing
+#' - `gaul_2_name`: Standardized district name (GAUL level 2)
+#' - `n_fishers`: Total number of fishers (men + women + children)
+#' - `trip_duration_hrs`: Duration in hours
+#' - `gear`: Standardized gear type
+#' - `vessel_type`: Standardized vessel type
+#' - `catch_habitat`: Habitat where catch occurred
+#' - `catch_outcome`: Outcome of catch (landed, sold, etc.)
+#' - `n_catch`: Number of individual catch items
+#' - `catch_taxon`: Species or taxonomic group
+#' - `length_cm`: Length measurement in centimeters
+#' - `catch_kg`: Weight in kilograms
+#' - `catch_price`: Price in local currency
+#'
+#' **Cloud Storage Location**:
+#' Files are uploaded to the path specified in `conf$api$trips$raw$cloud_path`
+#' (e.g., `zanzibar/raw/`) with versioned filenames following the pattern:
+#' `{file_prefix}__{timestamp}_{git_sha}__.parquet`
+#'
+#' @param log_threshold The logging level threshold for the logger package (e.g., DEBUG, INFO).
+#'   See `logger::log_levels` for available options. Default is logger::DEBUG.
+#'
+#' @return NULL (invisible). The function uploads data to cloud storage as a side effect.
+#'
+#' @examples
+#' \dontrun{
+#' # Export raw API trip data with default debug logging
+#' export_api_raw()
+#'
+#' # Export with info-level logging only
+#' export_api_raw(logger::INFO)
+#' }
+#'
+#' @seealso
+#' * [preprocess_wf_surveys()] for generating the preprocessed survey data
+#' * [validate_wf_surveys()] for the validation step that produces validated data
+#' * [download_parquet_from_cloud()] for retrieving data from cloud storage
+#' * [upload_cloud_file()] for uploading data to cloud storage
+#' * [get_airtable_form_id()] for retrieving form-specific asset metadata
+#'
+#' @keywords workflow export
+#' @export
+export_api_raw <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+  pars <- read_config()
+
+  logger::log_info("Downloading preprocessed survey data...")
+  preprocessed_surveys <- download_parquet_from_cloud(
+    prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+
+  logger::log_info("Loading form-specific assets from cloud storage...")
+  target_form_id <- get_airtable_form_id(
+    kobo_asset_id = pars$surveys$wf_surveys_v2$asset_id,
+    conf = pars
+  )
+
+  assets <- cloud_object_name(
+    prefix = "assets",
+    provider = pars$storage$google$key,
+    extension = "rds",
+    options = pars$storage$google$options_coasts
+  ) |>
+    download_cloud_file(
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options_coasts
+    ) |>
+    readr::read_rds() |>
+    purrr::keep_at(c("taxa", "geo", "gear", "vessels", "sites")) |>
+    purrr::map(
+      ~ dplyr::filter(
+        .x,
+        stringr::str_detect(
+          .data$form_id,
+          paste0(
+            "(^|,\\s*)",
+            !!target_form_id,
+            "(\\s*,|$)"
+          )
+        )
+      )
+    ) |>
+    purrr::map(
+      ~ dplyr::select(.x, -"form_id")
+    )
+  api_preprocessed |> View()
+  logger::log_info("Transforming surveys to API format...")
+  api_preprocessed <- preprocessed_surveys |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      trip_id = paste0(
+        "TRIP_",
+        substr(digest::digest(.data$submission_id, algo = "xxhash64"), 1, 12)
+      ),
+      survey_id = dplyr::case_when(
+        .data$survey_version == "1" ~ pars$surveys$wf_surveys_v1$asset_id,
+        .data$survey_version == "2" ~ pars$surveys$wf_surveys_v2$asset_id
+      )
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      n_catch = as.integer(.data$n_catch),
+      n_fishers = .data$no_men_fishers +
+        .data$no_women_fishers +
+        .data$no_child_fishers
+    ) |>
+    dplyr::left_join(assets$geo, by = c("district" = "survey_label")) |>
+    dplyr::left_join(assets$gear, by = c("gear" = "survey_label")) |>
+    dplyr::left_join(assets$vessels, by = c("vessel_type" = "survey_label")) |>
+    dplyr::mutate(
+      "catch_habitat" = dplyr::case_when(
+        .data$habitat == "1" ~ "Reef",
+        .data$habitat == "2" ~ "FAD",
+        .data$habitat == "3" ~ "Open Sea",
+        .data$habitat == "4" ~ "Shore",
+        .data$habitat == "6" ~ "Mangrove",
+        .data$habitat == "7" ~ "Seagrass"
+      )
+    ) |>
+    dplyr::select(
+      "survey_id",
+      "trip_id",
+      "landing_date",
+      "gaul_1_code",
+      "gaul_1_name",
+      "gaul_2_code",
+      "gaul_2_name",
+      "n_fishers",
+      trip_duration_hrs = "trip_duration",
+      gear = "standard_name.x",
+      vessel_type = "standard_name.y",
+      "catch_habitat",
+      "catch_outcome",
+      "n_catch",
+      "catch_taxon",
+      length_cm = "length",
+      "catch_kg",
+      "catch_price"
+    )
+
+  logger::log_info(
+    "Processed {nrow(api_preprocessed)} records from {length(unique(api_preprocessed$trip_id))} unique trips"
+  )
+
+  # Write locally with just the filename
+  filename <- pars$api$trips$raw$file_prefix |>
+    add_version(extension = "parquet")
+
+  logger::log_info("Writing parquet file locally: {filename}")
+  arrow::write_parquet(
+    api_preprocessed,
+    sink = filename,
+    compression = "lz4",
+    compression_level = 12
+  )
+
+  # Upload to cloud with the full path
+  cloud_path <- file.path(
+    pars$api$trips$raw$cloud_path,
+    filename
+  )
+
+  logger::log_info("Uploading to cloud storage: {cloud_path}")
+  upload_cloud_file(
+    file = filename,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options_api,
+    name = cloud_path
+  )
+
+  # Clean up local file
+  file.remove(filename)
+  logger::log_success("API trip data export completed successfully")
+
+  invisible(NULL)
+}
+
+#' Export Validated API-Ready Trip Data
+#'
+#' @description
+#' Processes WorldFish preprocessed survey data into a simplified API-friendly format
+#' and exports it to cloud storage for external consumption. This function exports the
+#' **validated** version of trip data.
+#'
+#' @details
+#' The function performs the following operations:
+#' - Downloads **validated** WF survey data from cloud storage
+#' - Loads form-specific assets (taxa, geography, gear, vessels) from Airtable metadata
+#' - Generates unique trip IDs using xxhash64 algorithm
+#' - Transforms nested survey structure to flat API format
+#' - Joins with standardized lookup tables (districts, gear types, vessel types)
+#' - Exports to the **validated** cloud storage path (before validation)
+#'
+#' **Data Pipeline Context**:
+#' This function exports raw preprocessed data and is part of a two-stage API export pipeline:
+#' 1. `raw()` - Exports raw/preprocessed data
+#' 1. `export_api_validated()` - Exports validated data (this function)
+#'
+#' **Output Schema**:
+#' The exported dataset includes the following fields:
+#' - `trip_id`: Unique identifier (TRIP_xxxxxxxxxxxx format)
+#' - `landing_date`: Date of landing
+#' - `gaul_2_name`: Standardized district name (GAUL level 2)
+#' - `n_fishers`: Total number of fishers (men + women + children)
+#' - `trip_duration_hrs`: Duration in hours
+#' - `gear`: Standardized gear type
+#' - `vessel_type`: Standardized vessel type
+#' - `catch_habitat`: Habitat where catch occurred
+#' - `catch_outcome`: Outcome of catch (landed, sold, etc.)
+#' - `n_catch`: Number of individual catch items
+#' - `catch_taxon`: Species or taxonomic group
+#' - `length_cm`: Length measurement in centimeters
+#' - `catch_kg`: Weight in kilograms
+#' - `catch_price`: Price in local currency
+#'
+#' **Cloud Storage Location**:
+#' Files are uploaded to the path specified in `conf$api$trips$validated$cloud_path`
+#' (e.g., `zanzibar/validated/`) with versioned filenames following the pattern:
+#' `{file_prefix}__{timestamp}_{git_sha}__.parquet`
+#'
+#' @param log_threshold The logging level threshold for the logger package (e.g., DEBUG, INFO).
+#'   See `logger::log_levels` for available options. Default is logger::DEBUG.
+#'
+#' @return NULL (invisible). The function uploads data to cloud storage as a side effect.
+#'
+#' @examples
+#' \dontrun{
+#' # Export raw API trip data with default debug logging
+#' export_api_validated()
+#'
+#' # Export with info-level logging only
+#' export_api_validated(logger::INFO)
+#' }
+#'
+#' @seealso
+#' * [preprocess_wf_surveys()] for generating the preprocessed survey data
+#' * [validate_wf_surveys()] for the validation step that produces validated data
+#' * [download_parquet_from_cloud()] for retrieving data from cloud storage
+#' * [upload_cloud_file()] for uploading data to cloud storage
+#' * [get_airtable_form_id()] for retrieving form-specific asset metadata
+#'
+#' @keywords workflow export
+#' @export
+export_api_validated <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+  pars <- read_config()
+
+  logger::log_info("Downloading preprocessed survey data...")
+  validated_surveys <- download_parquet_from_cloud(
+    prefix = pars$surveys$wf_surveys_v1$validated_surveys$file_prefix,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options
+  )
+
+  logger::log_info("Loading form-specific assets from cloud storage...")
+  target_form_id <- get_airtable_form_id(
+    kobo_asset_id = pars$surveys$wf_surveys_v2$asset_id,
+    conf = pars
+  )
+
+  assets <- cloud_object_name(
+    prefix = "assets",
+    provider = pars$storage$google$key,
+    extension = "rds",
+    options = pars$storage$google$options_coasts
+  ) |>
+    download_cloud_file(
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options_coasts
+    ) |>
+    readr::read_rds() |>
+    purrr::keep_at(c("taxa", "geo", "gear", "vessels", "sites")) |>
+    purrr::map(
+      ~ dplyr::filter(
+        .x,
+        stringr::str_detect(
+          .data$form_id,
+          paste0(
+            "(^|,\\s*)",
+            !!target_form_id,
+            "(\\s*,|$)"
+          )
+        )
+      )
+    ) |>
+    purrr::map(
+      ~ dplyr::select(.x, -"form_id")
+    )
+
+  logger::log_info("Transforming surveys to API format...")
+  api_validated <- validated_surveys |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      trip_id = paste0(
+        "TRIP_",
+        substr(digest::digest(.data$submission_id, algo = "xxhash64"), 1, 12)
+      ),
+      survey_id = dplyr::case_when(
+        .data$survey_version == "1" ~ pars$surveys$wf_surveys_v1$asset_id,
+        .data$survey_version == "2" ~ pars$surveys$wf_surveys_v2$asset_id
+      )
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      n_catch = as.integer(.data$n_catch),
+      n_fishers = .data$no_men_fishers +
+        .data$no_women_fishers +
+        .data$no_child_fishers
+    ) |>
+    dplyr::left_join(assets$geo, by = c("district" = "survey_label")) |>
+    dplyr::left_join(assets$gear, by = c("gear" = "survey_label")) |>
+    dplyr::left_join(assets$vessels, by = c("vessel_type" = "survey_label")) |>
+    dplyr::mutate(
+      "catch_habitat" = dplyr::case_when(
+        .data$habitat == "1" ~ "Reef",
+        .data$habitat == "2" ~ "FAD",
+        .data$habitat == "3" ~ "Open Sea",
+        .data$habitat == "4" ~ "Shore",
+        .data$habitat == "6" ~ "Mangrove",
+        .data$habitat == "7" ~ "Seagrass"
+      )
+    ) |>
+    dplyr::select(
+      "survey_id",
+      "trip_id",
+      "landing_date",
+      "gaul_1_code",
+      "gaul_1_name",
+      "gaul_2_code",
+      "gaul_2_name",
+      "n_fishers",
+      trip_duration_hrs = "trip_duration",
+      gear = "standard_name.x",
+      vessel_type = "standard_name.y",
+      "catch_habitat",
+      "catch_outcome",
+      "n_catch",
+      "catch_taxon",
+      length_cm = "length",
+      "catch_kg",
+      "catch_price"
+    )
+
+  logger::log_info(
+    "Processed {nrow(api_validated)} records from {length(unique(api_validated$trip_id))} unique trips"
+  )
+
+  # Write locally with just the filename
+  filename <- pars$api$trips$validated$file_prefix |>
+    add_version(extension = "parquet")
+
+  logger::log_info("Writing parquet file locally: {filename}")
+  arrow::write_parquet(
+    api_validated,
+    sink = filename,
+    compression = "lz4",
+    compression_level = 12
+  )
+
+  # Upload to cloud with the full path
+  cloud_path <- file.path(
+    pars$api$trips$validated$cloud_path,
+    filename
+  )
+
+  logger::log_info("Uploading to cloud storage: {cloud_path}")
+  upload_cloud_file(
+    file = filename,
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options_api,
+    name = cloud_path
+  )
+
+  # Clean up local file
+  file.remove(filename)
+  logger::log_success("API trip data export completed successfully")
+
+  invisible(NULL)
+}
