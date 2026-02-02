@@ -282,6 +282,7 @@ preprocess_wf_surveys <- function(
     preprocessed_data |>
     dplyr::relocate("fishing_days_week", .after = "survey_activity") |>
     dplyr::relocate("fish_group", .after = "catch_taxon") |>
+    dplyr::relocate("boat_reg_no", "boat_name", .after = "has_boat") |>
     dplyr::arrange(.data$submission_id, .data$n_catch)
 
   logger::log_info(
