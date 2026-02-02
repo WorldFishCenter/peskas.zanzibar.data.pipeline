@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,61 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.2.0" id="peskaszanzibardatapipeline-420">peskas.zanzibar.data.pipeline 4.2.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-420"></a></h2>
+<div class="section level3">
+<h3 id="new-features-4-2-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-4-2-0"></a></h3>
+<ul><li>
+<strong>API Data Export Pipeline</strong>: Added new <code><a href="../reference/export_api_raw.html">export_api_raw()</a></code> function to export raw preprocessed survey data in API-friendly format
+<ul><li>Exports raw/preprocessed trip data (before validation) to cloud storage</li>
+<li>Part of a two-stage API export pipeline (raw and validated exports)</li>
+<li>Transforms nested survey data into flat structure with standardized trip-level records</li>
+<li>Generates unique trip IDs using xxhash64 algorithm</li>
+<li>Integrates with Airtable metadata for form-specific asset lookups</li>
+<li>Exports versioned parquet files to <code>zanzibar/raw/</code> path for external API consumption</li>
+<li>Includes comprehensive output schema with 14 standardized fields (trip_id, landing_date, gear, catch metrics, etc.)</li>
+</ul></li>
+<li>
+<strong>Airtable Integration</strong>: New helper functions for managing Airtable metadata and form configurations
+<ul><li>
+<code><a href="../reference/get_airtable_form_id.html">get_airtable_form_id()</a></code>: Retrieves Airtable record IDs from KoBoToolbox asset IDs</li>
+<li>
+<code><a href="../reference/airtable_to_df.html">airtable_to_df()</a></code>: Downloads complete Airtable tables with automatic pagination handling</li>
+<li>
+<code><a href="../reference/get_writable_fields.html">get_writable_fields()</a></code>: Identifies updatable fields in Airtable tables (excludes computed fields)</li>
+<li>
+<code><a href="../reference/update_airtable_record.html">update_airtable_record()</a></code>: Updates individual records with field validation</li>
+<li>
+<code><a href="../reference/bulk_update_airtable.html">bulk_update_airtable()</a></code>: Batch updates multiple records efficiently (up to 10 records per request)</li>
+<li>
+<code><a href="../reference/device_sync.html">device_sync()</a></code>: Synchronizes GPS device metadata between Airtable and MongoDB</li>
+</ul></li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-4-2-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-4-2-0"></a></h3>
+<ul><li>
+<strong>Configuration Enhancements</strong>:
+<ul><li>Added <code>api</code> configuration section for trip data exports with separate raw/validated paths</li>
+<li>Configured cloud storage paths for API exports (zanzibar/raw, zanzibar/validated)</li>
+<li>Added Airtable base ID and token configuration for metadata management</li>
+<li>Enhanced <code>options_api</code> storage configuration for peskas-coasts bucket</li>
+</ul></li>
+<li>
+<strong>GitHub Actions Workflow</strong>:
+<ul><li>Added new <code>export-api-data</code> job to automated pipeline workflow</li>
+<li>Integrated Airtable authentication with GitHub Secrets (AIRTABLE_TOKEN, AIRTABLE_BASE_ID_FRAME, AIRTABLE_BASE_ID_ASSETS)</li>
+<li>Configured API export job to run after survey preprocessing step</li>
+<li>Added production environment configuration for API data exports</li>
+</ul></li>
+<li>
+<strong>Code Quality</strong>:
+<ul><li>Improved documentation with comprehensive roxygen2 comments for all new functions</li>
+<li>Added detailed examples and cross-references in function documentation</li>
+<li>Enhanced error handling and input validation in Airtable operations</li>
+<li>Implemented proper cleanup of temporary local files after cloud uploads</li>
+</ul></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.1.1" id="peskaszanzibardatapipeline-411">peskas.zanzibar.data.pipeline 4.1.1<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-411"></a></h2>
 <div class="section level3">

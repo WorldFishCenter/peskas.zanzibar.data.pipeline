@@ -12,6 +12,10 @@ storage.
   : Calculate Monthly Trip Statistics by District
 - [`estimate_fleet_activity()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/estimate_fleet_activity.md)
   : Estimate Fleet-Wide Activity from Sample Data
+- [`export_api_raw()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_raw.md)
+  : Export Raw API-Ready Trip Data
+- [`export_api_validated()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_validated.md)
+  : Export Validated API-Ready Trip Data
 - [`export_validation_flags()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_validation_flags.md)
   : Export Validation Flags to MongoDB
 - [`export_wf_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_wf_data.md)
@@ -113,6 +117,8 @@ reshaping, and trip processing.
   : Generate Grid Summaries for Track Data
 - [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md)
   : Get Length-Weight Coefficients and Morphological Data for Species
+- [`get_airtable_form_id()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_airtable_form_id.md)
+  : Get Airtable Form ID from KoBoToolbox Asset ID
 - [`get_fao_groups()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_fao_groups.md)
   : Extract and Format FAO Taxonomic Groups
 - [`get_length_weight_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_weight_batch.md)
@@ -239,6 +245,10 @@ geographic visualizations, and preparing data for portals and reporting.
   : Generate Geographic Regional Summaries of Fishery Data
 - [`create_geos_v1()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/create_geos_v1.md)
   : Generate Geographic Regional Summaries of Fishery Data (Version 1)
+- [`export_api_raw()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_raw.md)
+  : Export Raw API-Ready Trip Data
+- [`export_api_validated()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_validated.md)
+  : Export Validated API-Ready Trip Data
 - [`export_wf_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_wf_data.md)
   : Export WorldFish Summary Data to MongoDB
 - [`kepler_mapper()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/kepler_mapper.md)
@@ -261,5 +271,24 @@ common data manipulation and processing capabilities.
 
 - [`add_version()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/add_version.md)
   : Add timestamp and sha string to a file name
+- [`get_airtable_form_id()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_airtable_form_id.md)
+  : Get Airtable Form ID from KoBoToolbox Asset ID
 - [`read_config()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/read_config.md)
   : Read configuration file
+
+## Airtable Integration
+
+Functions for interacting with Airtable API.
+
+- [`airtable_to_df()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/airtable_to_df.md)
+  : Get All Records from Airtable with Pagination
+- [`get_writable_fields()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_writable_fields.md)
+  : Get Writable Fields from Airtable Table
+- [`update_airtable_record()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/update_airtable_record.md)
+  : Update Single Airtable Record
+- [`bulk_update_airtable()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/bulk_update_airtable.md)
+  : Bulk Update Multiple Airtable Records
+- [`df_to_airtable()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/df_to_airtable.md)
+  : Create New Airtable Records
+- [`device_sync()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/device_sync.md)
+  : Sync Data with Airtable (Update + Create)
