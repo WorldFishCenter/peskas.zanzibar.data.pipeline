@@ -129,7 +129,7 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call merge_trips()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::merge_trips()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::merge_trips(site = "zanzibar")'
 
   summarize-model-wf-data:
     name: Summarize and model validated data
