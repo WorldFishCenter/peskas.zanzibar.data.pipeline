@@ -115,6 +115,22 @@ jobs:
       # - name: Call sync_validation_submissions()
       #   run: Rscript -e 'peskas.zanzibar.data.pipeline::sync_validation_submissions()'
 
+  merge-trips:
+    name: Merge PDS and survey trips
+    needs: ingest-preprocess-surveys
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call merge_trips()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::merge_trips()'
+
   summarize-model-wf-data:
     name: Summarize and model validated data
     needs: [validate-sync-surveys, ingest-preprocess-pds-data]

@@ -338,19 +338,37 @@ rename_child <- function(x, i, p) {
 #' @export
 ingest_pds_trips <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
-  pars <- read_config()
+  conf <- read_config()
 
-  devices_table <- get_metadata(table = "devices")
+  logger::log_info("Loading device registry...")
+  devices <- cloud_object_name(
+    prefix = conf$metadata$airtable$assets,
+    provider = conf$storage$google$key,
+    version = "latest",
+    extension = "rds",
+    options = conf$storage$google$options_coasts
+  ) |>
+    download_cloud_file(
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options_coasts
+    ) |>
+    readr::read_rds() |>
+    purrr::pluck("devices") |>
+    dplyr::filter(
+      .data$customer_name %in%
+        c("WorldFish - Tanzania AP", "WorldFish - Zanzibar")
+    )
 
   boats_trips <- get_trips(
-    token = pars$pds$token,
-    secret = pars$pds$secret,
+    token = conf$pds$token,
+    secret = conf$pds$secret,
     dateFrom = "2023-01-01",
     dateTo = Sys.Date(),
-    imeis = devices_table$devices$IMEI
+    deviceInfo = TRUE,
+    imeis = unique(devices$imei)
   )
 
-  filename <- pars$pds$pds_trips$file_prefix %>%
+  filename <- conf$pds$pds_trips$file_prefix %>%
     add_version(extension = "parquet")
 
   arrow::write_parquet(
@@ -363,8 +381,8 @@ ingest_pds_trips <- function(log_threshold = logger::DEBUG) {
   logger::log_info("Uploading {filename} to cloud storage")
   upload_cloud_file(
     file = filename,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 }
 #' Ingest Pelagic Data Systems (PDS) Track Data

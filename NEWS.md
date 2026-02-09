@@ -1,3 +1,29 @@
+# peskas.zanzibar.data.pipeline 4.3.0
+
+## New Features
+
+- **Survey-GPS Trip Matching Pipeline**: Added comprehensive fuzzy matching system to link catch survey records with GPS trip data
+  - New `merge_trips()` workflow function for Kenya and Zanzibar sites
+  - `match_surveys_to_gps_trips()`: Universal two-step matching (surveys → registry → trips)
+  - Fuzzy string matching using Levenshtein distance on registration numbers, boat names, and fisher names
+  - Conservative one-trip-per-day constraint to avoid ambiguous matches
+  - Support for both explicit device registries (Kenya) and implicit registries built from trip data (Zanzibar)
+  - Configurable matching thresholds (registration: 15%, names: 25% difference allowed)
+  - Exports merged dataset with matched pairs plus all unmatched surveys and trips
+  - Helper functions: `standardize_column_names()`, `clean_matching_fields()`, `build_registry_from_trips()`
+
+## Improvements
+
+- **PDS Data Ingestion**:
+  - Updated `ingest_pds_trips()` to load device registry from cloud storage instead of Airtable metadata
+  - Added device info retrieval and proper filtering for Zanzibar devices
+  - Improved configuration variable naming (pars → conf)
+
+- **GitHub Actions Workflow**:
+  - Added new `merge-trips` job to automated pipeline
+  - Runs after survey preprocessing and before summarization
+  - Integrated with production environment configuration
+
 # peskas.zanzibar.data.pipeline 4.2.0
 
 ## New Features
