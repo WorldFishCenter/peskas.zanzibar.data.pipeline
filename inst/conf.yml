@@ -36,6 +36,9 @@ default:
       validated_surveys:
         file_prefix: wf-surveys-validated
         version: latest
+      merged_surveys:
+        file_prefix: wf-surveys-merged
+        version: latest
       validation:
         flags:
           file_prefix: wf-flags

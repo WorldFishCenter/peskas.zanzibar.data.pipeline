@@ -766,6 +766,16 @@ merge_trips <- function(
     dplyr::filter(!is.na(.data$trip)) |>
     dplyr::pull(.data$trip)
 
+  # Enrich matched records with full survey data
+  matched_with_full_data <- matched_subset |>
+    dplyr::left_join(
+      all_surveys,
+      by = "submission_id",
+      suffix = c("_match", ""),
+      relationship = "many-to-many"
+    ) |>
+    dplyr::select(-dplyr::ends_with("_match"))
+
   # Get unmatched records
   unmatched_surveys <- all_surveys |>
     dplyr::filter(!.data$submission_id %in% matched_submission_ids)
@@ -775,7 +785,7 @@ merge_trips <- function(
 
   # Combine all records
   merged_trips <- dplyr::bind_rows(
-    matched_subset,
+    matched_with_full_data,
     unmatched_surveys,
     unmatched_trips
   )
