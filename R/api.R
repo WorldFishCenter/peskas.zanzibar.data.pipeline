@@ -163,7 +163,17 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
       "catch_taxon",
       length_cm = "length",
       "catch_kg",
-      "catch_price"
+      tot_catch_price = "catch_price"
+    ) |>
+    dplyr::group_by(.data$trip_id) |>
+    dplyr::mutate(
+      catch_price = NA_real_,
+      tot_catch_kg = sum(catch_kg),
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::relocate(
+      c("catch_price", "tot_catch_kg", "tot_catch_price"),
+      .after = "catch_price"
     ) |>
     dplyr::distinct()
 
@@ -368,7 +378,17 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
       "catch_taxon",
       length_cm = "length",
       "catch_kg",
-      "catch_price"
+      tot_catch_price = "catch_price"
+    ) |>
+    dplyr::group_by(.data$trip_id) |>
+    dplyr::mutate(
+      catch_price = NA_real_,
+      tot_catch_kg = sum(catch_kg),
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::relocate(
+      c("catch_price", "tot_catch_kg", "tot_catch_price"),
+      .after = "catch_price"
     ) |>
     dplyr::distinct()
 
