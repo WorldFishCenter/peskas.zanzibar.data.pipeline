@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,40 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.3.0" id="peskaszanzibardatapipeline-430">peskas.zanzibar.data.pipeline 4.3.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-430"></a></h2>
+<div class="section level3">
+<h3 id="new-features-4-3-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-4-3-0"></a></h3>
+<ul><li>
+<strong>Survey-GPS Trip Matching Pipeline</strong>: Added comprehensive fuzzy matching system to link catch survey records with GPS trip data
+<ul><li>New <code><a href="../reference/merge_trips.html">merge_trips()</a></code> workflow function for Kenya and Zanzibar sites</li>
+<li>
+<code><a href="../reference/match_surveys_to_gps_trips.html">match_surveys_to_gps_trips()</a></code>: Universal two-step matching (surveys → registry → trips)</li>
+<li>Fuzzy string matching using Levenshtein distance on registration numbers, boat names, and fisher names</li>
+<li>Conservative one-trip-per-day constraint to avoid ambiguous matches</li>
+<li>Support for both explicit device registries (Kenya) and implicit registries built from trip data (Zanzibar)</li>
+<li>Configurable matching thresholds (registration: 15%, names: 25% difference allowed)</li>
+<li>Exports merged dataset with matched pairs plus all unmatched surveys and trips</li>
+<li>Helper functions: <code><a href="../reference/standardize_column_names.html">standardize_column_names()</a></code>, <code><a href="../reference/clean_matching_fields.html">clean_matching_fields()</a></code>, <code><a href="../reference/build_registry_from_trips.html">build_registry_from_trips()</a></code>
+</li>
+</ul></li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-4-3-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-4-3-0"></a></h3>
+<ul><li>
+<strong>PDS Data Ingestion</strong>:
+<ul><li>Updated <code><a href="../reference/ingest_pds_trips.html">ingest_pds_trips()</a></code> to load device registry from cloud storage instead of Airtable metadata</li>
+<li>Added device info retrieval and proper filtering for Zanzibar devices</li>
+<li>Improved configuration variable naming (pars → conf)</li>
+</ul></li>
+<li>
+<strong>GitHub Actions Workflow</strong>:
+<ul><li>Added new <code>merge-trips</code> job to automated pipeline</li>
+<li>Runs after survey preprocessing and before summarization</li>
+<li>Integrated with production environment configuration</li>
+</ul></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.2.0" id="peskaszanzibardatapipeline-420">peskas.zanzibar.data.pipeline 4.2.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-420"></a></h2>
 <div class="section level3">

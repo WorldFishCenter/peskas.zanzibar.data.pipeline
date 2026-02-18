@@ -30,6 +30,10 @@ storage.
   : Ingest Pelagic Data Systems (PDS) Trip Data
 - [`ingest_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/ingest_surveys.md)
   : Ingest WCS and WF Catch Survey Data
+- [`match_surveys_to_gps_trips()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/match_surveys_to_gps_trips.md)
+  : Match Catch Surveys to GPS Trips
+- [`merge_trips()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/merge_trips.md)
+  : Merge Survey and GPS Trip Data
 - [`prepare_boat_registry()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/prepare_boat_registry.md)
   : Prepare Boat Registry Data from Metadata
 - [`preprocess_ba_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_ba_surveys.md)

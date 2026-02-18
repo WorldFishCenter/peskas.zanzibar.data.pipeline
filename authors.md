@@ -11,13 +11,13 @@
 
 Longobardi L (2026). *peskas.zanzibar.data.pipeline: Functions to
 Implement the Zanzibar Small Scale Fisheries Data Pipeline*. R package
-version 4.2.0,
+version 4.3.0,
 <https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/>.
 
     @Manual{,
       title = {peskas.zanzibar.data.pipeline: Functions to Implement the Zanzibar Small Scale Fisheries Data Pipeline},
       author = {Lorenzo Longobardi},
       year = {2026},
-      note = {R package version 4.2.0},
+      note = {R package version 4.3.0},
       url = {https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/},
     }
