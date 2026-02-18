@@ -173,12 +173,49 @@ preprocess_wf_surveys <- function(
   logger::log_threshold(log_threshold)
 
   pars <- read_config()
+
   asfis <- download_parquet_from_cloud(
     prefix = "asfis",
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
 
+  target_form_ids <- c(
+    get_airtable_form_id(
+      kobo_asset_id = pars$surveys$wf_surveys_v1$asset_id,
+      conf = pars
+    ),
+    get_airtable_form_id(
+      kobo_asset_id = pars$surveys$wf_surveys_v2$asset_id,
+      conf = pars
+    )
+  )
+
+  # Build a single regex that matches any of the IDs
+  ids_pattern <- paste0(
+    "(^|,\\s*)(",
+    paste(target_form_ids, collapse = "|"),
+    ")(\\s*,|$)"
+  )
+
+  assets <-
+    cloud_object_name(
+      prefix = pars$airtable$assets,
+      provider = pars$storage$google$key,
+      version = "latest",
+      extension = "rds",
+      options = pars$storage$google$options_coasts
+    ) |>
+    download_cloud_file(
+      provider = pars$storage$google$key,
+      options = pars$storage$google$options_coasts
+    ) |>
+    readr::read_rds() |>
+    purrr::keep_at(c("taxa", "gear", "vessels", "sites", "geo")) |>
+    purrr::map(
+      ~ dplyr::filter(.x, stringr::str_detect(.data$form_id, ids_pattern)) |>
+        dplyr::distinct()
+    )
   # metadata <- get_metadata()
 
   # Process both versions and combine results
@@ -278,7 +315,7 @@ preprocess_wf_surveys <- function(
     )
   }
   # Sort final combined data
-  preprocessed_data <-
+  preprocessed_landings <-
     preprocessed_data |>
     dplyr::relocate("fishing_days_week", .after = "survey_activity") |>
     dplyr::relocate("fish_group", .after = "catch_taxon") |>
@@ -288,9 +325,29 @@ preprocess_wf_surveys <- function(
   logger::log_info(
     "Combined dataset has {nrow(preprocessed_data)} rows from {length(unique(preprocessed_data$submission_id))} submissions"
   )
+  preprocessed_data_mapped <-
+    map_surveys(
+      data = preprocessed_landings,
+      taxa_mapping = assets$taxa,
+      gear_mapping = assets$gear,
+      vessels_mapping = assets$vessels,
+      sites_mapping = assets$sites,
+      geo_mapping = assets$geo
+    ) |>
+    dplyr::mutate(
+      habitat = dplyr::case_when(
+        .data$habitat == "1" ~ "Reef",
+        .data$habitat == "2" ~ "FAD",
+        .data$habitat == "3" ~ "Open Sea",
+        .data$habitat == "4" ~ "Shore",
+        .data$habitat == "6" ~ "Mangrove",
+        .data$habitat == "7" ~ "Seagrass"
+      )
+    ) |>
+    dplyr::distinct()
 
   upload_parquet_to_cloud(
-    data = preprocessed_data,
+    data = preprocessed_data_mapped,
     prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
@@ -606,4 +663,79 @@ preprocess_pds_tracks <- function(
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
+}
+
+#' Map Survey Labels to Standardized Taxa, Gear, and Vessel Names
+#'
+#' @description
+#' Converts local species, gear, and vessel labels from surveys to standardized names using
+#' Airtable reference tables. Replaces catch_taxon with scientific_name and alpha3_code,
+#' and replaces local gear and vessel names with standardized types.
+#'
+#' @param data A data frame with preprocessed survey data containing catch_taxon, gear,
+#'   vessel_type, and landing_site columns.
+#' @param taxa_mapping A data frame from Airtable taxa table with survey_label, alpha3_code,
+#'   and scientific_name columns.
+#' @param gear_mapping A data frame from Airtable gears table with survey_label and
+#'   standard_name columns.
+#' @param vessels_mapping A data frame from Airtable vessels table with survey_label and
+#'   standard_name columns.
+#' @param sites_mapping A data frame from Airtable landing_sites table with site_code and
+#'   site columns.
+#' @param geo_mapping A data frame from Airtable geo table with GAUL codes and names
+#'
+#'
+#' @return A tibble with catch_taxon replaced by scientific_name and alpha3_code, gear and
+#'   vessel_type replaced by standardized names, and landing_site replaced by the full site name.
+#'   Records without matches will have NA values.
+#'
+#' @details
+#' This function is called within `preprocess_landings()` after processing raw survey data.
+#' The mapping tables are retrieved from Airtable frame base and filtered by
+#' form ID before being passed to this function.
+#'
+#' @keywords preprocessing helper
+#' @export
+map_surveys <- function(
+  data = NULL,
+  taxa_mapping = NULL,
+  gear_mapping = NULL,
+  vessels_mapping = NULL,
+  sites_mapping = NULL,
+  geo_mapping = NULL
+) {
+  data |>
+    dplyr::left_join(geo_mapping, by = c("district" = "survey_label")) |>
+    dplyr::select(
+      -c("form_id", "district_code", "country")
+    ) |>
+    dplyr::relocate(
+      "gaul_1_name",
+      "gaul_1_code",
+      "gaul_2_name",
+      "gaul_2_code",
+      .after = "district"
+    ) |>
+    dplyr::left_join(taxa_mapping, by = c("catch_taxon" = "survey_label")) |>
+    dplyr::select(-c("catch_taxon", "form_id", "english_name")) |>
+    dplyr::relocate("scientific_name", .after = "n_catch") |>
+    dplyr::relocate("alpha3_code", .after = "scientific_name") |>
+    dplyr::left_join(gear_mapping, by = c("gear" = "survey_label")) |>
+    dplyr::select(-c("gear", "form_id")) |>
+    dplyr::relocate("standard_name", .after = "vessel_type") |>
+    dplyr::rename(gear = "standard_name") |>
+    dplyr::left_join(
+      vessels_mapping,
+      by = c("vessel_type" = "survey_label")
+    ) |>
+    dplyr::select(-c("vessel_type", "form_id")) |>
+    dplyr::relocate("standard_name", .after = "habitat") |>
+    dplyr::rename(vessel_type = "standard_name") |>
+    dplyr::left_join(
+      sites_mapping,
+      by = c("landing_site" = "site_code")
+    ) |>
+    dplyr::select(-c("landing_site", "form_id")) |>
+    dplyr::relocate("site", .after = "district") |>
+    dplyr::rename(landing_site = "site")
 }

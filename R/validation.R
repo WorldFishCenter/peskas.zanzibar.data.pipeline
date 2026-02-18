@@ -205,7 +205,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       "catch_outcome",
       "catch_price",
       "fish_group",
-      "catch_taxon",
+      catch_taxon = "alpha3_code",
       "length",
       "min_length",
       "max_length_75",

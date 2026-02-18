@@ -76,41 +76,6 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
     options = pars$storage$google$options
   )
 
-  logger::log_info("Loading form-specific assets from cloud storage...")
-  target_form_id <- get_airtable_form_id(
-    kobo_asset_id = pars$surveys$wf_surveys_v2$asset_id,
-    conf = pars
-  )
-
-  assets <- cloud_object_name(
-    prefix = "assets",
-    provider = pars$storage$google$key,
-    extension = "rds",
-    options = pars$storage$google$options_coasts
-  ) |>
-    download_cloud_file(
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options_coasts
-    ) |>
-    readr::read_rds() |>
-    purrr::keep_at(c("taxa", "geo", "gear", "vessels", "sites")) |>
-    purrr::map(
-      ~ dplyr::filter(
-        .x,
-        stringr::str_detect(
-          .data$form_id,
-          paste0(
-            "(^|,\\s*)",
-            !!target_form_id,
-            "(\\s*,|$)"
-          )
-        )
-      )
-    ) |>
-    purrr::map(
-      ~ dplyr::select(.x, -"form_id")
-    )
-
   logger::log_info("Transforming surveys to API format...")
   api_preprocessed <- preprocessed_surveys |>
     dplyr::rowwise() |>
@@ -132,19 +97,6 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
         .data$no_women_fishers +
         .data$no_child_fishers
     ) |>
-    dplyr::left_join(assets$geo, by = c("district" = "survey_label")) |>
-    dplyr::left_join(assets$gear, by = c("gear" = "survey_label")) |>
-    dplyr::left_join(assets$vessels, by = c("vessel_type" = "survey_label")) |>
-    dplyr::mutate(
-      "catch_habitat" = dplyr::case_when(
-        .data$habitat == "1" ~ "Reef",
-        .data$habitat == "2" ~ "FAD",
-        .data$habitat == "3" ~ "Open Sea",
-        .data$habitat == "4" ~ "Shore",
-        .data$habitat == "6" ~ "Mangrove",
-        .data$habitat == "7" ~ "Seagrass"
-      )
-    ) |>
     dplyr::select(
       "survey_id",
       "trip_id",
@@ -155,12 +107,12 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
       "gaul_2_name",
       "n_fishers",
       trip_duration_hrs = "trip_duration",
-      gear = "standard_name.x",
-      vessel_type = "standard_name.y",
-      "catch_habitat",
+      "gear",
+      "vessel_type",
+      catch_habitat = "habitat",
       "catch_outcome",
       "n_catch",
-      "catch_taxon",
+      catch_taxon = "alpha3_code",
       length_cm = "length",
       "catch_kg",
       tot_catch_price = "catch_price"
@@ -291,41 +243,6 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
     options = pars$storage$google$options
   )
 
-  logger::log_info("Loading form-specific assets from cloud storage...")
-  target_form_id <- get_airtable_form_id(
-    kobo_asset_id = pars$surveys$wf_surveys_v2$asset_id,
-    conf = pars
-  )
-
-  assets <- cloud_object_name(
-    prefix = "assets",
-    provider = pars$storage$google$key,
-    extension = "rds",
-    options = pars$storage$google$options_coasts
-  ) |>
-    download_cloud_file(
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options_coasts
-    ) |>
-    readr::read_rds() |>
-    purrr::keep_at(c("taxa", "geo", "gear", "vessels", "sites")) |>
-    purrr::map(
-      ~ dplyr::filter(
-        .x,
-        stringr::str_detect(
-          .data$form_id,
-          paste0(
-            "(^|,\\s*)",
-            !!target_form_id,
-            "(\\s*,|$)"
-          )
-        )
-      )
-    ) |>
-    purrr::map(
-      ~ dplyr::select(.x, -"form_id")
-    )
-
   logger::log_info("Transforming surveys to API format...")
   api_validated <- validated_surveys |>
     dplyr::rowwise() |>
@@ -347,19 +264,6 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
         .data$no_women_fishers +
         .data$no_child_fishers
     ) |>
-    dplyr::left_join(assets$geo, by = c("district" = "survey_label")) |>
-    dplyr::left_join(assets$gear, by = c("gear" = "survey_label")) |>
-    dplyr::left_join(assets$vessels, by = c("vessel_type" = "survey_label")) |>
-    dplyr::mutate(
-      "catch_habitat" = dplyr::case_when(
-        .data$habitat == "1" ~ "Reef",
-        .data$habitat == "2" ~ "FAD",
-        .data$habitat == "3" ~ "Open Sea",
-        .data$habitat == "4" ~ "Shore",
-        .data$habitat == "6" ~ "Mangrove",
-        .data$habitat == "7" ~ "Seagrass"
-      )
-    ) |>
     dplyr::select(
       "survey_id",
       "trip_id",
@@ -370,12 +274,12 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
       "gaul_2_name",
       "n_fishers",
       trip_duration_hrs = "trip_duration",
-      gear = "standard_name.x",
-      vessel_type = "standard_name.y",
-      "catch_habitat",
+      "gear",
+      "vessel_type",
+      catch_habitat = "habitat",
       "catch_outcome",
       "n_catch",
-      "catch_taxon",
+      catch_taxon = "alpha3_code",
       length_cm = "length",
       "catch_kg",
       tot_catch_price = "catch_price"
