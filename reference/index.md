@@ -132,6 +132,8 @@ reshaping, and trip processing.
   : Get FAO Areas for Species (Batch Version)
 - [`load_taxa_databases()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/load_taxa_databases.md)
   : Load Taxa Data from FishBase and SeaLifeBase
+- [`map_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/map_surveys.md)
+  : Map Survey Labels to Standardized Taxa, Gear, and Vessel Names
 - [`match_species_from_taxa()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/match_species_from_taxa.md)
   : Match Species from Taxa Databases
 - [`prepare_boat_registry()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/prepare_boat_registry.md)
@@ -277,6 +279,8 @@ common data manipulation and processing capabilities.
   : Add timestamp and sha string to a file name
 - [`get_airtable_form_id()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_airtable_form_id.md)
   : Get Airtable Form ID from KoBoToolbox Asset ID
+- [`map_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/map_surveys.md)
+  : Map Survey Labels to Standardized Taxa, Gear, and Vessel Names
 - [`read_config()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/read_config.md)
   : Read configuration file
 
