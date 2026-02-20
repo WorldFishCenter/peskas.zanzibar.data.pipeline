@@ -72,12 +72,12 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   # WCS Survey
   logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
   wcs_files <- retrieve_surveys(
-    prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
+    prefix = pars$surveys$wcs$raw$file_prefix,
     append_version = TRUE,
     url = "kf.kobotoolbox.org",
-    project_id = pars$surveys$wcs_surveys$asset_id,
-    username = pars$surveys$wcs_surveys$username,
-    psswd = pars$surveys$wcs_surveys$password,
+    project_id = pars$ingestion$wcs$asset_id,
+    username = pars$ingestion$wcs$username,
+    psswd = pars$ingestion$wcs$password,
     encoding = "UTF-8"
   )
 
@@ -88,12 +88,12 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   # WF Survey - Version 1
   logger::log_info("Downloading WF Fish Catch Survey Kobo data (v1)...")
   wf_files_v1 <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys_v1$raw_surveys$file_prefix,
+    prefix = pars$surveys$wf_v1$raw$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
-    project_id = pars$surveys$wf_surveys_v1$asset_id,
-    username = pars$surveys$wf_surveys_v1$username,
-    psswd = pars$surveys$wf_surveys_v1$password,
+    project_id = pars$ingestion$wf_v1$asset_id,
+    username = pars$ingestion$wf_v1$username,
+    psswd = pars$ingestion$wf_v1$password,
     encoding = "UTF-8"
   )
 
@@ -104,12 +104,12 @@ ingest_surveys <- function(log_threshold = logger::DEBUG) {
   # WF Survey - Version 2
   logger::log_info("Downloading WF Fish Catch Survey Kobo data (v2)...")
   wf_files_v2 <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys_v2$raw_surveys$file_prefix,
+    prefix = pars$surveys$wf_v2$raw$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
-    project_id = pars$surveys$wf_surveys_v2$asset_id,
-    username = pars$surveys$wf_surveys_v2$username,
-    psswd = pars$surveys$wf_surveys_v2$password,
+    project_id = pars$ingestion$wf_v2$asset_id,
+    username = pars$ingestion$wf_v2$username,
+    psswd = pars$ingestion$wf_v2$password,
     encoding = "UTF-8"
   )
 

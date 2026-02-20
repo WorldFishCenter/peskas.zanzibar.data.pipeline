@@ -1,18 +1,36 @@
 default:
-  surveys:
-    wcs_surveys:
+  ingestion:
+    wcs:
       asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
       username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
       password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
-      version:
-        preprocess: latest
-      raw_surveys:
+
+    wf_v1:
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+
+    wf_v2:
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+
+    ba:
+      asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
+      username: !expr Sys.getenv('BA_SURVEYS_UNAME')
+      password: !expr Sys.getenv('BA_SURVEYS_PSSW')
+
+  surveys:
+    wcs:
+      raw:
         file_prefix: wcs-surveys-raw
         version: latest
-      preprocessed_surveys:
+      preprocessed:
         file_prefix: wcs-surveys-preprocessed
         version: latest
-      validated_surveys:
+      validated:
         file_prefix: wcs-surveys-validated
         version: latest
       validation:
@@ -20,57 +38,45 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
-    wf_surveys_v1:
-      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
-      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
-      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
-      asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
-      version:
-        preprocess: latest
-      raw_surveys:
+
+    wf_v1:
+      raw:
         file_prefix: wf-surveys-raw
         version: latest
-      preprocessed_surveys:
+      preprocessed:
         file_prefix: wf-surveys-preprocessed
         version: latest
-      validated_surveys:
+      validated:
         file_prefix: wf-surveys-validated
         version: latest
-      merged_surveys:
+      merged:
         file_prefix: wf-surveys-merged
         version: latest
-      validation:
-        flags:
-          file_prefix: wf-flags
       summaries:
         file_prefix: wf-summaries
         version: latest
       aggregated:
         file_prefix: wf-aggregated
         version: latest
-    wf_surveys_v2:
-      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
-      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
-      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
-      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
-      version:
-        preprocess: latest
-      raw_surveys:
+      validation:
+        flags:
+          file_prefix: wf-flags
+
+    wf_v2:
+      raw:
         file_prefix: wf-v2-surveys-raw
         version: latest
-    ba_surveys:
-      asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
-      username: !expr Sys.getenv('BA_SURVEYS_UNAME')
-      password: !expr Sys.getenv('BA_SURVEYS_PSSW')
+
+    ba:
       version:
         preprocess: latest
-      raw_surveys:
+      raw:
         file_prefix: ba-surveys-raw
         version: latest
-      preprocessed_surveys:
+      preprocessed:
         file_prefix: ba-surveys-preprocessed
         version: latest
-      validated_surveys:
+      validated:
         file_prefix: ba-surveys-validated
         version: latest
       validation:
@@ -78,6 +84,7 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
+
   pds:
     token: !expr Sys.getenv('PDS_TOKEN')
     secret: !expr Sys.getenv('PDS_SECRET')
@@ -87,6 +94,7 @@ default:
     pds_tracks:
       file_prefix: pds-tracks
       version: latest
+
   api:
     trips:
       raw:
@@ -95,6 +103,7 @@ default:
       validated:
         file_prefix: trips-validated
         cloud_path: zanzibar/validated
+
   storage:
     google:
       key: gcs
@@ -104,41 +113,47 @@ default:
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
       options_coasts:
         project: peskas
-        bucket: peskas-coasts
+        bucket: peskas-coasts-dev
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
       options_api:
-         bucket: peskas-api-dev  
+        bucket: peskas-api-dev
     mongodb:
-      connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
-      pipeline:
-        database_name: zanzibar
-        collection:
-          monthly_metrics: monthly_metrics
-          gear_metrics: gear_metrics
-          taxa: taxa_proportions
-          effort_map: effort_map
-      validation:
-        connection_string: !expr Sys.getenv('MONGODB_CONNECTION_STRING_VALIDATION')
-        database_name: validation-dev
-        collection:
-          flags: surveys_flags
-          enumerators_stats: enumerators_stats
-      portal:
-        database_name: portal-dev
-        collection:
-          monthly_summaries: monthly_summaries
-          taxa_summaries: taxa_summaries
-          districts_summaries: districts_summaries
-          gear_summaries: gear_summaries
-          grid_summaries: grid_summaries
+      connection_strings:
+        main: !expr Sys.getenv('MONGODB_CONNECTION_STRING')
+        validation: !expr Sys.getenv('MONGODB_CONNECTION_STRING_VALIDATION')
+      databases:
+        pipeline:
+          database_name: zanzibar-dev
+          collections:
+            monthly_metrics: monthly_metrics
+            gear_metrics: gear_metrics
+            taxa: taxa_proportions
+            effort_map: effort_map
+        validation:
+          database_name: validation-dev
+          collections:
+            flags: surveys_flags
+            enumerators_stats: enumerators_stats
+        dashboard:
+          database_name: portal-dev
+          collections:
+            monthly_summaries: monthly_summaries
+            taxa_summaries: taxa_summaries
+            districts_summaries: districts_summaries
+            gear_summaries: gear_summaries
+            grid_summaries: grid_summaries
+
   pds_storage:
     google:
       key: gcs
       options:
         project: peskas
-        bucket: pds-zanzibar
+        bucket: pds-zanzibar-dev
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
+
   metadata:
+    map_boundaries:
+      prefix: ZAN_boundaries
     google_sheets:
       name: metadata-tables
       sheet_id: !expr Sys.getenv("GOOGLE_SHEET_ID")
@@ -148,29 +163,32 @@ default:
         - boats
         - catch_type
         - communities
+    airtable:
+      assets: assets
+      token: !expr Sys.getenv('AIRTABLE_TOKEN')
+      frame:
+        base_id: !expr Sys.getenv('AIRTABLE_BASE_ID_FRAME')
+
   validation:
     k_MAD_catch: 7
-  airtable:
-    assets: assets
-    token: !expr Sys.getenv('AIRTABLE_TOKEN')
-    frame:
-      base_id: !expr Sys.getenv('AIRTABLE_BASE_ID_FRAME')
+
 production:
   storage:
     google:
       options:
         bucket: zanzibar-prod
       options_coasts:
-        bucket: peskas-coasts  
+        bucket: peskas-coasts
       options_api:
-         bucket: peskas-api-prod    
+        bucket: peskas-api-prod
     mongodb:
-      pipeline:
-        database_name: zanzibar-prod
-      validation:
-        database_name: validation-prod
-      portal:
-        database_name: portal-prod
+      databases:
+        pipeline:
+          database_name: zanzibar-prod
+        validation:
+          database_name: validation-prod
+        dashboard:
+          database_name: portal-prod
   pds_storage:
     google:
       options:

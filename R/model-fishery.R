@@ -64,9 +64,11 @@ prepare_boat_registry <- function(boats_table = NULL) {
 #' - Filters out unrealistic trips (>48 hours)
 #' - Standardizes column names and structure
 #'
-#' @param pars Configuration parameters containing:
+#' @param conf Configuration parameters containing:
 #'   - pds$token: API token for PDS access
 #'   - pds$secret: API secret for PDS access
+#' @param devices_table Data frame containing device metadata with at minimum
+#'   an `imei` column. Used to join district information to trips.
 #' @param imei_list Vector of IMEI numbers for devices to retrieve trip data for
 #'
 #' @return A processed data frame with:
@@ -81,9 +83,9 @@ prepare_boat_registry <- function(boats_table = NULL) {
 #' @examples
 #' \dontrun{
 #' # Process trip data with parameters and device list
-#' pars <- read_config()
+#' conf <- read_config()
 #' trips_stats <- process_trip_data(
-#'   pars = pars,
+#'   conf = conf,
 #'   imei_list = imei_list
 #' )
 #'
@@ -98,14 +100,16 @@ prepare_boat_registry <- function(boats_table = NULL) {
 #'
 #' @keywords workflow preprocessing
 #' @export
-process_trip_data <- function(pars = NULL, imei_list = NULL) {
+process_trip_data <- function(
+  conf = NULL,
+  devices_table = NULL,
+  imei_list = NULL
+) {
   # Get metadata within the function
-  metadata <- get_metadata()
-
   boats_trips <-
     get_trips(
-      token = pars$pds$token,
-      secret = pars$pds$secret,
+      token = conf$pds$token,
+      secret = conf$pds$secret,
       dateFrom = "2023-01-01",
       dateTo = Sys.Date(),
       imeis = imei_list
@@ -128,8 +132,21 @@ process_trip_data <- function(pars = NULL, imei_list = NULL) {
     ) |>
     # Exclude trips longer than 2 days
     dplyr::filter(.data$duration_hrs <= 48) |>
-    dplyr::left_join(metadata$communities, by = "community") |>
-    dplyr::select("district", dplyr::everything())
+    dplyr::left_join(
+      devices_table |>
+        dplyr::select("community", "gaul_2_name") |>
+        dplyr::distinct(),
+      by = "community"
+    ) |>
+    dplyr::select(
+      "gaul_2_name",
+      "community",
+      "trip",
+      "boat",
+      "landing_date",
+      "date_month",
+      "duration_hrs"
+    )
 
   return(trips_stats)
 }
@@ -182,7 +199,7 @@ process_trip_data <- function(pars = NULL, imei_list = NULL) {
 #' @export
 calculate_monthly_trip_stats <- function(trips_data) {
   trips_data |>
-    dplyr::group_by(.data$district, .data$date_month) |>
+    dplyr::group_by(.data$gaul_2_name, .data$date_month) |>
     dplyr::summarise(
       # Sample statistics from GPS-tracked boats
       sample_total_trips = dplyr::n(),
@@ -194,7 +211,7 @@ calculate_monthly_trip_stats <- function(trips_data) {
 
       .groups = "drop"
     ) |>
-    dplyr::arrange(.data$district, .data$date_month)
+    dplyr::arrange(.data$gaul_2_name, .data$date_month)
 }
 
 #' Estimate Fleet-Wide Activity from Sample Data
@@ -258,7 +275,7 @@ calculate_monthly_trip_stats <- function(trips_data) {
 #' @export
 estimate_fleet_activity <- function(monthly_stats, boat_registry) {
   monthly_stats |>
-    dplyr::left_join(boat_registry, by = "district") |>
+    dplyr::left_join(boat_registry, by = "gaul_2_name") |>
     dplyr::mutate(
       # Estimate total trips if all boats were tracked
       estimated_total_trips = .data$avg_trips_per_boat_per_month *
@@ -338,7 +355,7 @@ calculate_district_totals <- function(fleet_estimates, monthly_summaries) {
     # Join with catch/revenue data
     dplyr::full_join(
       monthly_summaries,
-      by = c("district" = "district", "date_month" = "date")
+      by = c("gaul_2_name" = "gaul_2_name", "date_month" = "date")
     ) |>
     # Calculate total estimates based on fleet-wide projections
     dplyr::mutate(
@@ -352,22 +369,22 @@ calculate_district_totals <- function(fleet_estimates, monthly_summaries) {
     ) |>
     # Select relevant columns
     dplyr::select(
-      .data$district,
-      .data$date_month,
+      "gaul_2_name",
+      "date_month",
       # Fleet estimates
-      .data$sample_total_trips,
-      .data$estimated_total_trips,
-      .data$sampling_rate,
+      "sample_total_trips",
+      "estimated_total_trips",
+      "sampling_rate",
       # Sample-based averages
-      .data$mean_catch_kg,
-      .data$mean_catch_price,
+      "mean_catch_kg",
+      "mean_catch_price",
       # Fleet-wide totals
-      .data$estimated_total_catch_kg,
-      .data$estimated_total_revenue
+      "estimated_total_catch_kg",
+      "estimated_total_revenue"
     ) |>
     # Filter out rows with missing catch data
     dplyr::filter(!is.na(.data$mean_catch_kg)) |>
-    dplyr::arrange(.data$district, .data$date_month)
+    dplyr::arrange(.data$gaul_2_name, .data$date_month)
 }
 
 #' Generate Complete Fleet Activity Analysis Pipeline
@@ -431,53 +448,69 @@ calculate_district_totals <- function(fleet_estimates, monthly_summaries) {
 #' @keywords workflow analysis pipeline
 #' @export
 generate_fleet_analysis <- function(log_threshold = logger::DEBUG) {
-  pars <- read_config()
-  metadata <- get_metadata()
+  conf <- read_config()
 
-  # Prepare boat registry from metadata
-  boat_registry <- prepare_boat_registry(boats_table = metadata$boats)
+  assets <- cloud_object_name(
+    prefix = conf$metadata$airtable$assets,
+    provider = conf$storage$google$key,
+    version = "latest",
+    extension = "rds",
+    options = conf$storage$google$options_coasts
+  ) |>
+    download_cloud_file(
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options_coasts
+    ) |>
+    readr::read_rds() |>
+    purrr::keep_at(c("devices", "geo"))
+
+  devices <- assets$devices |>
+    dplyr::filter(
+      .data$customer_name %in%
+        c("WorldFish - Tanzania AP", "WorldFish - Zanzibar")
+    )
+
+  regions <-
+    assets$geo |>
+    dplyr::filter(.data$gaul_2_code %in% c(devices$gaul_2_code))
+
+  boat_registry <-
+    regions |>
+    dplyr::select("gaul_2_name", "total_boats")
 
   # Process raw trip data
   trips_stats <- process_trip_data(
-    pars = pars,
-    imei_list = unique(metadata$devices$IMEI)
+    conf = conf,
+    devices_table = devices,
+    imei_list = unique(devices$imei)
   )
 
   monthly_summaries <-
     download_parquet_from_cloud(
       prefix = paste0(
-        pars$surveys$wf_surveys_v1$summaries$file_prefix,
+        conf$surveys$wf_v1$summaries$file_prefix,
         "_monthly_summaries"
       ),
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options
     )
 
   # Calculate monthly statistics
-  monthly_stats <- calculate_monthly_trip_stats(trips_stats)
+  monthly_stats <- calculate_monthly_trip_stats(trips_data = trips_stats)
 
   # Estimate fleet activity
   fleet_estimates <- estimate_fleet_activity(
     monthly_stats = monthly_stats,
     boat_registry = boat_registry
-  ) |>
-    dplyr::mutate(
-      district = dplyr::case_when(
-        .data$district == "North A" ~ "North a",
-        .data$district == "North B" ~ "North b",
-        .data$district == "West A" ~ "West a",
-        .data$district == "West B" ~ "West b",
-        TRUE ~ .data$district
-      )
-    )
+  )
 
   # Calculate district totals
   district_totals <- calculate_district_totals(
-    fleet_estimates,
-    monthly_summaries
+    fleet_estimates = fleet_estimates,
+    monthly_summaries = monthly_summaries
   ) |>
     tidyr::complete(
-      .data$district,
+      .data$gaul_2_name,
       date_month = seq(
         min(.data$date_month),
         max(.data$date_month),
@@ -498,7 +531,7 @@ generate_fleet_analysis <- function(log_threshold = logger::DEBUG) {
   annual_summary <-
     district_totals |>
     dplyr::mutate(year = as.character(lubridate::year(.data$date_month))) |>
-    dplyr::group_by(.data$year, .data$district) |>
+    dplyr::group_by(.data$year, .data$gaul_2_name) |>
     dplyr::summarise(
       months_with_data = dplyr::n(),
       avg_sampling_rate = mean(.data$sampling_rate, na.rm = TRUE),
@@ -525,7 +558,7 @@ generate_fleet_analysis <- function(log_threshold = logger::DEBUG) {
 
   # Save aggregated results
   aggregated_filename <-
-    paste0(pars$surveys$wf_surveys_v1$aggregated$file_prefix) |>
+    paste0(conf$surveys$wf_v1$aggregated$file_prefix) |>
     add_version(extension = "rds")
 
   readr::write_rds(aggregated, aggregated_filename)
@@ -534,7 +567,7 @@ generate_fleet_analysis <- function(log_threshold = logger::DEBUG) {
   logger::log_info("Uploading fleet analysis results to cloud storage...")
   upload_cloud_file(
     file = aggregated_filename,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 }

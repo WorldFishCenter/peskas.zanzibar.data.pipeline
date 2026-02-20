@@ -4,14 +4,17 @@
 \alias{process_trip_data}
 \title{Process Trip Data with District Information}
 \usage{
-process_trip_data(pars = NULL, imei_list = NULL)
+process_trip_data(conf = NULL, devices_table = NULL, imei_list = NULL)
 }
 \arguments{
-\item{pars}{Configuration parameters containing:
+\item{conf}{Configuration parameters containing:
 \itemize{
 \item pds$token: API token for PDS access
 \item pds$secret: API secret for PDS access
 }}
+
+\item{devices_table}{Data frame containing device metadata with at minimum
+an \code{imei} column. Used to join district information to trips.}
 
 \item{imei_list}{Vector of IMEI numbers for devices to retrieve trip data for}
 }
@@ -46,9 +49,9 @@ The function:
 \examples{
 \dontrun{
 # Process trip data with parameters and device list
-pars <- read_config()
+conf <- read_config()
 trips_stats <- process_trip_data(
-  pars = pars,
+  conf = conf,
   imei_list = imei_list
 )
 

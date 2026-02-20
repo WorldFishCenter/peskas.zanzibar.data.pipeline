@@ -178,7 +178,7 @@ standardize_column_names <- function(data) {
 #' \enumerate{
 #'   \item Computes Levenshtein distance matrices between surveys and registry
 #'     for each field (registration, boat name, fisher name)
-#'   \item Normalizes distances by maximum string length to get values in [0,1]
+#'   \item Normalizes distances by maximum string length to get values in \[0,1\]
 #'   \item For each survey, counts how many fields match each registry entry
 #'     (within thresholds)
 #'   \item Assigns survey to the registry entry with the most matching fields
@@ -667,8 +667,8 @@ merge_trips <- function(
     # zanzibar
     list(
       device_filter = c("WorldFish - Tanzania AP", "WorldFish - Zanzibar"),
-      survey_prefix = conf$surveys$wf_surveys_v1$validated_surveys$file_prefix,
-      output_prefix = conf$surveys$wf_surveys_v1$merged_surveys$file_prefix,
+      survey_prefix = conf$surveys$wf_v1$validated$file_prefix,
+      output_prefix = conf$surveys$wf_v1$merged$file_prefix,
       reg_col = "boat_reg_no",
       fisher_col = "fisher_name",
       pds_flag_col = "has_PDS",
@@ -679,7 +679,7 @@ merge_trips <- function(
   # Load device registry
   logger::log_info("Loading {site} device registry...")
   registry <- cloud_object_name(
-    prefix = conf$airtable$assets,
+    prefix = conf$metadata$airtable$assets,
     provider = conf$storage$google$key,
     version = "latest",
     extension = "rds",

@@ -185,49 +185,39 @@ generate_track_summaries <- function(data, min_hours = 0.15, max_hours = 15) {
 #' @export
 calculate_fishery_metrics <- function(data = NULL) {
   catch_data <- data |>
-    dplyr::filter(.data$catch_outcome == "1") |>
+    #dplyr::filter(.data$catch_outcome == "1") |>
     dplyr::select(
-      "submission_id",
+      "trip_id",
       "landing_date",
-      "district",
+      "gaul_2_name",
       "gear",
-      "trip_duration",
-      dplyr::starts_with("no_"),
+      "trip_duration_hrs",
+      "n_fishers",
       "catch_taxon",
       "catch_price",
-      "catch_kg"
+      "catch_kg",
+      "tot_catch_kg",
+      "tot_catch_price"
     ) |>
     dplyr::mutate(
-      n_fishers = .data$no_men_fishers +
-        .data$no_women_fishers +
-        .data$no_child_fishers,
       year_month = lubridate::floor_date(.data$landing_date, "month")
-    ) |>
-    dplyr::select(
-      -c("no_men_fishers", "no_women_fishers", "no_child_fishers")
-    ) |>
-    dplyr::rename(
-      landing_site = .data$district,
-      species = .data$catch_taxon
     )
 
   trip_level_data <- catch_data |>
-    dplyr::group_by(
-      .data$submission_id,
-      .data$landing_date,
-      .data$landing_site,
-      .data$gear,
-      .data$n_fishers,
-      .data$year_month
+    dplyr::select(
+      "trip_id",
+      "landing_date",
+      "gaul_2_name",
+      "gear",
+      "n_fishers",
+      "year_month",
+      trip_total_catch_kg = "tot_catch_kg",
+      trip_total_revenue = "tot_catch_price"
     ) |>
-    dplyr::summarise(
-      trip_total_catch_kg = sum(.data$catch_kg, na.rm = TRUE),
-      trip_total_revenue = sum(.data$catch_price, na.rm = TRUE),
-      .groups = "drop"
-    )
+    dplyr::distinct()
 
   site_level_metrics <- trip_level_data |>
-    dplyr::group_by(.data$landing_site, .data$year_month) |>
+    dplyr::group_by(.data$gaul_2_name, .data$year_month) |>
     dplyr::summarise(
       avg_fishers_per_trip = mean(.data$n_fishers, na.rm = TRUE),
       avg_catch_per_trip = mean(.data$trip_total_catch_kg, na.rm = TRUE),
@@ -240,21 +230,21 @@ calculate_fishery_metrics <- function(data = NULL) {
     ) |>
     dplyr::mutate(
       gear_type = NA_character_,
-      species = NA_character_,
+      catch_taxon = NA_character_,
       rank = NA_integer_
     )
 
   gear_metrics <- trip_level_data |>
-    dplyr::group_by(.data$landing_site, .data$year_month) |>
+    dplyr::group_by(.data$gaul_2_name, .data$year_month) |>
     dplyr::mutate(total_trips = dplyr::n()) |>
     dplyr::add_count(.data$gear, name = "gear_count") |>
     dplyr::slice_max(.data$gear_count, n = 1, with_ties = FALSE) |>
-    dplyr::distinct(.data$landing_site, .data$year_month, .keep_all = TRUE) |>
+    dplyr::distinct(.data$gaul_2_name, .data$year_month, .keep_all = TRUE) |>
     dplyr::mutate(
       pct_main_gear = (.data$gear_count / .data$total_trips) * 100
     ) |>
     dplyr::select(
-      .data$landing_site,
+      .data$gaul_2_name,
       .data$year_month,
       .data$gear,
       .data$pct_main_gear
@@ -263,85 +253,85 @@ calculate_fishery_metrics <- function(data = NULL) {
 
   predominant_gear_metrics <- gear_metrics |>
     dplyr::transmute(
-      landing_site = .data$landing_site,
+      gaul_2_name = .data$gaul_2_name,
       year_month = .data$year_month,
       metric_type = "predominant_gear",
       metric_value = NA_real_,
       gear_type = .data$gear,
-      species = NA_character_,
+      catch_taxon = NA_character_,
       rank = NA_integer_
     )
 
   pct_main_gear_metrics <- gear_metrics |>
     dplyr::transmute(
-      landing_site = .data$landing_site,
+      gaul_2_name = .data$gaul_2_name,
       year_month = .data$year_month,
       metric_type = "pct_main_gear",
       metric_value = .data$pct_main_gear,
       gear_type = NA_character_,
-      species = NA_character_,
+      catch_taxon = NA_character_,
       rank = NA_integer_
     )
 
   cpue_metrics <- trip_level_data |>
     dplyr::mutate(cpue = .data$trip_total_catch_kg / .data$n_fishers) |>
-    dplyr::group_by(.data$landing_site, .data$year_month, .data$gear) |>
+    dplyr::group_by(.data$gaul_2_name, .data$year_month, .data$gear) |>
     dplyr::summarise(
       avg_cpue = mean(.data$cpue, na.rm = TRUE),
       .groups = "drop"
     ) |>
     dplyr::transmute(
-      landing_site = .data$landing_site,
+      gaul_2_name = .data$gaul_2_name,
       year_month = .data$year_month,
       metric_type = "cpue",
       metric_value = .data$avg_cpue,
       gear_type = .data$gear,
-      species = NA_character_,
+      catch_taxon = NA_character_,
       rank = NA_integer_
     )
 
   rpue_metrics <- trip_level_data |>
     dplyr::mutate(rpue = .data$trip_total_revenue / .data$n_fishers) |>
-    dplyr::group_by(.data$landing_site, .data$year_month, .data$gear) |>
+    dplyr::group_by(.data$gaul_2_name, .data$year_month, .data$gear) |>
     dplyr::summarise(
       avg_rpue = mean(.data$rpue, na.rm = TRUE),
       .groups = "drop"
     ) |>
     dplyr::transmute(
-      landing_site = .data$landing_site,
+      gaul_2_name = .data$gaul_2_name,
       year_month = .data$year_month,
       metric_type = "rpue",
       metric_value = .data$avg_rpue,
       gear_type = .data$gear,
-      species = NA_character_,
+      catch_taxon = NA_character_,
       rank = NA_integer_
     )
 
   species_metrics <- catch_data |>
-    dplyr::group_by(.data$landing_site, .data$year_month, .data$species) |>
+    dplyr::group_by(.data$gaul_2_name, .data$year_month, .data$catch_taxon) |>
     dplyr::summarise(
       total_species_catch = sum(.data$catch_kg, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    dplyr::group_by(.data$landing_site, .data$year_month) |>
+    dplyr::group_by(.data$gaul_2_name, .data$year_month) |>
     dplyr::mutate(
       total_site_catch = sum(.data$total_species_catch),
       species_pct = (.data$total_species_catch / .data$total_site_catch) * 100
     ) |>
     dplyr::arrange(
-      .data$landing_site,
+      .data$gaul_2_name,
       .data$year_month,
       dplyr::desc(.data$species_pct)
     ) |>
     dplyr::mutate(rank = dplyr::row_number()) |>
     dplyr::filter(.data$rank <= 2) |>
     dplyr::transmute(
-      landing_site = .data$landing_site,
+      gaul_2_name = .data$gaul_2_name,
       year_month = .data$year_month,
       metric_type = "species_pct",
       metric_value = .data$species_pct,
       gear_type = NA_character_,
-      species = .data$species,
+      catch_taxon = .data$catch_taxon,
       rank = .data$rank
     ) |>
     dplyr::ungroup()
@@ -354,7 +344,7 @@ calculate_fishery_metrics <- function(data = NULL) {
     rpue_metrics,
     species_metrics
   ) |>
-    dplyr::arrange(.data$landing_site, .data$year_month, .data$metric_type)
+    dplyr::arrange(.data$gaul_2_name, .data$year_month, .data$metric_type)
 
   return(fishery_metrics)
 }

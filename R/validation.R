@@ -24,7 +24,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   # 1. Load and preprocess survey data
   preprocessed_surveys <- get_preprocessed_surveys(
     pars,
-    prefix = pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix
+    prefix = pars$surveys$wcs$preprocessed$file_prefix
   ) |>
     dplyr::filter(!.data$trip_info == "no")
 
@@ -41,7 +41,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   validated_surveys <- aggregate_survey_data(catch_price_table, trips_info)
 
   # 5. Save and upload results
-  validated_filename <- pars$surveys$wcs_surveys$validated_surveys$file_prefix %>%
+  validated_filename <- pars$surveys$wcs$validated$file_prefix %>%
     add_version(extension = "parquet")
 
   arrow::write_parquet(
@@ -114,7 +114,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   # 1. Load and preprocess survey data
   preprocessed_surveys <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
+      prefix = pars$surveys$wf_v1$preprocessed$file_prefix,
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
@@ -123,14 +123,14 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   not_approved_ids <-
     purrr::map(
       .x = c(
-        v1 = pars$surveys$wf_surveys_v1$asset_id,
-        v2 = pars$surveys$wf_surveys_v2$asset_id
+        v1 = pars$ingestion$wf_v1$asset_id,
+        v2 = pars$ingestion$wf_v2$asset_id
       ),
       .f = ~ mdb_collection_pull(
-        connection_string = pars$storage$mongodb$validation$connection_string,
-        db_name = pars$storage$mongodb$validation$database_name,
+        connection_string = pars$storage$mongodb$connection_strings$validation,
+        db_name = pars$storage$mongodb$databases$validation$database_name,
         collection_name = paste(
-          pars$storage$mongodb$validation$collection$flags,
+          pars$storage$mongodb$databases$validation$collections$flags,
           .x,
           sep = "-"
         )
@@ -157,8 +157,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   validation_statuses$v1 <- not_approved_ids$v1 %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys_v1$asset_id,
-      token = pars$surveys$wf_surveys_v1$token,
+      asset_id = pars$ingestion$wf_v1$asset_id,
+      token = pars$ingestion$wf_v1$token,
       .options = furrr::furrr_options(seed = TRUE)
     )
 
@@ -166,8 +166,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   validation_statuses$v2 <- not_approved_ids$v2 %>%
     furrr::future_map_dfr(
       get_validation_status,
-      asset_id = pars$surveys$wf_surveys_v2$asset_id,
-      token = pars$surveys$wf_surveys_v2$token,
+      asset_id = pars$ingestion$wf_v2$asset_id,
+      token = pars$ingestion$wf_v2$token,
       .options = furrr::furrr_options(seed = TRUE)
     )
 
@@ -489,7 +489,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   upload_parquet_to_cloud(
     data = clean_data,
-    prefix = pars$surveys$wf_surveys_v1$validated_surveys$file_prefix,
+    prefix = pars$surveys$wf_v1$validated$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
@@ -546,7 +546,7 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
   preprocessed_surveys <-
     get_preprocessed_surveys(
       pars,
-      prefix = pars$surveys$ba_surveys$preprocessed_surveys$file_prefix
+      prefix = pars$surveys$ba$preprocessed$file_prefix
     ) |>
     dplyr::arrange(.data$survey_id)
 
@@ -659,7 +659,7 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
       )
     )
 
-  validated_filename <- pars$surveys$ba_surveys$validated_surveys$file_prefix %>%
+  validated_filename <- pars$surveys$ba$validated$file_prefix %>%
     add_version(extension = "parquet")
 
   arrow::write_parquet(
@@ -738,7 +738,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 
   submissions_versions <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
+      prefix = pars$surveys$wf_v1$preprocessed$file_prefix,
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     ) |>
@@ -748,7 +748,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
   # Download validation flags
   validation_flags <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wf_surveys_v1$validation$flags$file_prefix,
+      prefix = pars$surveys$wf_v1$validation$flags$file_prefix,
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
@@ -778,8 +778,8 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       {
         get_validation_status(
           submission_id = id,
-          asset_id = pars$surveys$wf_surveys_v1$asset_id,
-          token = pars$surveys$wf_surveys_v1$token
+          asset_id = pars$ingestion$wf_v1$asset_id,
+          token = pars$ingestion$wf_v1$token
         )
       },
       error = function(e) NULL
@@ -790,8 +790,8 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       {
         get_validation_status(
           submission_id = id,
-          asset_id = pars$surveys$wf_surveys_v2$asset_id,
-          token = pars$surveys$wf_surveys_v2$token
+          asset_id = pars$ingestion$wf_v2$asset_id,
+          token = pars$ingestion$wf_v2$token
         )
       },
       error = function(e) NULL
@@ -822,7 +822,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 
   # 2. Identify manually approved submissions (preserve human decisions)
   # Get username from either v1 or v2 config
-  system_username <- pars$surveys$wf_surveys_v1$username
+  system_username <- pars$ingestion$wf_v1$username
 
   manual_approved_ids <- current_kobo_status %>%
     dplyr::filter(
@@ -854,8 +854,8 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       {
         update_validation_status(
           submission_id = id,
-          asset_id = pars$surveys$wf_surveys_v1$asset_id,
-          token = pars$surveys$wf_surveys_v1$token,
+          asset_id = pars$ingestion$wf_v1$asset_id,
+          token = pars$ingestion$wf_v1$token,
           status = status
         )
       },
@@ -867,8 +867,8 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       {
         update_validation_status(
           submission_id = id,
-          asset_id = pars$surveys$wf_surveys_v2$asset_id,
-          token = pars$surveys$wf_surveys_v2$token,
+          asset_id = pars$ingestion$wf_v2$asset_id,
+          token = pars$ingestion$wf_v2$token,
           status = status
         )
       },
@@ -992,8 +992,8 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 
   # Define version-specific info
   versions <- list(
-    list(key = "1", asset_id = pars$surveys$wf_surveys_v1$asset_id),
-    list(key = "2", asset_id = pars$surveys$wf_surveys_v2$asset_id)
+    list(key = "1", asset_id = pars$ingestion$wf_v1$asset_id),
+    list(key = "2", asset_id = pars$ingestion$wf_v2$asset_id)
   )
 
   for (v in versions) {
@@ -1020,25 +1020,25 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     # Push validation flags to MongoDB
     mdb_collection_push(
       data = validation_flags_with_kobo_status,
-      connection_string = pars$storage$mongodb$validation$connection_string,
+      connection_string = pars$storage$mongodb$connection_strings$validation,
       collection_name = paste(
-        pars$storage$mongodb$validation$collection$flags,
+        pars$storage$mongodb$databases$validation$collections$flags,
         v$asset_id,
         sep = "-"
       ),
-      db_name = pars$storage$mongodb$validation$database_name
+      db_name = pars$storage$mongodb$databases$validation$database_name
     )
 
     # Push enumerators statistics to MongoDB
     mdb_collection_push(
       data = validation_flags_long,
-      connection_string = pars$storage$mongodb$validation$connection_string,
+      connection_string = pars$storage$mongodb$connection_strings$validation,
       collection_name = paste(
-        pars$storage$mongodb$validation$collection$enumerators_stats,
+        pars$storage$mongodb$databases$validation$collections$enumerators_stats,
         v$asset_id,
         sep = "-"
       ),
-      db_name = pars$storage$mongodb$validation$database_name
+      db_name = pars$storage$mongodb$databases$validation$database_name
     )
   }
   logger::log_info("Validation synchronization completed successfully")
@@ -1142,14 +1142,14 @@ export_validation_flags <- function(
         is.na(
           .data$alert_flag
         ),
-        conf$surveys$wf_surveys_v1$username,
+        conf$ingestion$wf_v1$username,
         .data$validated_by
       ),
       validation_status = dplyr::case_when(
         # Preserve existing status if validated by someone else (not pipeline account user and not NA)
         !is.na(.data$validated_by) &
           .data$validated_by !=
-            conf$surveys$wf_surveys_v1$username ~ .data$validation_status,
+            conf$ingestion$wf_v1$username ~ .data$validation_status,
         # Apply new status only if validated_by is NA or matches kobo user
         !is.na(.data$alert_flag) ~ "validation_status_not_approved",
         is.na(.data$alert_flag) ~ "validation_status_approved",
@@ -1167,10 +1167,10 @@ export_validation_flags <- function(
 
   mdb_collection_push(
     data = validation_flags_with_kobo_status,
-    connection_string = conf$storage$mongodb$validation$connection_string,
-    db_name = conf$storage$mongodb$validation$database_name,
+    connection_string = conf$storage$mongodb$connection_strings$validation,
+    db_name = conf$storage$mongodb$databases$validation$database_name,
     collection_name = paste(
-      conf$storage$mongodb$validation$collection$flags,
+      conf$storage$mongodb$databases$validation$collections$flags,
       asset_id,
       sep = "-"
     )
@@ -1178,10 +1178,10 @@ export_validation_flags <- function(
 
   mdb_collection_push(
     data = validation_flags_long,
-    connection_string = conf$storage$mongodb$validation$connection_string,
-    db_name = conf$storage$mongodb$validation$database_name,
+    connection_string = conf$storage$mongodb$connection_strings$validation,
+    db_name = conf$storage$mongodb$databases$validation$database_name,
     collection_name = paste(
-      conf$storage$mongodb$validation$collection$enumerators_stats,
+      conf$storage$mongodb$databases$validation$collections$enumerators_stats,
       asset_id,
       sep = "-"
     )

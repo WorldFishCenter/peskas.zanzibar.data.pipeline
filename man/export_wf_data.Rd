@@ -55,7 +55,6 @@ export_wf_data(logger::INFO)
 \item \code{\link[=summarize_data]{summarize_data()}} for generating the summary datasets
 \item \code{\link[=download_parquet_from_cloud]{download_parquet_from_cloud()}} for retrieving data from cloud storage
 \item \code{\link[=mdb_collection_push]{mdb_collection_push()}} for uploading data to MongoDB
-\item \code{\link[=create_geos]{create_geos()}} for generating geographic summaries
 }
 }
 \keyword{export}

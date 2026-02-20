@@ -54,181 +54,50 @@
 summarize_data <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
   pars <- read_config()
-  metadata_tables <- get_metadata()
 
-  validated_surveys <-
-    get_validated_surveys(pars, sources = "wf") |>
-    dplyr::select(-"source")
-
-  # Choose a parallelization strategy - adjust the number of workers as needed
-  future::plan(
-    strategy = future::multisession,
-    workers = future::availableCores() - 2
-  ) # Use available cores minus 2
-
-  # get validation table and store approved ids from both assets
-  submission_ids <- unique(validated_surveys$submission_id)
-
-  # Query validation status from both survey versions using same credentials
-  logger::log_info(
-    "Querying validation status from both wf_surveys_v1 and wf_surveys_v2 assets"
+  # Input: validated trip data (catch-level rows, one row per catch item per trip)
+  clean_data <- download_parquet_from_cloud(
+    prefix = file.path(
+      pars$api$trips$validated$cloud_path,
+      pars$api$trips$validated$file_prefix
+    ),
+    provider = pars$storage$google$key,
+    options = pars$storage$google$options_api
   )
-
-  validation_results <- list()
-
-  # Query wf_surveys v1 (original asset)
-  validation_results$v1 <- submission_ids %>%
-    furrr::future_map_dfr(
-      get_validation_status,
-      asset_id = pars$surveys$wf_surveys_v1$asset_id,
-      token = pars$surveys$wf_surveys_v1$token,
-      .options = furrr::furrr_options(seed = TRUE)
-    )
-
-  # Query wf_surveys v2 (new asset)
-  validation_results$v2 <- submission_ids %>%
-    furrr::future_map_dfr(
-      get_validation_status,
-      asset_id = pars$surveys$wf_surveys_v2$asset_id,
-      token = pars$surveys$wf_surveys_v2$token,
-      .options = furrr::furrr_options(seed = TRUE)
-    )
-
-  # Combine validation results and extract approved IDs
-  valid_ids <- validation_results %>%
-    dplyr::bind_rows() %>%
-    dplyr::filter(.data$validation_status == "validation_status_approved") %>%
-    dplyr::pull(.data$submission_id) %>%
-    unique()
-
-  logger::log_info(
-    "Found {length(valid_ids)} approved submissions across both assets"
-  )
-
-  clean_data <-
-    validated_surveys |>
-    dplyr::filter(.data$submission_id %in% valid_ids)
 
   f_metrics <- calculate_fishery_metrics(data = clean_data)
 
+  # Trip-level intermediate: collapse to one row per trip, add effort metrics.
+  # clean_data has multiple rows per trip (one per catch item); trip-level columns
+  # (tot_catch_kg, tot_catch_price, n_fishers, etc.) are identical within a trip,
+  # so slice(1) is safe and explicit.
   indicators_df <-
     clean_data |>
-    dplyr::filter(.data$collect_data_today == "1") |>
+    dplyr::group_by(.data$trip_id) |>
+    dplyr::slice(1) |>
+    dplyr::ungroup() |>
     dplyr::mutate(
-      n_fishers = .data$no_men_fishers +
-        .data$no_women_fishers +
-        .data$no_child_fishers
-    ) |>
-    dplyr::select(
-      "submission_id",
-      "landing_date",
-      "district",
-      "landing_site",
-      "habitat",
-      "gear",
-      "vessel_type",
-      "propulsion_gear",
-      "fuel_L",
-      "trip_duration",
-      "vessel_type",
-      "no_men_fishers",
-      "no_men_fishers",
-      "no_child_fishers",
-      "n_fishers",
-      "catch_taxon",
-      "catch_price",
-      "catch_kg"
-    ) |>
-    dplyr::group_by(.data$submission_id) |>
-    dplyr::summarise(
-      dplyr::across(
-        .cols = c(
-          "landing_date",
-          "district",
-          "landing_site",
-          "habitat",
-          "gear",
-          "vessel_type",
-          "propulsion_gear",
-          "fuel_L",
-          "trip_duration",
-          "vessel_type",
-          "n_fishers",
-          "no_men_fishers",
-          "no_men_fishers",
-          "no_child_fishers",
-          "catch_price"
-        ),
-        ~ dplyr::first(.x)
-      ),
-      tot_catch_kg = sum(.data$catch_kg),
-      catch_taxon = paste(unique(.data$catch_taxon), collapse = "-")
-    ) |>
-    dplyr::mutate(
-      catch_price = .data$catch_price,
-      price_kg = .data$catch_price / .data$tot_catch_kg,
-      cpue = .data$tot_catch_kg / .data$n_fishers / .data$trip_duration,
-      rpue = .data$catch_price / .data$n_fishers / .data$trip_duration,
-      cpue_day = .data$tot_catch_kg / .data$n_fishers, # CPUE per day for map data (assuming 1 trip per day)
-      rpue_day = .data$catch_price / .data$n_fishers # RPUE per day for map data (assuming 1 trip per day)
+      price_kg = .data$tot_catch_price / .data$tot_catch_kg,
+      cpue = .data$tot_catch_kg / .data$n_fishers / .data$trip_duration_hrs,
+      rpue = .data$tot_catch_price / .data$n_fishers / .data$trip_duration_hrs,
+      cpue_day = .data$tot_catch_kg / .data$n_fishers,
+      rpue_day = .data$tot_catch_price / .data$n_fishers
     )
 
+  # Taxon-level intermediate: collapse to one row per trip x taxon,
+  # computing per-taxon catch weight and mean length.
   taxa_df <-
     clean_data |>
-    dplyr::filter(.data$collect_data_today == "1") |>
-    dplyr::mutate(
-      n_fishers = .data$no_men_fishers +
-        .data$no_women_fishers +
-        .data$no_child_fishers
-    ) |>
-    dplyr::select(
-      "submission_id",
-      "landing_date",
-      "district",
-      "landing_site",
-      "habitat",
-      "gear",
-      "vessel_type",
-      "propulsion_gear",
-      "fuel_L",
-      "trip_duration",
-      "vessel_type",
-      "n_fishers",
-      "catch_taxon",
-      "length",
-      "catch_price",
-      "catch_kg"
-    ) |>
-    dplyr::group_by(.data$submission_id) |>
-    dplyr::mutate(
-      n_catch = dplyr::n(),
-      .groups = "drop"
-    ) |>
-    dplyr::group_by(.data$submission_id, .data$catch_taxon) |>
+    dplyr::group_by(.data$trip_id, .data$catch_taxon) |>
     dplyr::summarise(
-      dplyr::across(
-        .cols = c(
-          "n_catch",
-          "landing_date",
-          "district",
-          "landing_site",
-          "habitat",
-          "gear",
-          "vessel_type",
-          "propulsion_gear",
-          "fuel_L",
-          "trip_duration",
-          "vessel_type",
-          "n_fishers",
-          "catch_price"
-        ),
-        ~ dplyr::first(.x)
-      ),
-      lenght = mean(.data$length),
-      tot_catch_kg = sum(.data$catch_kg),
+      dplyr::across(dplyr::everything(), ~ dplyr::first(.x)),
+      length_cm = mean(.data$length_cm, na.rm = TRUE),
+      taxon_catch_kg = sum(.data$catch_kg, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    dplyr::relocate("n_catch", .after = "submission_id")
+    dplyr::relocate("n_catch", .after = "trip_id")
+
+  # --- Summaries (all stored wide until export_wf_data pivots for MongoDB) ---
 
   monthly_summaries <-
     indicators_df |>
@@ -236,12 +105,12 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
       date = lubridate::floor_date(.data$landing_date, "month"),
       date = lubridate::as_datetime(.data$date)
     ) |>
-    dplyr::group_by(.data$district, .data$date) |>
+    dplyr::group_by(.data$gaul_2_name, .data$date) |>
     dplyr::summarise(
       dplyr::across(
         .cols = c(
           "tot_catch_kg",
-          "catch_price",
+          "tot_catch_price",
           "cpue",
           "cpue_day",
           "rpue",
@@ -254,7 +123,7 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::rename(
       mean_catch_kg = "tot_catch_kg",
-      mean_catch_price = "catch_price",
+      mean_catch_price = "tot_catch_price",
       mean_cpue = "cpue",
       mean_cpue_day = "cpue_day",
       mean_rpue = "rpue",
@@ -262,7 +131,7 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
       mean_price_kg = "price_kg"
     ) |>
     tidyr::complete(
-      .data$district,
+      .data$gaul_2_name,
       date = seq(min(.data$date), max(.data$date), by = "month"),
       fill = list(
         mean_catch_kg = NA,
@@ -273,145 +142,90 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
         mean_rpue_day = NA,
         mean_price_kg = NA
       )
-    ) |>
-    dplyr::mutate(
-      district = stringr::str_to_title(.data$district),
-      district = stringr::str_replace(.data$district, "_", " ")
     )
 
+  # Taxa summaries: total catch and mean length per species x district x month.
+  # Stored in long format (metric/value) for portal consumption.
   taxa_summaries <-
     taxa_df |>
     dplyr::mutate(date = lubridate::floor_date(.data$landing_date, "month")) |>
-    dplyr::group_by(.data$district, .data$date, .data$catch_taxon) |>
+    dplyr::group_by(.data$gaul_2_name, .data$date, .data$catch_taxon) |>
     dplyr::summarise(
-      catch_kg = sum(.data$tot_catch_kg, na.rm = T),
-      catch_price = sum(.data$catch_price, na.rm = T),
-      mean_length = mean(.data$lenght, na.rm = T),
+      catch_kg = sum(.data$taxon_catch_kg, na.rm = TRUE),
+      catch_price = sum(.data$tot_catch_price, na.rm = TRUE),
+      mean_length = mean(.data$length_cm, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    dplyr::rename(alpha3_code = "catch_taxon") |>
-    dplyr::left_join(metadata_tables$catch_type, by = "alpha3_code") |>
-    dplyr::select(
-      "district",
-      "date",
-      "common_name",
-      "catch_kg",
-      "catch_price",
-      "mean_length"
-    ) |>
     tidyr::complete(
-      .data$district,
+      .data$gaul_2_name,
       date = seq(min(.data$date), max(.data$date), by = "month"),
-      .data$common_name,
-      fill = list(
-        catch_kg = NA,
-        catch_price = NA,
-        length = NA
-      )
+      .data$catch_taxon
     ) |>
     dplyr::mutate(price_kg = .data$catch_price / .data$catch_kg) |>
     dplyr::select(-c("catch_price")) |>
     tidyr::pivot_longer(
-      -c("district", "date", "common_name"),
+      -c("gaul_2_name", "date", "catch_taxon"),
       names_to = "metric",
       values_to = "value"
     ) |>
     dplyr::mutate(
-      date = lubridate::as_datetime(.data$date),
-      district = stringr::str_to_title(.data$district),
-      district = stringr::str_replace(.data$district, "_", " ")
-    )
+      date = lubridate::as_datetime(.data$date)
+    ) |>
+    dplyr::distinct()
 
+  # Districts summaries: submission counts and effort metrics per district x month.
+  # Stored wide; export_wf_data() joins modeled estimates then pivots to long.
   districts_summaries <-
     indicators_df |>
     dplyr::mutate(date = lubridate::floor_date(.data$landing_date, "month")) |>
-    dplyr::group_by(.data$district, .data$date) |>
+    dplyr::group_by(.data$gaul_2_name, .data$date) |>
     dplyr::summarise(
       n_submissions = dplyr::n(),
       n_fishers = mean(.data$n_fishers),
-      trip_duration = mean(.data$trip_duration),
+      trip_duration_hrs = mean(.data$trip_duration_hrs),
       mean_cpue = mean(.data$cpue, na.rm = TRUE),
       mean_rpue = mean(.data$rpue, na.rm = TRUE),
       mean_price_kg = mean(.data$price_kg, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    tidyr::pivot_longer(
-      -c("district", "date"),
-      names_to = "indicator",
-      values_to = "value"
-    ) |>
     tidyr::complete(
-      .data$district,
-      date = seq(min(.data$date), max(.data$date), by = "month"),
-      fill = list(
-        n_submissions = NA,
-        n_fishers = NA,
-        trip_duration = NA,
-        mean_cpue = NA,
-        mean_rpue = NA,
-        mean_price_kg = NA
-      )
+      .data$gaul_2_name,
+      date = seq(min(.data$date), max(.data$date), by = "month")
     ) |>
-    dplyr::mutate(
-      date = lubridate::as_datetime(.data$date),
-      district = stringr::str_to_title(.data$district),
-      district = stringr::str_replace(.data$district, "_", " ")
-    )
+    dplyr::mutate(date = lubridate::as_datetime(.data$date))
 
+  # Gear summaries: CPUE/RPUE by gear type x district x month, in long format.
   gear_summaries <-
     indicators_df |>
     dplyr::mutate(date = lubridate::floor_date(.data$landing_date, "month")) |>
-    dplyr::group_by(.data$district, .data$date, .data$gear) |>
+    dplyr::group_by(.data$gaul_2_name, .data$date, .data$gear) |>
     dplyr::summarise(
       n_submissions = dplyr::n(),
-      cpue = mean(.data$cpue, na.rm = T),
-      rpue = mean(.data$rpue),
+      cpue = mean(.data$cpue, na.rm = TRUE),
+      rpue = mean(.data$rpue, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    dplyr::mutate(
-      gear = dplyr::case_when(
-        stringr::str_count(.data$gear) > 3 ~ "Mixed gears",
-        .data$gear == "HL" ~ "Hand line",
-        .data$gear == "BS" ~ "Beach Seine",
-        .data$gear == "CS" ~ "Cast Net",
-        .data$gear == "GN" ~ "Gill Net",
-        .data$gear == "LL" ~ "Long line",
-        .data$gear == "SP" ~ "Spear gun",
-        .data$gear == "SR" ~ "Stick Rod",
-        .data$gear == "PS" ~ "Purse Seine",
-        .data$gear == "RN" ~ "Ring Net",
-        .data$gear == "SN" ~ "Shark Net",
-        .data$gear == "TR" ~ "Trap",
-        TRUE ~ .data$gear # Keep original value if no match
-      )
+    tidyr::complete(
+      .data$gaul_2_name,
+      date = seq(min(.data$date), max(.data$date), by = "month"),
+      .data$gear
     ) |>
+    dplyr::mutate(date = lubridate::as_datetime(.data$date)) |>
     tidyr::pivot_longer(
-      -c("district", "date", "gear"),
+      -c("gaul_2_name", "date", "gear"),
       names_to = "indicator",
       values_to = "value"
-    ) |>
-    tidyr::complete(
-      .data$district,
-      date = seq(min(.data$date), max(.data$date), by = "month"),
-      fill = list(
-        gear = NA,
-        indicator = NA,
-        value = NA
-      )
-    ) |>
-    dplyr::mutate(
-      date = lubridate::as_datetime(.data$date),
-      district = stringr::str_to_title(.data$district),
-      district = stringr::str_replace(.data$district, "_", " ")
     )
 
+  # Grid summaries: pre-computed spatial grid from PDS tracks, passed through as-is.
   grid_summaries <-
     download_parquet_from_cloud(
       prefix = paste0(pars$pds$pds_tracks$file_prefix, "-grid_summaries"),
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     )
-  # Dataframes to upload
+
+  # Upload all summaries to cloud storage (versioned parquet files)
   dataframes_to_upload <- list(
     monthly_summaries = monthly_summaries,
     taxa_summaries = taxa_summaries,
@@ -422,7 +236,7 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
 
   # Write each data frame to its own parquet file with versioning and upload
   for (name in names(dataframes_to_upload)) {
-    filename <- pars$surveys$wf_surveys_v1$summaries$file_prefix %>%
+    filename <- pars$surveys$wf_v1$summaries$file_prefix %>%
       paste0("_", name) %>% # Add the table name to distinguish files
       add_version(extension = "parquet")
 

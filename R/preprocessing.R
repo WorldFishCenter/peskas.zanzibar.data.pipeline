@@ -39,7 +39,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   catch_surveys_raw <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
+      prefix = pars$surveys$wcs$raw$file_prefix,
       provider = pars$storage$google$key,
       options = pars$storage$google$options
     ) |>
@@ -98,7 +98,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   upload_parquet_to_cloud(
     data = wcs_surveys_nested,
-    prefix = pars$surveys$wcs_surveys$preprocessed_surveys$file_prefix,
+    prefix = pars$surveys$wcs$preprocessed$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
@@ -182,11 +182,11 @@ preprocess_wf_surveys <- function(
 
   target_form_ids <- c(
     get_airtable_form_id(
-      kobo_asset_id = pars$surveys$wf_surveys_v1$asset_id,
+      kobo_asset_id = pars$ingestion$wf_v1$asset_id,
       conf = pars
     ),
     get_airtable_form_id(
-      kobo_asset_id = pars$surveys$wf_surveys_v2$asset_id,
+      kobo_asset_id = pars$ingestion$wf_v2$asset_id,
       conf = pars
     )
   )
@@ -200,7 +200,7 @@ preprocess_wf_surveys <- function(
 
   assets <-
     cloud_object_name(
-      prefix = pars$airtable$assets,
+      prefix = pars$metadata$airtable$assets,
       provider = pars$storage$google$key,
       version = "latest",
       extension = "rds",
@@ -230,10 +230,10 @@ preprocess_wf_surveys <- function(
 
       catch_surveys_raw_v1 <-
         download_parquet_from_cloud(
-          prefix = pars$surveys$wf_surveys_v1$raw_surveys$file_prefix,
+          prefix = pars$surveys$wf_v1$raw$file_prefix,
           provider = pars$storage$google$key,
           options = pars$storage$google$options,
-          version = pars$surveys$wf_surveys_v1$raw_surveys$version
+          version = pars$surveys$wf_v1$raw$version
         )
 
       # Ensure we have a data frame, not a file path
@@ -269,10 +269,10 @@ preprocess_wf_surveys <- function(
 
       catch_surveys_raw_v2 <-
         download_parquet_from_cloud(
-          prefix = pars$surveys$wf_surveys_v2$raw_surveys$file_prefix,
+          prefix = pars$surveys$wf_v2$raw$file_prefix,
           provider = pars$storage$google$key,
           options = pars$storage$google$options,
-          version = pars$surveys$wf_surveys_v2$raw_surveys$version
+          version = pars$surveys$wf_v2$raw$version
         )
 
       # Ensure we have a data frame, not a file path
@@ -348,7 +348,7 @@ preprocess_wf_surveys <- function(
 
   upload_parquet_to_cloud(
     data = preprocessed_data_mapped,
-    prefix = pars$surveys$wf_surveys_v1$preprocessed_surveys$file_prefix,
+    prefix = pars$surveys$wf_v1$preprocessed$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
@@ -443,10 +443,10 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
   pars <- read_config()
 
   ba_surveys_csv <- cloud_object_name(
-    prefix = pars$surveys$ba_surveys$raw_surveys$file_prefix,
+    prefix = pars$surveys$ba$raw$file_prefix,
     provider = pars$storage$google$key,
     extension = "csv",
-    version = pars$surveys$ba_surveys$version$preprocess,
+    version = pars$surveys$ba$version$preprocess,
     options = pars$storage$google$options
   )
 
@@ -516,7 +516,7 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
 
   upload_parquet_to_cloud(
     data = catch_surveys_preprocessed,
-    prefix = pars$surveys$ba_surveys$preprocessed_surveys$file_prefix,
+    prefix = pars$surveys$ba$preprocessed$file_prefix,
     provider = pars$storage$google$key,
     options = pars$storage$google$options
   )
@@ -721,6 +721,13 @@ map_surveys <- function(
     dplyr::relocate("scientific_name", .after = "n_catch") |>
     dplyr::relocate("alpha3_code", .after = "scientific_name") |>
     dplyr::left_join(gear_mapping, by = c("gear" = "survey_label")) |>
+    # label multiple gears
+    dplyr::mutate(
+      standard_name = dplyr::case_when(
+        stringr::str_count(.data$gear) > 3 ~ "Mixed gears",
+        TRUE ~ .data$standard_name
+      )
+    ) |>
     dplyr::select(-c("gear", "form_id")) |>
     dplyr::relocate("standard_name", .after = "vessel_type") |>
     dplyr::rename(gear = "standard_name") |>
