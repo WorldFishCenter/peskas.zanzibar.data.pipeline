@@ -116,7 +116,9 @@ default:
         bucket: peskas-coasts-dev
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
       options_api:
+        project: peskas
         bucket: peskas-api-dev
+        service_account_key: !expr Sys.getenv('GCP_SA_KEY')
     mongodb:
       connection_strings:
         main: !expr Sys.getenv('MONGODB_CONNECTION_STRING')

@@ -297,6 +297,7 @@ default:
         bucket: peskas-coasts
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
       options_api:
+        project: peskas
         bucket: peskas-api-dev
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
 
