@@ -101,7 +101,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     dplyr::distinct() |>
     dplyr::mutate(
       date = format(.data$date, "%Y-%m-%dT%H:%M:%SZ"),
-      country = "zanzibar"
+      country = conf$country
     ) |>
     dplyr::select(
       "country",
@@ -115,7 +115,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
 
   upload_parquet_to_cloud(
     data = region_monthly_summaries,
-    prefix = "zanzibar_monthly_summaries_map",
+    prefix = paste0(conf$country, "_monthly_summaries_map"),
     provider = conf$storage$google$key,
     options = conf$storage$google$options_coasts
   )
