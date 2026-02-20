@@ -67,13 +67,13 @@
 #' @export
 export_api_raw <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
-  pars <- read_config()
+  conf <- read_config()
 
   logger::log_info("Downloading preprocessed survey data...")
   preprocessed_surveys <- download_parquet_from_cloud(
-    prefix = pars$surveys$wf_v1$preprocessed$file_prefix,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    prefix = conf$surveys$wf_v1$preprocessed$file_prefix,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 
   logger::log_info("Transforming surveys to API format...")
@@ -86,8 +86,8 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
         #substr(digest::digest(.data$submission_id, algo = "xxhash64"), 1, 12)
       ),
       survey_id = dplyr::case_when(
-        .data$survey_version == "1" ~ pars$ingestion$wf_v1$asset_id,
-        .data$survey_version == "2" ~ pars$ingestion$wf_v2$asset_id
+        .data$survey_version == "1" ~ conf$ingestion$wf_v1$asset_id,
+        .data$survey_version == "2" ~ conf$ingestion$wf_v2$asset_id
       )
     ) |>
     dplyr::ungroup() |>
@@ -134,7 +134,7 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
   )
 
   # Write locally with just the filename
-  filename <- pars$api$trips$raw$file_prefix |>
+  filename <- conf$api$trips$raw$file_prefix |>
     add_version(extension = "parquet")
 
   logger::log_info("Writing parquet file locally: {filename}")
@@ -147,15 +147,15 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
 
   # Upload to cloud with the full path
   cloud_path <- file.path(
-    pars$api$trips$raw$cloud_path,
+    conf$api$trips$raw$cloud_path,
     filename
   )
 
   logger::log_info("Uploading to cloud storage: {cloud_path}")
   upload_cloud_file(
     file = filename,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options_api,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options_api,
     name = cloud_path
   )
 
@@ -234,13 +234,13 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
 #' @export
 export_api_validated <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
-  pars <- read_config()
+  conf <- read_config()
 
   logger::log_info("Downloading preprocessed survey data...")
   validated_surveys <- download_parquet_from_cloud(
-    prefix = pars$surveys$wf_v1$validated$file_prefix,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    prefix = conf$surveys$wf_v1$validated$file_prefix,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 
   logger::log_info("Transforming surveys to API format...")
@@ -253,8 +253,8 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
         #substr(digest::digest(.data$submission_id, algo = "xxhash64"), 1, 12)
       ),
       survey_id = dplyr::case_when(
-        .data$survey_version == "1" ~ pars$ingestion$wf_v1$asset_id,
-        .data$survey_version == "2" ~ pars$ingestion$wf_v2$asset_id
+        .data$survey_version == "1" ~ conf$ingestion$wf_v1$asset_id,
+        .data$survey_version == "2" ~ conf$ingestion$wf_v2$asset_id
       )
     ) |>
     dplyr::ungroup() |>
@@ -301,7 +301,7 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
   )
 
   # Write locally with just the filename
-  filename <- pars$api$trips$validated$file_prefix |>
+  filename <- conf$api$trips$validated$file_prefix |>
     add_version(extension = "parquet")
 
   logger::log_info("Writing parquet file locally: {filename}")
@@ -314,15 +314,15 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
 
   # Upload to cloud with the full path
   cloud_path <- file.path(
-    pars$api$trips$validated$cloud_path,
+    conf$api$trips$validated$cloud_path,
     filename
   )
 
   logger::log_info("Uploading to cloud storage: {cloud_path}")
   upload_cloud_file(
     file = filename,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options_api,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options_api,
     name = cloud_path
   )
 

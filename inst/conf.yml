@@ -1,4 +1,5 @@
 default:
+  country: zanzibar
   ingestion:
     wcs:
       asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')

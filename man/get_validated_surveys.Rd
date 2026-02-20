@@ -4,10 +4,10 @@
 \alias{get_validated_surveys}
 \title{Download Validated Surveys}
 \usage{
-get_validated_surveys(pars, sources = NULL)
+get_validated_surveys(conf, sources = NULL)
 }
 \arguments{
-\item{pars}{A list representing the configuration settings, typically obtained from a YAML configuration file.
+\item{conf}{A list representing the configuration settings, typically obtained from a YAML configuration file.
 The configuration should include:
 - \verb{surveys.<source>.validated.file_prefix}: File prefix for validated surveys
 - \verb{surveys.<source>.validated.version}: Version to retrieve (optional, defaults to "latest")

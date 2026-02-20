@@ -53,16 +53,16 @@
 #' @export
 summarize_data <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
-  pars <- read_config()
+  conf <- read_config()
 
   # Input: validated trip data (catch-level rows, one row per catch item per trip)
   clean_data <- download_parquet_from_cloud(
     prefix = file.path(
-      pars$api$trips$validated$cloud_path,
-      pars$api$trips$validated$file_prefix
+      conf$api$trips$validated$cloud_path,
+      conf$api$trips$validated$file_prefix
     ),
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options_api
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options_api
   )
 
   f_metrics <- calculate_fishery_metrics(data = clean_data)
@@ -220,9 +220,9 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
   # Grid summaries: pre-computed spatial grid from PDS tracks, passed through as-is.
   grid_summaries <-
     download_parquet_from_cloud(
-      prefix = paste0(pars$pds$pds_tracks$file_prefix, "-grid_summaries"),
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options
+      prefix = paste0(conf$pds$pds_tracks$file_prefix, "-grid_summaries"),
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options
     )
 
   # Upload all summaries to cloud storage (versioned parquet files)
@@ -236,7 +236,7 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
 
   # Write each data frame to its own parquet file with versioning and upload
   for (name in names(dataframes_to_upload)) {
-    filename <- pars$surveys$wf_v1$summaries$file_prefix %>%
+    filename <- conf$surveys$wf_v1$summaries$file_prefix %>%
       paste0("_", name) %>% # Add the table name to distinguish files
       add_version(extension = "parquet")
 
@@ -250,15 +250,15 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
     logger::log_info("Uploading {filename} to cloud storage")
     upload_cloud_file(
       file = filename,
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options
     )
   }
 
   upload_parquet_to_cloud(
     data = f_metrics,
-    prefix = "zanzibar_fishery_metrics",
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options_coasts
+    prefix = paste0(conf$country, "_fishery_metrics"),
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options_coasts
   )
 }

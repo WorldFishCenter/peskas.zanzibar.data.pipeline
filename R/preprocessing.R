@@ -35,13 +35,13 @@
 preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
 
-  pars <- read_config()
+  conf <- read_config()
 
   catch_surveys_raw <-
     download_parquet_from_cloud(
-      prefix = pars$surveys$wcs$raw$file_prefix,
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options
+      prefix = conf$surveys$wcs$raw$file_prefix,
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options
     ) |>
     dplyr::filter(.data$survey_real == "real")
 
@@ -98,9 +98,9 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   upload_parquet_to_cloud(
     data = wcs_surveys_nested,
-    prefix = pars$surveys$wcs$preprocessed$file_prefix,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    prefix = conf$surveys$wcs$preprocessed$file_prefix,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 }
 
@@ -172,22 +172,22 @@ preprocess_wf_surveys <- function(
 ) {
   logger::log_threshold(log_threshold)
 
-  pars <- read_config()
+  conf <- read_config()
 
   asfis <- download_parquet_from_cloud(
     prefix = "asfis",
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 
   target_form_ids <- c(
     get_airtable_form_id(
-      kobo_asset_id = pars$ingestion$wf_v1$asset_id,
-      conf = pars
+      kobo_asset_id = conf$ingestion$wf_v1$asset_id,
+      conf = conf
     ),
     get_airtable_form_id(
-      kobo_asset_id = pars$ingestion$wf_v2$asset_id,
-      conf = pars
+      kobo_asset_id = conf$ingestion$wf_v2$asset_id,
+      conf = conf
     )
   )
 
@@ -200,15 +200,15 @@ preprocess_wf_surveys <- function(
 
   assets <-
     cloud_object_name(
-      prefix = pars$metadata$airtable$assets,
-      provider = pars$storage$google$key,
+      prefix = conf$metadata$airtable$assets,
+      provider = conf$storage$google$key,
       version = "latest",
       extension = "rds",
-      options = pars$storage$google$options_coasts
+      options = conf$storage$google$options_coasts
     ) |>
     download_cloud_file(
-      provider = pars$storage$google$key,
-      options = pars$storage$google$options_coasts
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options_coasts
     ) |>
     readr::read_rds() |>
     purrr::keep_at(c("taxa", "gear", "vessels", "sites", "geo")) |>
@@ -230,10 +230,10 @@ preprocess_wf_surveys <- function(
 
       catch_surveys_raw_v1 <-
         download_parquet_from_cloud(
-          prefix = pars$surveys$wf_v1$raw$file_prefix,
-          provider = pars$storage$google$key,
-          options = pars$storage$google$options,
-          version = pars$surveys$wf_v1$raw$version
+          prefix = conf$surveys$wf_v1$raw$file_prefix,
+          provider = conf$storage$google$key,
+          options = conf$storage$google$options,
+          version = conf$surveys$wf_v1$raw$version
         )
 
       # Ensure we have a data frame, not a file path
@@ -269,10 +269,10 @@ preprocess_wf_surveys <- function(
 
       catch_surveys_raw_v2 <-
         download_parquet_from_cloud(
-          prefix = pars$surveys$wf_v2$raw$file_prefix,
-          provider = pars$storage$google$key,
-          options = pars$storage$google$options,
-          version = pars$surveys$wf_v2$raw$version
+          prefix = conf$surveys$wf_v2$raw$file_prefix,
+          provider = conf$storage$google$key,
+          options = conf$storage$google$options,
+          version = conf$surveys$wf_v2$raw$version
         )
 
       # Ensure we have a data frame, not a file path
@@ -348,9 +348,9 @@ preprocess_wf_surveys <- function(
 
   upload_parquet_to_cloud(
     data = preprocessed_data_mapped,
-    prefix = pars$surveys$wf_v1$preprocessed$file_prefix,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    prefix = conf$surveys$wf_v1$preprocessed$file_prefix,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 }
 
@@ -440,21 +440,21 @@ process_version_data <- function(catch_info, general_info, asfis) {
 preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
 
-  pars <- read_config()
+  conf <- read_config()
 
   ba_surveys_csv <- cloud_object_name(
-    prefix = pars$surveys$ba$raw$file_prefix,
-    provider = pars$storage$google$key,
+    prefix = conf$surveys$ba$raw$file_prefix,
+    provider = conf$storage$google$key,
     extension = "csv",
-    version = pars$surveys$ba$version$preprocess,
-    options = pars$storage$google$options
+    version = conf$surveys$ba$version$preprocess,
+    options = conf$storage$google$options
   )
 
   logger::log_info("Retrieving {ba_surveys_csv}")
   download_cloud_file(
     name = ba_surveys_csv,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 
   catch_surveys_preprocessed <-
@@ -516,9 +516,9 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
 
   upload_parquet_to_cloud(
     data = catch_surveys_preprocessed,
-    prefix = pars$surveys$ba$preprocessed$file_prefix,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    prefix = conf$surveys$ba$preprocessed$file_prefix,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 }
 
@@ -539,16 +539,16 @@ preprocess_pds_tracks <- function(
   grid_size = 500
 ) {
   logger::log_threshold(log_threshold)
-  pars <- read_config()
+  conf <- read_config()
 
   # Get already preprocessed tracks
   logger::log_info("Checking existing preprocessed tracks...")
   preprocessed_filename <- cloud_object_name(
-    prefix = paste0(pars$pds$pds_tracks$file_prefix, "-preprocessed"),
-    provider = pars$storage$google$key,
+    prefix = paste0(conf$pds$pds_tracks$file_prefix, "-preprocessed"),
+    provider = conf$storage$google$key,
     extension = "parquet",
-    version = pars$pds$pds_tracks$version,
-    options = pars$storage$google$options
+    version = conf$pds$pds_tracks$version,
+    options = conf$storage$google$options
   )
 
   # Get preprocessed trip IDs if file exists
@@ -556,8 +556,8 @@ preprocess_pds_tracks <- function(
     {
       download_cloud_file(
         name = preprocessed_filename,
-        provider = pars$storage$google$key,
-        options = pars$storage$google$options
+        provider = conf$storage$google$key,
+        options = conf$storage$google$options
       )
       preprocessed_data <- arrow::read_parquet(preprocessed_filename)
       unique(preprocessed_data$Trip)
@@ -571,8 +571,8 @@ preprocess_pds_tracks <- function(
   # List raw tracks
   logger::log_info("Listing raw tracks...")
   raw_tracks <- googleCloudStorageR::gcs_list_objects(
-    bucket = pars$pds_storage$google$options$bucket,
-    prefix = pars$pds$pds_tracks$file_prefix
+    bucket = conf$pds_storage$google$options$bucket,
+    prefix = conf$pds$pds_tracks$file_prefix
   )$name
 
   raw_trip_ids <- extract_trip_ids_from_filenames(raw_tracks)
@@ -596,8 +596,8 @@ preprocess_pds_tracks <- function(
     function(track_file) {
       download_cloud_file(
         name = track_file,
-        provider = pars$pds_storage$google$key,
-        options = pars$pds_storage$google$options
+        provider = conf$pds_storage$google$key,
+        options = conf$pds_storage$google$options
       )
 
       track_data <- arrow::read_parquet(track_file) %>%
@@ -620,7 +620,7 @@ preprocess_pds_tracks <- function(
   }
 
   output_filename <-
-    paste0(pars$pds$pds_tracks$file_prefix, "-preprocessed") |>
+    paste0(conf$pds$pds_tracks$file_prefix, "-preprocessed") |>
     add_version(extension = "parquet")
 
   arrow::write_parquet(
@@ -633,8 +633,8 @@ preprocess_pds_tracks <- function(
   logger::log_info("Uploading preprocessed tracks...")
   upload_cloud_file(
     file = output_filename,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 
   unlink(output_filename)
@@ -647,7 +647,7 @@ preprocess_pds_tracks <- function(
   grid_summaries <- generate_track_summaries(final_data)
 
   output_filename <-
-    paste0(pars$pds$pds_tracks$file_prefix, "-grid_summaries") |>
+    paste0(conf$pds$pds_tracks$file_prefix, "-grid_summaries") |>
     add_version(extension = "parquet")
 
   arrow::write_parquet(
@@ -660,8 +660,8 @@ preprocess_pds_tracks <- function(
   logger::log_info("Uploading preprocessed tracks...")
   upload_cloud_file(
     file = output_filename,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 }
 

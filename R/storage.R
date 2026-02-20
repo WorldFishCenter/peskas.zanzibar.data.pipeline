@@ -460,7 +460,7 @@ mdb_collection_push <- function(
 #'
 #' Retrieves preprocessed survey data from Google Cloud Storage, specifically configured for WCS (Wildlife Conservation Society) datasets. This function fetches data stored in Parquet format.
 #'
-#' @param pars A list representing the configuration settings, typically obtained from a YAML configuration file.
+#' @param conf A list representing the configuration settings, typically obtained from a YAML configuration file.
 #' @param prefix A character string specifying the organization prefix to retrieve preprocessed surveys, either "wcs" or "ba".
 #' @return A dataframe of preprocessed survey landings, loaded from Parquet files.
 #' @keywords storage
@@ -471,21 +471,21 @@ mdb_collection_push <- function(
 #' df_preprocessed <- get_preprocessed_surveys(config, prefix = "ba")
 #' }
 #'
-get_preprocessed_surveys <- function(pars, prefix = NULL) {
+get_preprocessed_surveys <- function(conf, prefix = NULL) {
   wcs_preprocessed_surveys <-
     cloud_object_name(
       prefix = prefix,
-      provider = pars$storage$google$key,
+      provider = conf$storage$google$key,
       extension = "parquet",
       version = "latest",
-      options = pars$storage$google$options
+      options = conf$storage$google$options
     )
 
   logger::log_info("Retrieving {wcs_preprocessed_surveys}")
   download_cloud_file(
     name = wcs_preprocessed_surveys,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 
   arrow::read_parquet(wcs_preprocessed_surveys)
@@ -497,7 +497,7 @@ get_preprocessed_surveys <- function(pars, prefix = NULL) {
 #' Retrieves validated survey data from Google Cloud Storage for multiple survey sources.
 #' This function fetches data stored in Parquet format from sources defined in the configuration.
 #'
-#' @param pars A list representing the configuration settings, typically obtained from a YAML configuration file.
+#' @param conf A list representing the configuration settings, typically obtained from a YAML configuration file.
 #'             The configuration should include:
 #'             - `surveys.<source>.validated.file_prefix`: File prefix for validated surveys
 #'             - `surveys.<source>.validated.version`: Version to retrieve (optional, defaults to "latest")
@@ -525,9 +525,9 @@ get_preprocessed_surveys <- function(pars, prefix = NULL) {
 #' wf_validated <- get_validated_surveys(config, sources = "wf")
 #' }
 #'
-get_validated_surveys <- function(pars, sources = NULL) {
+get_validated_surveys <- function(conf, sources = NULL) {
   # Identify available survey sources from config
-  available_sources <- names(pars$surveys)
+  available_sources <- names(conf$surveys)
 
   # Create a mapping for source aliases
   # wf -> wf_v1 (default for backward compatibility)
@@ -540,7 +540,7 @@ get_validated_surveys <- function(pars, sources = NULL) {
   # If no sources specified, use all available that have validated configuration
   if (is.null(sources)) {
     sources <- available_sources[sapply(available_sources, function(s) {
-      !is.null(pars$surveys[[s]]$validated)
+      !is.null(conf$surveys[[s]]$validated)
     })]
   } else {
     # Map source aliases to full names
@@ -576,13 +576,13 @@ get_validated_surveys <- function(pars, sources = NULL) {
   # Loop through each source and retrieve data
   for (source_key in sources) {
     # Skip if the source configuration doesn't exist
-    if (!source_key %in% names(pars$surveys)) {
+    if (!source_key %in% names(conf$surveys)) {
       logger::log_warn("Configuration for {source_key} not found, skipping")
       next
     }
 
     # Skip if no validated configuration exists
-    if (is.null(pars$surveys[[source_key]]$validated)) {
+    if (is.null(conf$surveys[[source_key]]$validated)) {
       logger::log_warn(
         "No validated configuration for {source_key}, skipping"
       )
@@ -591,11 +591,11 @@ get_validated_surveys <- function(pars, sources = NULL) {
 
     # Get validated surveys file name
     validated_surveys_file <- cloud_object_name(
-      prefix = pars$surveys[[source_key]]$validated$file_prefix,
-      provider = pars$storage$google$key,
+      prefix = conf$surveys[[source_key]]$validated$file_prefix,
+      provider = conf$storage$google$key,
       extension = "parquet",
-      version = pars$surveys[[source_key]]$validated$version %||% "latest",
-      options = pars$storage$google$options
+      version = conf$surveys[[source_key]]$validated$version %||% "latest",
+      options = conf$storage$google$options
     )
 
     logger::log_info("Retrieving {validated_surveys_file}")
@@ -605,8 +605,8 @@ get_validated_surveys <- function(pars, sources = NULL) {
       {
         download_cloud_file(
           name = validated_surveys_file,
-          provider = pars$storage$google$key,
-          options = pars$storage$google$options
+          provider = conf$storage$google$key,
+          options = conf$storage$google$options
         )
 
         # Read the parquet file
