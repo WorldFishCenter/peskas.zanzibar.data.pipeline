@@ -236,7 +236,7 @@ summarize_data <- function(log_threshold = logger::DEBUG) {
 
   # Write each data frame to its own parquet file with versioning and upload
   for (name in names(dataframes_to_upload)) {
-    filename <- conf$surveys$wf_v1$summaries$file_prefix %>%
+    filename <- conf$surveys$summaries$file_prefix %>%
       paste0("_", name) %>% # Add the table name to distinguish files
       add_version(extension = "parquet")
 

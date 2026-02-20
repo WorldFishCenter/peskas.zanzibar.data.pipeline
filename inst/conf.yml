@@ -24,6 +24,12 @@ default:
       password: !expr Sys.getenv('BA_SURVEYS_PSSW')
 
   surveys:
+    summaries:
+      file_prefix: zanzibar-summaries
+      version: latest
+    aggregated:
+      file_prefix: zanzibar-aggregated
+      version: latest
     wcs:
       raw:
         file_prefix: wcs-surveys-raw
@@ -52,12 +58,6 @@ default:
         version: latest
       merged:
         file_prefix: wf-surveys-merged
-        version: latest
-      summaries:
-        file_prefix: wf-summaries
-        version: latest
-      aggregated:
-        file_prefix: wf-aggregated
         version: latest
       validation:
         flags:

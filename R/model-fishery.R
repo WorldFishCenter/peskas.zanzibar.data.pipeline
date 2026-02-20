@@ -488,7 +488,7 @@ generate_fleet_analysis <- function(log_threshold = logger::DEBUG) {
   monthly_summaries <-
     download_parquet_from_cloud(
       prefix = paste0(
-        conf$surveys$wf_v1$summaries$file_prefix,
+        conf$surveys$summaries$file_prefix,
         "_monthly_summaries"
       ),
       provider = conf$storage$google$key,
@@ -558,7 +558,7 @@ generate_fleet_analysis <- function(log_threshold = logger::DEBUG) {
 
   # Save aggregated results
   aggregated_filename <-
-    paste0(conf$surveys$wf_v1$aggregated$file_prefix) |>
+    conf$surveys$aggregated$file_prefix |>
     add_version(extension = "rds")
 
   readr::write_rds(aggregated, aggregated_filename)
