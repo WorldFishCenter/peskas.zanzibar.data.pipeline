@@ -1,3 +1,22 @@
+# peskas.zanzibar.data.pipeline 4.5.0
+
+## Major Changes
+
+- **Adopted `coasts` as the shared multicountry analytics engine**: Aggregated
+  data summarization and dashboard export are now delegated to
+  [`WorldFishCenter/peskas.coasts`](https://github.com/WorldFishCenter/peskas.coasts)
+  (dev branch). This centralizes the logic for producing monthly, taxa, district,
+  and gear summaries — as well as fishery metrics — across all Peskas country
+  deployments (Zanzibar, Kenya, Mozambique), ensuring consistent outputs and a
+  single place to maintain and improve the shared pipeline logic.
+  - Added `coasts` to `Imports` and `Remotes` in `DESCRIPTION`
+  - Added `remotes::install_github("WorldFishCenter/peskas.coasts", ref = "dev")`
+    to both `Dockerfile` and `Dockerfile.prod` so the image ships the package
+  - Pipeline steps that previously used local `summarize_data()` and
+    `generate_fleet_analysis()` now call the equivalent `coasts::` functions,
+    passing `package = "peskas.zanzibar.data.pipeline"` so they read the
+    country-specific `inst/conf.yml`
+
 # peskas.zanzibar.data.pipeline 4.4.0
 
 ## Improvements

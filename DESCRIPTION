@@ -1,7 +1,7 @@
 Package: peskas.zanzibar.data.pipeline
 Title: Functions to Implement the Zanzibar Small Scale Fisheries
     Data Pipeline
-Version: 4.4.0
+Version: 4.5.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",
@@ -37,7 +37,10 @@ Imports:
     sf,
     janitor,
     glue,
-    stringdist
+    stringdist,
+    coasts
+Remotes:
+    WorldFishCenter/peskas.coasts@dev
 Suggests:
     cleaner,
     googlesheets4,

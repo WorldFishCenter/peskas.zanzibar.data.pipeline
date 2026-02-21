@@ -52,6 +52,9 @@ RUN install2.r --error --skipinstalled \
     stringi \
     taxize
 
+# Install GitHub packages
+RUN Rscript -e 'remotes::install_github("WorldFishCenter/peskas.coasts", ref = "dev")'
+
 # Install local package
 COPY . /home
 WORKDIR /home
