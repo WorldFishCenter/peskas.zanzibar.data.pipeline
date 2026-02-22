@@ -44,7 +44,7 @@ The matching algorithm:
 \enumerate{
 \item Computes Levenshtein distance matrices between surveys and registry
 for each field (registration, boat name, fisher name)
-\item Normalizes distances by maximum string length to get values in \link{0,1}
+\item Normalizes distances by maximum string length to get values in [0,1]
 \item For each survey, counts how many fields match each registry entry
 (within thresholds)
 \item Assigns survey to the registry entry with the most matching fields

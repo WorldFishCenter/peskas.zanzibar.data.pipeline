@@ -36,10 +36,10 @@ catch_palette <-
   )
 
 setwd("../..")
-pars <- peskas.zanzibar.data.pipeline::read_config()
+conf <- peskas.zanzibar.data.pipeline::read_config()
 
 validated <-
-  peskas.zanzibar.data.pipeline::get_validated_surveys(pars)
+  peskas.zanzibar.data.pipeline::get_validated_surveys(conf)
 ```
 
 # Aim

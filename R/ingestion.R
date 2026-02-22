@@ -67,54 +67,54 @@
 #' @export
 ingest_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
-  pars <- read_config()
+  conf <- read_config()
 
   # WCS Survey
   logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
   wcs_files <- retrieve_surveys(
-    prefix = pars$surveys$wcs_surveys$raw_surveys$file_prefix,
+    prefix = conf$surveys$wcs$raw$file_prefix,
     append_version = TRUE,
     url = "kf.kobotoolbox.org",
-    project_id = pars$surveys$wcs_surveys$asset_id,
-    username = pars$surveys$wcs_surveys$username,
-    psswd = pars$surveys$wcs_surveys$password,
+    project_id = conf$ingestion$wcs$asset_id,
+    username = conf$ingestion$wcs$username,
+    psswd = conf$ingestion$wcs$password,
     encoding = "UTF-8"
   )
 
   logger::log_info("Uploading WCS files to cloud...")
-  purrr::map(pars$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
+  purrr::map(conf$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
   logger::log_success("WCS files upload succeeded")
 
   # WF Survey - Version 1
   logger::log_info("Downloading WF Fish Catch Survey Kobo data (v1)...")
   wf_files_v1 <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys_v1$raw_surveys$file_prefix,
+    prefix = conf$surveys$wf_v1$raw$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
-    project_id = pars$surveys$wf_surveys_v1$asset_id,
-    username = pars$surveys$wf_surveys_v1$username,
-    psswd = pars$surveys$wf_surveys_v1$password,
+    project_id = conf$ingestion$wf_v1$asset_id,
+    username = conf$ingestion$wf_v1$username,
+    psswd = conf$ingestion$wf_v1$password,
     encoding = "UTF-8"
   )
 
   logger::log_info("Uploading WF v1 files to cloud...")
-  purrr::map(pars$storage, ~ upload_cloud_file(wf_files_v1, .$key, .$options))
+  purrr::map(conf$storage, ~ upload_cloud_file(wf_files_v1, .$key, .$options))
   logger::log_success("WF v1 files upload succeeded")
 
   # WF Survey - Version 2
   logger::log_info("Downloading WF Fish Catch Survey Kobo data (v2)...")
   wf_files_v2 <- retrieve_surveys(
-    prefix = pars$surveys$wf_surveys_v2$raw_surveys$file_prefix,
+    prefix = conf$surveys$wf_v2$raw$file_prefix,
     append_version = TRUE,
     url = "eu.kobotoolbox.org",
-    project_id = pars$surveys$wf_surveys_v2$asset_id,
-    username = pars$surveys$wf_surveys_v2$username,
-    psswd = pars$surveys$wf_surveys_v2$password,
+    project_id = conf$ingestion$wf_v2$asset_id,
+    username = conf$ingestion$wf_v2$username,
+    psswd = conf$ingestion$wf_v2$password,
     encoding = "UTF-8"
   )
 
   logger::log_info("Uploading WF v2 files to cloud...")
-  purrr::map(pars$storage, ~ upload_cloud_file(wf_files_v2, .$key, .$options))
+  purrr::map(conf$storage, ~ upload_cloud_file(wf_files_v2, .$key, .$options))
   logger::log_success("WF v2 files upload succeeded")
 }
 
@@ -404,23 +404,23 @@ ingest_pds_tracks <- function(
   batch_size = NULL
 ) {
   logger::log_threshold(log_threshold)
-  pars <- read_config()
+  conf <- read_config()
 
   # Get trips file from cloud storage
   logger::log_info("Getting trips file from cloud storage...")
   pds_trips_parquet <- cloud_object_name(
-    prefix = pars$pds$pds_trips$file_prefix,
-    provider = pars$storage$google$key,
+    prefix = conf$pds$pds_trips$file_prefix,
+    provider = conf$storage$google$key,
     extension = "parquet",
-    version = pars$pds$pds_trips$version,
-    options = pars$storage$google$options
+    version = conf$pds$pds_trips$version,
+    options = conf$storage$google$options
   )
 
   logger::log_info("Downloading {pds_trips_parquet}")
   download_cloud_file(
     name = pds_trips_parquet,
-    provider = pars$storage$google$key,
-    options = pars$storage$google$options
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   )
 
   # Read trip IDs
@@ -436,8 +436,8 @@ ingest_pds_tracks <- function(
   logger::log_info("Checking existing tracks in cloud storage...")
   existing_tracks <-
     googleCloudStorageR::gcs_list_objects(
-      bucket = pars$pds_storage$google$options$bucket,
-      prefix = pars$pds$pds_tracks$file_prefix
+      bucket = conf$pds_storage$google$options$bucket,
+      prefix = conf$pds$pds_tracks$file_prefix
     )$name
 
   # Get new trip IDs
@@ -471,14 +471,14 @@ ingest_pds_tracks <- function(
           # Create filename for this track
           track_filename <- sprintf(
             "%s_%s.parquet",
-            pars$pds$pds_tracks$file_prefix,
+            conf$pds$pds_tracks$file_prefix,
             trip_id
           )
 
           # Get track data
           track_data <- get_trip_points(
-            token = pars$pds$token,
-            secret = pars$pds$secret,
+            token = conf$pds$token,
+            secret = conf$pds$secret,
             id = as.character(trip_id),
             deviceInfo = TRUE
           )
@@ -495,8 +495,8 @@ ingest_pds_tracks <- function(
           logger::log_info("Uploading track for trip {trip_id}")
           upload_cloud_file(
             file = track_filename,
-            provider = pars$pds_storage$google$key,
-            options = pars$pds_storage$google$options
+            provider = conf$pds_storage$google$key,
+            options = conf$pds_storage$google$options
           )
 
           # Clean up local file
@@ -562,23 +562,23 @@ extract_trip_ids_from_filenames <- function(filenames) {
 #' Process Single PDS Track
 #'
 #' @param trip_id Character. The ID of the trip to process.
-#' @param pars List. Configuration parameters.
+#' @param conf List. Configuration parameters.
 #' @return List with processing status and details.
 #' @keywords internal
-process_single_track <- function(trip_id, pars) {
+process_single_track <- function(trip_id, conf) {
   tryCatch(
     {
       # Create filename for this track
       track_filename <- sprintf(
         "%s_%s.parquet",
-        pars$pds$pds_tracks$file_prefix,
+        conf$pds$pds_tracks$file_prefix,
         trip_id
       )
 
       # Get track data
       track_data <- get_trip_points(
-        token = pars$pds$token,
-        secret = pars$pds$secret,
+        token = conf$pds$token,
+        secret = conf$pds$secret,
         id = trip_id,
         deviceInfo = TRUE
       )
@@ -595,8 +595,8 @@ process_single_track <- function(trip_id, pars) {
       logger::log_info("Uploading track for trip {trip_id}")
       upload_cloud_file(
         file = track_filename,
-        provider = pars$pds_storage$google$key,
-        options = pars$pds_storage$google$options
+        provider = conf$pds_storage$google$key,
+        options = conf$pds_storage$google$options
       )
 
       # Clean up local file

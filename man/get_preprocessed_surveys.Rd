@@ -4,10 +4,10 @@
 \alias{get_preprocessed_surveys}
 \title{Download Preprocessed Surveys}
 \usage{
-get_preprocessed_surveys(pars, prefix = NULL)
+get_preprocessed_surveys(conf, prefix = NULL)
 }
 \arguments{
-\item{pars}{A list representing the configuration settings, typically obtained from a YAML configuration file.}
+\item{conf}{A list representing the configuration settings, typically obtained from a YAML configuration file.}
 
 \item{prefix}{A character string specifying the organization prefix to retrieve preprocessed surveys, either "wcs" or "ba".}
 }

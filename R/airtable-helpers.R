@@ -11,9 +11,9 @@
 #' @export
 get_airtable_form_id <- function(kobo_asset_id = NULL, conf = NULL) {
   airtable_to_df(
-    base_id = conf$airtable$frame$base_id,
+    base_id = conf$metadata$airtable$frame$base_id,
     table_name = "forms",
-    token = conf$airtable$token
+    token = conf$metadata$airtable$token
   ) |>
     janitor::clean_names() |>
     dplyr::filter(.data$form_id == kobo_asset_id) |>

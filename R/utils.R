@@ -69,13 +69,13 @@ read_config <- function() {
     dotenv::load_dot_env(".env")
   }
 
-  pars <- config::get(
+  conf <- config::get(
     config = Sys.getenv("R_CONFIG_ACTIVE", "default"),
     file = system.file("conf.yml", package = "peskas.zanzibar.data.pipeline")
   )
 
-  logger::log_info("Using configutation: {attr(pars, 'config')}")
-  logger::log_debug("Running with parameters {pars}")
+  logger::log_info("Using configutation: {attr(conf, 'config')}")
+  logger::log_debug("Running with parameters {conf}")
 
-  pars
+  conf
 }

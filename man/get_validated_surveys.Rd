@@ -4,20 +4,20 @@
 \alias{get_validated_surveys}
 \title{Download Validated Surveys}
 \usage{
-get_validated_surveys(pars, sources = NULL)
+get_validated_surveys(conf, sources = NULL)
 }
 \arguments{
-\item{pars}{A list representing the configuration settings, typically obtained from a YAML configuration file.
+\item{conf}{A list representing the configuration settings, typically obtained from a YAML configuration file.
 The configuration should include:
-- \verb{surveys.<source>_surveys.validated_surveys.file_prefix}: File prefix for validated surveys
-- \verb{surveys.<source>_surveys.validated_surveys.version}: Version to retrieve (optional, defaults to \code{version.preprocess} or "latest")
+- \verb{surveys.<source>.validated.file_prefix}: File prefix for validated surveys
+- \verb{surveys.<source>.validated.version}: Version to retrieve (optional, defaults to "latest")
 - \code{storage.google.key}: Storage provider key
 - \code{storage.google.options}: Storage provider options (bucket, project, service_account_key)}
 
 \item{sources}{Character vector specifying which survey sources to retrieve.
-Accepts short names ("wcs", "wf", "ba") or full config keys ("wcs_surveys", "wf_surveys_v1", etc.).
-The "wf" alias maps to "wf_surveys_v1" for backward compatibility.
-If NULL (default), retrieves data from all available sources with validated_surveys configuration.}
+Accepts short names ("wcs", "wf", "ba") or full config keys ("wcs", "wf_v1", "ba").
+The "wf" alias maps to "wf_v1" for backward compatibility.
+If NULL (default), retrieves data from all available sources with validated configuration.}
 }
 \value{
 A dataframe of validated survey landings from all requested sources, loaded from Parquet files.
@@ -36,7 +36,7 @@ all_validated <- get_validated_surveys(config)
 # Get only WCS and BA validated surveys (using short names)
 some_validated <- get_validated_surveys(config, sources = c("wcs", "ba"))
 
-# Get WF validated surveys (maps to wf_surveys_v1)
+# Get WF validated surveys (maps to wf_v1)
 wf_validated <- get_validated_surveys(config, sources = "wf")
 }
 

@@ -1,3 +1,58 @@
+# peskas.zanzibar.data.pipeline 4.5.0
+
+## Major Changes
+
+- **Adopted `coasts` as the shared multicountry analytics engine**: Aggregated
+  data summarization and dashboard export are now delegated to
+  [`WorldFishCenter/peskas.coasts`](https://github.com/WorldFishCenter/peskas.coasts)
+  (dev branch). This centralizes the logic for producing monthly, taxa, district,
+  and gear summaries — as well as fishery metrics — across all Peskas country
+  deployments (Zanzibar, Kenya, Mozambique), ensuring consistent outputs and a
+  single place to maintain and improve the shared pipeline logic.
+  - Added `coasts` to `Imports` and `Remotes` in `DESCRIPTION`
+  - Added `remotes::install_github("WorldFishCenter/peskas.coasts", ref = "dev")`
+    to both `Dockerfile` and `Dockerfile.prod` so the image ships the package
+  - Pipeline steps that previously used local `summarize_data()` and
+    `generate_fleet_analysis()` now call the equivalent `coasts::` functions,
+    passing `package = "peskas.zanzibar.data.pipeline"` so they read the
+    country-specific `inst/conf.yml`
+
+# peskas.zanzibar.data.pipeline 4.4.0
+
+## Improvements
+
+- **Standardized configuration structure**: Replaced `inst/conf.yml` with a unified
+  multi-country template harmonized across all Peskas deployments (Zanzibar, Kenya,
+  Mozambique). Key structural changes:
+  - Survey credentials moved from `surveys.*` into a new top-level `ingestion.*` section
+  - Stage keys shortened (`raw_surveys` → `raw`, `preprocessed_surveys` → `preprocessed`, etc.)
+  - Source names shortened (`wcs_surveys` → `wcs`, `wf_surveys_v1` → `wf_v1`, etc.)
+  - MongoDB structure reorganized: connection strings under `connection_strings.*`,
+    databases under `databases.*`, collections key pluralized, `portal` renamed to `dashboard`
+  - Airtable config moved from top-level `airtable.*` to `metadata.airtable.*`
+  - All R code updated to use the new config paths
+
+- **`summarize_data()` correctness and clarity fixes**:
+  - Fixed data quality bug: `taxa_summaries` was incorrectly summing trip-total catch kg
+    per taxon instead of the actual per-taxon catch weight — values are now correct
+  - Fixed `districts_summaries` round-trip pivot: data is now stored wide and pivoted
+    once in `export_wf_data()` instead of pivot-long → store → pivot-wide → pivot-long
+  - Fixed `gear_summaries` `complete()` running after `pivot_longer` with wrong column
+    names in the fill list; now completes before pivoting across all gear × district × month combinations
+  - Replaced fragile `across(everything(), first)` pattern in trip-level collapse with
+    explicit `slice(1)`, which is clearer and avoids silent column overwrites
+  - Fixed inconsistent `na.rm` usage in gear summaries
+
+- **Removed dead code**: Deleted `create_geos()` and `create_geos_v1()` from `export.R`;
+  the geographic summary logic had already been inlined into `export_wf_data()`
+
+## Bug Fixes
+
+- Fixed `match_surveys_to_registry.Rd` cross-reference warning caused by `[0,1]` being
+  parsed as a markdown link
+- Documented missing `devices_table` argument in `process_trip_data()`
+- Added `stringdist` to `Imports` in `DESCRIPTION` (was used via `::` but not declared)
+
 # peskas.zanzibar.data.pipeline 4.3.0
 
 ## New Features
