@@ -53,7 +53,7 @@ RUN install2.r --error --skipinstalled \
     taxize
 
 # Install GitHub packages
-RUN Rscript -e 'remotes::install_github("WorldFishCenter/peskas.coasts", ref = "dev")'
+RUN Rscript -e 'remotes::install_github("WorldFishCenter/peskas.coasts", ref = "main")'
 
 # Install local package
 COPY . /home
