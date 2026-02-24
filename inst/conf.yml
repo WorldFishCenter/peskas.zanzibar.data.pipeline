@@ -87,6 +87,8 @@ default:
         K_price_max: 2
 
   pds:
+    customers:
+      - "WorldFish - Zanzibar"
     token: !expr Sys.getenv('PDS_TOKEN')
     secret: !expr Sys.getenv('PDS_SECRET')
     pds_trips:
