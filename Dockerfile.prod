@@ -52,8 +52,9 @@ RUN install2.r --error --skipinstalled \
     stringi \
     taxize
 
-# Install GitHub packages
-RUN Rscript -e 'remotes::install_github("WorldFishCenter/peskas.coasts", ref = "main", force = TRUE)'  # 2026-02-24
+# Install GitHub packages (ARG busts the cache on every build)
+ARG CACHEBUST=1
+RUN Rscript -e 'remotes::install_github("WorldFishCenter/peskas.coasts", ref = "main")'
 
 # Install local package
 COPY . /home
