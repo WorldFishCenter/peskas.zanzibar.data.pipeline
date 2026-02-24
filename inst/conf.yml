@@ -199,7 +199,3 @@ production:
     google:
       options:
         bucket: pds-zanzibar
-
-local:
-  # Local configuration inherits everything from default
-  # Add only local-specific overrides here if needed

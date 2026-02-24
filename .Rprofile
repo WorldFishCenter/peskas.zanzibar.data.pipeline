@@ -3,27 +3,12 @@
 use_prod <- function() {
   Sys.setenv(R_CONFIG_ACTIVE = "production")
   cat("\033[32m✓\033[0m Switched to \033[1mPRODUCTION\033[0m environment\n")
-  cat(
-    "\033[33m!\033[0m Note: If config was already loaded, reload package or call read_config() again\n"
-  )
-  invisible(NULL)
-}
-
-use_local <- function() {
-  Sys.setenv(R_CONFIG_ACTIVE = "local")
-  cat("\033[32m✓\033[0m Switched to \033[1mLOCAL\033[0m environment\n")
-  cat(
-    "\033[33m!\033[0m Note: If config was already loaded, reload package or call read_config() again\n"
-  )
   invisible(NULL)
 }
 
 use_default <- function() {
   Sys.setenv(R_CONFIG_ACTIVE = "default")
-  cat("\033[32m✓\033[0m Switched to \033[1mDEFAULT\033[0m environment\n")
-  cat(
-    "\033[33m!\033[0m Note: If config was already loaded, reload package or call read_config() again\n"
-  )
+  cat("\033[32m✓\033[0m Switched to \033[1mdefault\033[0m environment\n")
   invisible(NULL)
 }
 
@@ -40,7 +25,6 @@ if (interactive()) {
   cat("Current environment: \033[1m", current, "\033[0m\n", sep = "")
   cat("\nQuick commands:\n")
   cat("  • use_prod()    - Switch to production\n")
-  cat("  • use_local()   - Switch to local\n")
   cat("  • use_default() - Switch to default\n")
   cat("  • show_env()    - Show current environment\n\n")
 }
