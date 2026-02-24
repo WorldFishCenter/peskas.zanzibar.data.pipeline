@@ -22,7 +22,6 @@ default:
       asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
       username: !expr Sys.getenv('BA_SURVEYS_UNAME')
       password: !expr Sys.getenv('BA_SURVEYS_PSSW')
-
   surveys:
     summaries:
       file_prefix: zanzibar-summaries
@@ -85,7 +84,6 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
-
   pds:
     customers:
       - "WorldFish - Zanzibar"
@@ -97,7 +95,6 @@ default:
     pds_tracks:
       file_prefix: pds-tracks
       version: latest
-
   api:
     trips:
       raw:
@@ -106,7 +103,6 @@ default:
       validated:
         file_prefix: trips-validated
         cloud_path: zanzibar/validated
-
   storage:
     google:
       key: gcs
@@ -147,7 +143,6 @@ default:
             districts_summaries: districts_summaries
             gear_summaries: gear_summaries
             grid_summaries: grid_summaries
-
   pds_storage:
     google:
       key: gcs
@@ -155,7 +150,6 @@ default:
         project: peskas
         bucket: pds-zanzibar-dev
         service_account_key: !expr Sys.getenv('GCP_SA_KEY')
-
   metadata:
     map_boundaries:
       gaul1: ZAN_boundaries_gaul1
@@ -174,7 +168,6 @@ default:
       token: !expr Sys.getenv('AIRTABLE_TOKEN')
       frame:
         base_id: !expr Sys.getenv('AIRTABLE_BASE_ID_FRAME')
-
   validation:
     k_MAD_catch: 7
 
@@ -199,3 +192,7 @@ production:
     google:
       options:
         bucket: pds-zanzibar
+  metadata:
+    map_boundaries:
+      gaul1: ZAN_boundaries_gaul1
+      gaul2: ZAN_boundaries_gaul2
