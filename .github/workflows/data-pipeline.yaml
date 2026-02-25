@@ -50,7 +50,6 @@ jobs:
           file: Dockerfile.prod
           push: true
           tags: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
-          build-args: CACHEBUST=${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:buildcache
           cache-to: type=registry,ref=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:buildcache,mode=max
 
@@ -197,21 +196,6 @@ jobs:
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
-      - name: Debug coasts config
-        run: |
-          Rscript -e '
-            cat("=== config file paths ===\n")
-            cat("conf.yml  :", system.file("conf.yml",   package = "peskas.zanzibar.data.pipeline"), "\n")
-            cat("config.yml:", system.file("config.yml", package = "peskas.zanzibar.data.pipeline"), "\n")
-            cat("=== coasts version ===\n")
-            cat(as.character(packageVersion("coasts")), "\n")
-            cat("=== key config values ===\n")
-            conf <- coasts::read_config(package = "peskas.zanzibar.data.pipeline")
-            cat("R_CONFIG_ACTIVE :", Sys.getenv("R_CONFIG_ACTIVE", "default"), "\n")
-            cat("country         :", conf$country, "\n")
-            cat("gaul2           :", conf$metadata$map_boundaries$gaul2, "\n")
-            cat("summaries prefix:", conf$surveys$summaries$file_prefix, "\n")
-          '
       - name: Call export_portal()
         run: Rscript -e 'coasts::export_portal(package = "peskas.zanzibar.data.pipeline")'
         
