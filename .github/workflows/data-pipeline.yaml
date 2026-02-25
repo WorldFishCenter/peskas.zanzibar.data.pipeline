@@ -197,6 +197,21 @@ jobs:
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Debug coasts config
+        run: |
+          Rscript -e '
+            cat("=== config file paths ===\n")
+            cat("conf.yml  :", system.file("conf.yml",   package = "peskas.zanzibar.data.pipeline"), "\n")
+            cat("config.yml:", system.file("config.yml", package = "peskas.zanzibar.data.pipeline"), "\n")
+            cat("=== coasts version ===\n")
+            cat(as.character(packageVersion("coasts")), "\n")
+            cat("=== key config values ===\n")
+            conf <- coasts::read_config(package = "peskas.zanzibar.data.pipeline")
+            cat("R_CONFIG_ACTIVE :", Sys.getenv("R_CONFIG_ACTIVE", "default"), "\n")
+            cat("country         :", conf$country, "\n")
+            cat("gaul2           :", conf$metadata$map_boundaries$gaul2, "\n")
+            cat("summaries prefix:", conf$surveys$summaries$file_prefix, "\n")
+          '
       - name: Call export_portal()
         run: Rscript -e 'coasts::export_portal(package = "peskas.zanzibar.data.pipeline")'
         
