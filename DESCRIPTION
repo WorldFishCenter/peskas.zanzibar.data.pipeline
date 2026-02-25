@@ -39,8 +39,6 @@ Imports:
     glue,
     stringdist,
     coasts
-Remotes:
-    WorldFishCenter/peskas.coasts@dev
 Suggests:
     cleaner,
     googlesheets4,
