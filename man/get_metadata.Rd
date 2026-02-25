@@ -23,7 +23,7 @@ the tables that include information about the fishery. You can specify
 a single table to download or get all available tables.
 }
 \details{
-The parameters needed in \code{conf.yml} are:
+The parameters needed in \code{config.yml} are:
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{storage:
   storage_name:
@@ -42,7 +42,7 @@ metadata:
 }
 \examples{
 \dontrun{
-# Ensure you have the necessary configuration in conf.yml
+# Ensure you have the necessary configuration in config.yml
 
 # Download all metadata tables
 metadata_tables <- get_metadata()

@@ -28,7 +28,7 @@ and WF sources through Kobo Toolbox. It performs the following operations:
 }
 }
 \details{
-The function requires specific configuration in the \code{conf.yml} file with the following structure:
+The function requires specific configuration in the \code{config.yml} file with the following structure:
 
 \if{html}{\out{<div class="sourceCode yaml">}}\preformatted{surveys:
   wcs_surveys:

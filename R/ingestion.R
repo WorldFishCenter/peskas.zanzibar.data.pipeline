@@ -8,7 +8,7 @@
 #' 3. Uploads the processed files to configured cloud storage locations
 #'
 #' @details
-#' The function requires specific configuration in the `conf.yml` file with the following structure:
+#' The function requires specific configuration in the `config.yml` file with the following structure:
 #'
 #' ```yaml
 #' surveys:
@@ -289,7 +289,7 @@ rename_child <- function(x, i, p) {
 #' 4. Uploads the processed file to configured cloud storage
 #'
 #' @details
-#' The function requires specific configuration in the `conf.yml` file with the following structure:
+#' The function requires specific configuration in the `config.yml` file with the following structure:
 #'
 #' ```yaml
 #' pds:

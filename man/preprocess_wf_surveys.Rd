@@ -43,7 +43,7 @@ based on column patterns and applies appropriate processing logic for each datas
 If one version fails to process or is unavailable, the function continues with the
 available data and logs warnings. The function only fails if both versions are unavailable.
 
-Configurations are read from \code{conf.yml} with the following necessary parameters:
+Configurations are read from \code{config.yml} with the following necessary parameters:
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{surveys:
   wf_surveys:

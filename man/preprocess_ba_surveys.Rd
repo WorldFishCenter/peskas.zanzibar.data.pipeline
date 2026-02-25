@@ -18,7 +18,7 @@ Downloads and preprocesses raw structured Blue Alliance survey data from cloud s
 The process includes date standardization and survey ID generation for unique trip identification.
 }
 \details{
-Configurations are read from \code{conf.yml} with the following necessary parameters:
+Configurations are read from \code{config.yml} with the following necessary parameters:
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{surveys:
   ba_surveys:

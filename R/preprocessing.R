@@ -2,7 +2,7 @@
 #'
 #' Downloads and preprocesses raw structured WCS survey data from cloud storage into a binary format. The process includes nesting multiple columns related to species information into single columns within a dataframe, which helps reduce its width and organize data efficiently for analysis.
 #'
-#' Configurations are read from `conf.yml` with the following necessary parameters:
+#' Configurations are read from `config.yml` with the following necessary parameters:
 #'
 #' ```
 #' surveys:
@@ -129,7 +129,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #' If one version fails to process or is unavailable, the function continues with the
 #' available data and logs warnings. The function only fails if both versions are unavailable.
 #'
-#' Configurations are read from `conf.yml` with the following necessary parameters:
+#' Configurations are read from `config.yml` with the following necessary parameters:
 #'
 #' ```
 #' surveys:
@@ -409,7 +409,7 @@ process_version_data <- function(catch_info, general_info, asfis) {
 #' Downloads and preprocesses raw structured Blue Alliance survey data from cloud storage into a binary format.
 #' The process includes date standardization and survey ID generation for unique trip identification.
 #'
-#' Configurations are read from `conf.yml` with the following necessary parameters:
+#' Configurations are read from `config.yml` with the following necessary parameters:
 #'
 #' ```
 #' surveys:

@@ -659,7 +659,7 @@ get_validated_surveys <- function(conf, sources = NULL) {
 #' the tables that include information about the fishery. You can specify
 #' a single table to download or get all available tables.
 #'
-#' The parameters needed in `conf.yml` are:
+#' The parameters needed in `config.yml` are:
 #'
 #' ```
 #' storage:
@@ -690,7 +690,7 @@ get_validated_surveys <- function(conf, sources = NULL) {
 #'
 #' @examples
 #' \dontrun{
-#' # Ensure you have the necessary configuration in conf.yml
+#' # Ensure you have the necessary configuration in config.yml
 #'
 #' # Download all metadata tables
 #' metadata_tables <- get_metadata()

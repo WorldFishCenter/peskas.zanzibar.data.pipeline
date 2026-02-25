@@ -59,8 +59,8 @@ When retrieving jobs can call `cloud_object_name()` to obtain the latest or an s
 
 ## Environment parameters are specified in the config file
 
-The parameters that determine how the pipeline is run are specified in [`inst/conf.yml`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/inst/conf.yml). 
-This file can be accessed using `system.file("conf.yml",package="peskas.zanzibar.data.pipeline")`.
+The parameters that determine how the pipeline is run are specified in [`inst/config.yml`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/inst/config.yml). 
+This file can be accessed using `system.file("config.yml",package="peskas.zanzibar.data.pipeline")`.
 Using this file, as opposed to, for example, including them in the code, allows us to easily switch parameters depending on the environment. 
 We use the [config](https://github.com/rstudio/config) package to read the configuration file.
 We use three different environments (see below). 
@@ -78,7 +78,7 @@ This works well when the code runs in GitHub Actions, because the workflow has i
 The "local" environment is similar to the default environment in that is used for development and therefore uses resources ideal for testing the code. 
 The main difference is that the authentication information is not read from environment variables but from local files. 
 Specifically authentication files should live in a directory called `auth` which should never be committed to git. 
-It is possible to run `Sys.setenv(R_CONFIG_ACTIVE="local")` in the R console to ensure the local environment is activated the next time `conf.yml` is read.
+It is possible to run `Sys.setenv(R_CONFIG_ACTIVE="local")` in the R console to ensure the local environment is activated the next time `config.yml` is read.
 An even easier alternative is to add the key-value pair `R_CONFIG_ACTIVE=local` to the `.Renviron` file in the project directory. 
 
 - Production environment: 

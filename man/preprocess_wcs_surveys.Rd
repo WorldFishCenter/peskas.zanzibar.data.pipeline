@@ -17,7 +17,7 @@ None; the function is used for its side effects.
 Downloads and preprocesses raw structured WCS survey data from cloud storage into a binary format. The process includes nesting multiple columns related to species information into single columns within a dataframe, which helps reduce its width and organize data efficiently for analysis.
 }
 \details{
-Configurations are read from \code{conf.yml} with the following necessary parameters:
+Configurations are read from \code{config.yml} with the following necessary parameters:
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{surveys:
   wcs_surveys:

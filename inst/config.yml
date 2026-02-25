@@ -192,7 +192,4 @@ production:
     google:
       options:
         bucket: pds-zanzibar
-  metadata:
-    map_boundaries:
-      gaul1: ZAN_boundaries_gaul1
-      gaul2: ZAN_boundaries_gaul2
+
