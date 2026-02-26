@@ -22,9 +22,10 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   conf <- read_config()
 
   # 1. Load and preprocess survey data
-  preprocessed_surveys <- get_preprocessed_surveys(
-    conf,
-    prefix = conf$surveys$wcs$preprocessed$file_prefix
+  preprocessed_surveys <- coasts::download_parquet_from_cloud(
+    prefix = conf$survey$wcs$preprocessed$file_prefix,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
   ) |>
     dplyr::filter(!.data$trip_info == "no")
 
@@ -544,9 +545,10 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
   conf <- read_config()
 
   preprocessed_surveys <-
-    get_preprocessed_surveys(
-      conf,
-      prefix = conf$surveys$ba$preprocessed$file_prefix
+    coasts::download_parquet_from_cloud(
+      prefix = conf$surveys$ba$preprocessed$file_prefix,
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options
     ) |>
     dplyr::arrange(.data$survey_id)
 
