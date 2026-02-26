@@ -53,7 +53,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       sep = " "
     ) %>%
     dplyr::select(
-      "survey_id" = "_id",
+      "survey_id" = "submission_id",
       submission_date = "today",
       "survey_type",
       "landing_site",

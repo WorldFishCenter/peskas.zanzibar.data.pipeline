@@ -53,7 +53,7 @@ pt_nest_length <- function(x) {
 pt_nest_market <- function(x) {
   x %>%
     dplyr::select(
-      survey_id = .data$`_id`,
+      survey_id = "submission_id",
       dplyr::starts_with("Market_Catch_Survey")
     ) %>%
     tidyr::pivot_longer(-c("survey_id")) %>%
@@ -102,7 +102,7 @@ pt_nest_market <- function(x) {
 pt_nest_catch <- function(x) {
   x %>%
     dplyr::select(
-      survey_id = .data$`_id`,
+      survey_id = "submission_id",
       dplyr::starts_with("Total_Catch_Survey")
     ) %>%
     tidyr::pivot_longer(-c(.data$survey_id)) %>%
@@ -194,7 +194,7 @@ pt_nest_catch <- function(x) {
 pt_nest_trip <- function(x) {
   x %>%
     dplyr::select(
-      survey_id = .data$`_id`,
+      survey_id = "submission_id",
       dplyr::starts_with("Fishing_Trip")
     ) %>%
     tidyr::pivot_longer(-c(.data$survey_id)) %>%
@@ -269,7 +269,7 @@ pt_nest_attachments <- function(x) {
   x %>%
     # Using the .data pronoun to avoid RMD check notes
     dplyr::select(
-      survey_id = .data$`_id`,
+      survey_id = "submission_id",
       dplyr::starts_with("_attachments")
     ) %>%
     dplyr::mutate_all(as.character) %>%
@@ -287,13 +287,13 @@ pt_nest_attachments <- function(x) {
     dplyr::group_by(.data$survey_id) %>%
     tidyr::nest() %>%
     dplyr::ungroup() %>%
-    dplyr::rename("_attachments" = "data") %>%
+    dplyr::rename("_attachments" = "data") |>
     # If there are no attachments empty the nested data frames
     dplyr::mutate(
       survey_id = as.integer(.data$survey_id),
       `_attachments` = purrr::map(
         .data$`_attachments`,
-        ~ dplyr::filter(., !is.na(.data$id))
+        ~ dplyr::filter(., !dplyr::if_all(dplyr::everything(), is.na))
       )
     )
 }

@@ -53,8 +53,8 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:buildcache
           cache-to: type=registry,ref=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:buildcache,mode=max
 
-  ingest-preprocess-surveys:
-    name: Ingest and preprocess Kobo surveys
+  ingest-surveys:
+    name: Ingest Kobo surveys
     needs: build-container
     runs-on: ubuntu-latest
     container:
@@ -68,12 +68,30 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_wcs_surveys()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_wcs_surveys()'
-      - name: Call preprocess_ba_surveys()
+      - name: Call ingest_wf_surveys()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_wf_surveys()'
+
+  preprocess-surveys:
+    name: Preprocess Kobo surveys
+    needs: build-container
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call preprocess_ba_surveys()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_ba_surveys()'
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_ba_surveys()'        
+      - name: Call preprocess_wcs_surveys()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_wcs_surveys()'
       - name: Call preprocess_wf_surveys()
         run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_wf_surveys()'
+
+
 
   ingest-preprocess-pds-data:
     name: Ingest and preprocess GPS data
@@ -97,7 +115,7 @@ jobs:
 
   validate-sync-surveys:
     name: Validate and sync Kobo submissions
-    needs: ingest-preprocess-surveys
+    needs: [ingest-surveys, preprocess-surveys]
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
@@ -119,7 +137,7 @@ jobs:
 
   merge-trips:
     name: Merge PDS and survey trips
-    needs: ingest-preprocess-surveys
+    needs: [validate-sync-surveys, ingest-preprocess-pds-data]
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
@@ -135,7 +153,7 @@ jobs:
 
   export-api-raw:
     name: Export raw API formatted data
-    needs: ingest-preprocess-surveys
+    needs: preprocess-surveys
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
