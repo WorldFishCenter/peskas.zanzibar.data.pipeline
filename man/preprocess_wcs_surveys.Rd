@@ -6,6 +6,9 @@
 \usage{
 preprocess_wcs_surveys(log_threshold = logger::DEBUG)
 }
+\arguments{
+\item{log_threshold}{Logging threshold level (default: logger::DEBUG).}
+}
 \value{
 None; the function is used for its side effects.
 }

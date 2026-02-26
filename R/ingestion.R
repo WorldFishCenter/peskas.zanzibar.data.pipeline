@@ -24,10 +24,13 @@ ingest_catch_survey_version <- function(version, kobo_config, storage_config) {
     encoding = "UTF-8",
     format = "json"
   )
-
-  logger::log_info(glue::glue(
-    "Checking uniqueness of {length(data_raw)} submissions for {version}..."
-  ))
+  logger::log_info(
+    paste0(
+      "Checking uniqueness of ",
+      length(data_raw),
+      " submissions"
+    )
+  )
 
   unique_ids <- dplyr::n_distinct(purrr::map_dbl(data_raw, ~ .$`_id`))
   if (unique_ids != length(data_raw)) {
@@ -38,7 +41,7 @@ ingest_catch_survey_version <- function(version, kobo_config, storage_config) {
   }
 
   logger::log_info(glue::glue(
-    "Converting {version} Kobo data to tabular format..."
+    "Converting Kobo data to tabular format..."
   ))
 
   raw_survey <- data_raw %>%
@@ -47,7 +50,7 @@ ingest_catch_survey_version <- function(version, kobo_config, storage_config) {
     dplyr::rename(submission_id = "_id")
 
   logger::log_info(glue::glue(
-    "Converted {nrow(raw_survey)} rows with {ncol(raw_survey)} columns for {version}"
+    "Converted {nrow(raw_survey)} rows with {ncol(raw_survey)} columns"
   ))
 
   upload_parquet_to_cloud(

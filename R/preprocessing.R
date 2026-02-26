@@ -24,7 +24,7 @@
 #'
 #' The function uses logging to track progress.
 #'
-#' @inheritParams ingest_surveys
+#' @inheritParams ingest_wcs_surveys
 #' @return None; the function is used for its side effects.
 #' @export
 #' @keywords workflow preprocessing
@@ -150,7 +150,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #'       service_account_key:
 #' ```
 #'
-#' @inheritParams ingest_surveys
+#' @inheritParams ingest_wf_surveys
 #' @param version Character string, deprecated. Function now processes both versions automatically.
 #' @return None; the function is used for its side effects.
 #' @export
@@ -242,8 +242,7 @@ preprocess_wf_surveys <- function(
       }
 
       catch_surveys_raw_v1 <- catch_surveys_raw_v1 |>
-        dplyr::select(-dplyr::starts_with("_att")) |>
-        dplyr::rename(submission_id = "_id")
+        dplyr::select(-dplyr::starts_with("_att"))
 
       general_info_v1 <- preprocess_general(data = catch_surveys_raw_v1)
       catch_info_v1 <- preprocess_catch(
@@ -281,8 +280,7 @@ preprocess_wf_surveys <- function(
       }
 
       catch_surveys_raw_v2 <- catch_surveys_raw_v2 |>
-        dplyr::select(-dplyr::starts_with("_att")) |>
-        dplyr::rename(submission_id = "_id")
+        dplyr::select(-dplyr::starts_with("_att"))
 
       general_info_v2 <- preprocess_general(data = catch_surveys_raw_v2)
       catch_info_v2 <- preprocess_catch(
@@ -432,7 +430,7 @@ process_version_data <- function(catch_info, general_info, asfis) {
 #' The function uses logging to track progress and creates unique survey IDs using CRC32 hashing
 #' of concatenated trip attributes.
 #'
-#' @inheritParams ingest_surveys
+#' @inheritParams ingest_wf_surveys
 #' @return None; the function is used for its side effects.
 #' @export
 #' @keywords workflow preprocessing
