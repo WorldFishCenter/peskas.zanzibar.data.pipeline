@@ -7,16 +7,16 @@
 ingest_pds_tracks(log_threshold = logger::DEBUG, batch_size = NULL)
 }
 \arguments{
-\item{log_threshold}{The logging threshold to use. Default is logger::DEBUG.}
+\item{log_threshold}{Logging threshold level (default: logger::DEBUG).}
 
-\item{batch_size}{Optional number of tracks to process. If NULL, processes all new tracks.}
+\item{batch_size}{Optional number of tracks to process. If NULL, processes all.}
 }
 \value{
-None (invisible). The function performs its operations for side effects.
+None (invisible). Processes and uploads track data.
 }
 \description{
-This function handles the automated ingestion of GPS boat track data from Pelagic Data Systems (PDS).
-It downloads and stores only new tracks that haven't been previously uploaded to Google Cloud Storage.
+Handles the automated ingestion of GPS boat track data from PDS.
+Downloads and stores only new tracks that haven't been previously uploaded.
 Uses parallel processing for improved performance.
 }
 \keyword{ingestion}

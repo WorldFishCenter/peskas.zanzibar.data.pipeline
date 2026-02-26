@@ -7,10 +7,10 @@
 extract_trip_ids_from_filenames(filenames)
 }
 \arguments{
-\item{filenames}{Character vector of track filenames}
+\item{filenames}{Character vector of track filenames.}
 }
 \value{
-Character vector of trip IDs
+Character vector of trip IDs.
 }
 \description{
 Extract Trip IDs from Track Filenames

@@ -2,17 +2,17 @@
 % Please edit documentation in R/ingestion.R
 \name{flatten_row}
 \alias{flatten_row}
-\title{Flatten Survey Data Rows}
+\title{Flatten a Single Row of Kobotoolbox Data}
 \usage{
 flatten_row(x)
 }
 \arguments{
-\item{x}{A list representing a row of data, potentially containing nested lists or vectors.}
+\item{x}{A list representing a single row of Kobotoolbox data.}
 }
 \value{
-A tibble with each row representing flattened survey data.
+A flattened tibble representing the input row.
 }
 \description{
-Transforms each row of nested survey data into a flat tabular format using a mapping and flattening process.
+Transforms each row of nested survey data into a flat tabular format.
 }
 \keyword{internal}

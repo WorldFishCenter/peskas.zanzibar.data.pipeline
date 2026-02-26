@@ -1,248 +1,227 @@
-#' Ingest WCS and WF Catch Survey Data
+#' Core ingestion logic for catch survey data
 #'
-#' @description
-#' This function handles the automated ingestion of fish catch survey data from both WCS
-#' and WF sources through Kobo Toolbox. It performs the following operations:
-#' 1. Downloads the survey data from Kobo Toolbox
-#' 2. Processes and formats the data
-#' 3. Uploads the processed files to configured cloud storage locations
+#' Downloads survey data from Kobotoolbox, validates submission uniqueness,
+#' flattens the nested JSON into tabular format, and uploads to cloud storage
+#' as a versioned Parquet file.
+#'
+#' @param version Version identifier (e.g., "wcs", "wf_v1", "wf_v2")
+#' @param kobo_config List with Kobo connection details: `url`, `asset_id`,
+#'   `username`, `password`.
+#' @param storage_config List with storage details: `file_prefix`, `provider`,
+#'   `options`.
+#' @return No return value. Processes and uploads data as side effects.
+#' @keywords internal
+ingest_catch_survey_version <- function(version, kobo_config, storage_config) {
+  logger::log_info(glue::glue(
+    "Downloading Fish Catch Survey Kobo data ({version})..."
+  ))
+
+  data_raw <- coasts::get_kobo_data(
+    url = kobo_config$url,
+    assetid = kobo_config$asset_id,
+    uname = kobo_config$username,
+    pwd = kobo_config$password,
+    encoding = "UTF-8",
+    format = "json"
+  )
+
+  logger::log_info(glue::glue(
+    "Checking uniqueness of {length(data_raw)} submissions for {version}..."
+  ))
+
+  unique_ids <- dplyr::n_distinct(purrr::map_dbl(data_raw, ~ .$`_id`))
+  if (unique_ids != length(data_raw)) {
+    stop(glue::glue(
+      "Number of submission ids ({unique_ids}) not the same as ",
+      "number of records ({length(data_raw)}) in {version} data"
+    ))
+  }
+
+  logger::log_info(glue::glue(
+    "Converting {version} Kobo data to tabular format..."
+  ))
+
+  raw_survey <- data_raw %>%
+    purrr::map(flatten_row) %>%
+    dplyr::bind_rows() %>%
+    dplyr::rename(submission_id = "_id")
+
+  logger::log_info(glue::glue(
+    "Converted {nrow(raw_survey)} rows with {ncol(raw_survey)} columns for {version}"
+  ))
+
+  upload_parquet_to_cloud(
+    data = raw_survey,
+    prefix = storage_config$file_prefix,
+    provider = storage_config$provider,
+    options = storage_config$options
+  )
+
+  logger::log_info(glue::glue(
+    "Successfully completed ingestion for {version}"
+  ))
+}
+
+
+#' Ingest WCS Catch Survey Data
+#'
+#' Retrieves WCS catch survey data from Kobotoolbox, processes it, and uploads
+#' the raw data as a Parquet file to cloud storage.
+#'
+#' @param log_threshold Logging threshold level (default: logger::DEBUG).
+#'
+#' @return No return value. Downloads data, processes it, and uploads to cloud storage.
 #'
 #' @details
-#' The function requires specific configuration in the `config.yml` file with the following structure:
-#'
-#' ```yaml
-#' surveys:
-#'   wcs_surveys:
-#'     raw_surveys:
-#'       file_prefix: "wcs_raw_data"     # Prefix for output files
-#'       asset_id: "xxxxx"               # Kobo Toolbox asset ID
-#'       username: "user@example.com"    # Kobo Toolbox username
-#'       password: "password123"         # Kobo Toolbox password
-#'   wf_surveys:
-#'     raw_surveys:
-#'       file_prefix: "wf_raw_data"
-#'       asset_id: "yyyyy"
-#'       username: "user2@example.com"
-#'       password: "password456"
-#' storage:
-#'   gcp:                               # Storage provider name
-#'     key: "google"                    # Storage provider identifier
-#'     options:
-#'       project: "project-id"          # Cloud project ID
-#'       bucket: "bucket-name"          # Storage bucket name
-#'       service_account_key: "path/to/key.json"
-#' ```
-#'
-#' The function processes both WCS and WF surveys sequentially, with separate logging
-#' for each step. For each survey:
-#' - Downloads data using the `retrieve_surveys()` function
-#' - Converts the data to parquet format
-#' - Uploads the resulting files to all configured storage providers
-#'
-#' Error handling is managed through the logger package, with informative messages
-#' at each step of the process.
-#'
-#' @param log_threshold The logging threshold to use. Default is logger::DEBUG.
-#'   See `logger::log_levels` for available options.
-#'
-#' @return None (invisible). The function performs its operations for side effects:
-#'   - Creates parquet files locally
-#'   - Uploads files to configured cloud storage
-#'   - Generates logs of the process
-#'
-#' @examples
-#' \dontrun{
-#' # Run with default debug logging
-#' ingest_surveys()
-#'
-#' # Run with info-level logging only
-#' ingest_surveys(logger::INFO)
-#' }
-#'
-#' @seealso
-#' * [retrieve_surveys()] for details on the survey retrieval process
-#' * [upload_cloud_file()] for details on the cloud upload process
+#' The function:
+#' 1. Reads configuration settings
+#' 2. Downloads survey data from Kobotoolbox using `coasts::get_kobo_data()`
+#' 3. Checks for uniqueness of submissions
+#' 4. Converts data to tabular format
+#' 5. Uploads raw data as Parquet files to cloud storage
 #'
 #' @keywords workflow ingestion
 #' @export
-ingest_surveys <- function(log_threshold = logger::DEBUG) {
+#'
+#' @examples
+#' \dontrun{
+#' ingest_wcs_surveys()
+#' }
+ingest_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
   conf <- read_config()
 
-  # WCS Survey
-  logger::log_info("Downloading WCS Fish Catch Survey Kobo data...")
-  wcs_files <- retrieve_surveys(
-    prefix = conf$surveys$wcs$raw$file_prefix,
-    append_version = TRUE,
-    url = "kf.kobotoolbox.org",
-    project_id = conf$ingestion$wcs$asset_id,
-    username = conf$ingestion$wcs$username,
-    psswd = conf$ingestion$wcs$password,
-    encoding = "UTF-8"
+  version_configs <- list(
+    wcs = list(
+      kobo = list(
+        url = "kf.kobotoolbox.org",
+        asset_id = conf$ingestion$wcs$asset_id,
+        username = conf$ingestion$wcs$username,
+        password = conf$ingestion$wcs$password
+      ),
+      storage = list(
+        file_prefix = conf$surveys$wcs$raw$file_prefix,
+        provider = conf$storage$google$key,
+        options = conf$storage$google$options
+      )
+    )
   )
 
-  logger::log_info("Uploading WCS files to cloud...")
-  purrr::map(conf$storage, ~ upload_cloud_file(wcs_files, .$key, .$options))
-  logger::log_success("WCS files upload succeeded")
-
-  # WF Survey - Version 1
-  logger::log_info("Downloading WF Fish Catch Survey Kobo data (v1)...")
-  wf_files_v1 <- retrieve_surveys(
-    prefix = conf$surveys$wf_v1$raw$file_prefix,
-    append_version = TRUE,
-    url = "eu.kobotoolbox.org",
-    project_id = conf$ingestion$wf_v1$asset_id,
-    username = conf$ingestion$wf_v1$username,
-    psswd = conf$ingestion$wf_v1$password,
-    encoding = "UTF-8"
+  purrr::iwalk(
+    version_configs,
+    ~ ingest_catch_survey_version(
+      version = .y,
+      kobo_config = .x$kobo,
+      storage_config = .x$storage
+    )
   )
-
-  logger::log_info("Uploading WF v1 files to cloud...")
-  purrr::map(conf$storage, ~ upload_cloud_file(wf_files_v1, .$key, .$options))
-  logger::log_success("WF v1 files upload succeeded")
-
-  # WF Survey - Version 2
-  logger::log_info("Downloading WF Fish Catch Survey Kobo data (v2)...")
-  wf_files_v2 <- retrieve_surveys(
-    prefix = conf$surveys$wf_v2$raw$file_prefix,
-    append_version = TRUE,
-    url = "eu.kobotoolbox.org",
-    project_id = conf$ingestion$wf_v2$asset_id,
-    username = conf$ingestion$wf_v2$username,
-    psswd = conf$ingestion$wf_v2$password,
-    encoding = "UTF-8"
-  )
-
-  logger::log_info("Uploading WF v2 files to cloud...")
-  purrr::map(conf$storage, ~ upload_cloud_file(wf_files_v2, .$key, .$options))
-  logger::log_success("WF v2 files upload succeeded")
 }
 
-#' Retrieve Surveys from Kobotoolbox
+
+#' Ingest WF Catch Survey Data
 #'
-#' Downloads survey data from Kobotoolbox for a specified project and uploads the data in Parquet format. File naming can include versioning details.
+#' Retrieves WF catch survey data (v1 and v2) from Kobotoolbox, processes it,
+#' and uploads the raw data as Parquet files to cloud storage.
 #'
-#' @param prefix Filename prefix or path for downloaded files.
-#' @param append_version Boolean indicating whether to append versioning info to filenames.
-#' @param url URL of the Kobotoolbox instance.
-#' @param project_id Project asset ID for data download.
-#' @param username Kobotoolbox account username.
-#' @param psswd Kobotoolbox account password.
-#' @param encoding Character encoding for the downloaded data; defaults to "UTF-8".
+#' @param log_threshold Logging threshold level (default: logger::DEBUG).
 #'
-#' @return Vector of paths for the downloaded Parquet files.
+#' @return No return value. Downloads data, processes it, and uploads to cloud storage.
+#'
+#' @details
+#' The function processes both WF v1 and v2 catch surveys from eu.kobotoolbox.org.
+#'
+#' @keywords workflow ingestion
 #' @export
-#' @keywords ingestion
+#'
 #' @examples
 #' \dontrun{
-#' file_list <- retrieve_surveys(
-#'   prefix = "my_data",
-#'   append_version = TRUE,
-#'   url = "kf.kobotoolbox.org",
-#'   project_id = "my_project_id",
-#'   username = "admin",
-#'   psswd = "admin",
-#'   encoding = "UTF-8"
-#' )
+#' ingest_wf_surveys()
 #' }
-#'
-retrieve_surveys <- function(
-  prefix = NULL,
-  append_version = NULL,
-  url = NULL,
-  project_id = NULL,
-  username = NULL,
-  psswd = NULL,
-  encoding = NULL
-) {
-  data_raw <-
-    KoboconnectR::kobotools_kpi_data(
-      url = url,
-      assetid = project_id,
-      uname = username,
-      pwd = psswd,
-      encoding = encoding
-    )$results
+ingest_wf_surveys <- function(log_threshold = logger::DEBUG) {
+  logger::log_threshold(log_threshold)
+  conf <- read_config()
 
-  # Check that submissions are unique in case there is overlap in the pagination
-  if (
-    dplyr::n_distinct(purrr::map_dbl(data_raw, ~ .$`_id`)) != length(data_raw)
-  ) {
-    stop("Number of submission ids not the same as number of records")
-  }
-
-  logger::log_info(
-    "Converting Fish Catch Survey Kobo data to tabular format..."
-  )
-  tabular_data <- purrr::map_dfr(data_raw, flatten_row)
-  data_filename <- prefix
-
-  if (isTRUE(append_version)) {
-    parquet_filename <- add_version(data_filename, "parquet")
-  } else {
-    parquet_filename <- paste0(data_filename, ".parquet")
-  }
-
-  logger::log_info("Converting json data to Parquet as {parquet_filename}...")
-
-  # Convert tabular_data to Arrow Table
-  arrow_table <- arrow::as_arrow_table(tabular_data)
-
-  # Write to Parquet format
-  arrow::write_parquet(
-    arrow_table,
-    sink = parquet_filename,
-    compression = "lz4",
-    compression_level = 12
+  version_configs <- list(
+    wf_v1 = list(
+      kobo = list(
+        url = "eu.kobotoolbox.org",
+        asset_id = conf$ingestion$wf_v1$asset_id,
+        username = conf$ingestion$wf_v1$username,
+        password = conf$ingestion$wf_v1$password
+      ),
+      storage = list(
+        file_prefix = conf$surveys$wf_v1$raw$file_prefix,
+        provider = conf$storage$google$key,
+        options = conf$storage$google$options
+      )
+    ),
+    wf_v2 = list(
+      kobo = list(
+        url = "eu.kobotoolbox.org",
+        asset_id = conf$ingestion$wf_v2$asset_id,
+        username = conf$ingestion$wf_v2$username,
+        password = conf$ingestion$wf_v2$password
+      ),
+      storage = list(
+        file_prefix = conf$surveys$wf_v2$raw$file_prefix,
+        provider = conf$storage$google$key,
+        options = conf$storage$google$options
+      )
+    )
   )
 
-  return(parquet_filename)
+  purrr::iwalk(
+    version_configs,
+    ~ ingest_catch_survey_version(
+      version = .y,
+      kobo_config = .x$kobo,
+      storage_config = .x$storage
+    )
+  )
 }
 
-#' Flatten Survey Data Rows
+
+# ---- Flattening helpers (Kobo JSON → tabular) --------------------------------
+
+#' Flatten a Single Row of Kobotoolbox Data
 #'
-#' Transforms each row of nested survey data into a flat tabular format using a mapping and flattening process.
+#' Transforms each row of nested survey data into a flat tabular format.
 #'
-#' @param x A list representing a row of data, potentially containing nested lists or vectors.
-#' @return A tibble with each row representing flattened survey data.
+#' @param x A list representing a single row of Kobotoolbox data.
+#' @return A flattened tibble representing the input row.
 #' @keywords internal
 #' @export
 flatten_row <- function(x) {
   x %>%
-    # Each row is composed of several fields
     purrr::imap(flatten_field) %>%
     rlang::squash() %>%
-    # Remove NULL values before creating tibble
     purrr::compact() %>%
     tibble::as_tibble(.name_repair = "unique")
 }
 
-#' Flatten Survey Data Fields
+
+#' Flatten a Single Field of Kobotoolbox Data
 #'
-#' Processes each field within a row of survey data, handling both simple vectors and nested lists. For lists with named elements, renames and unlists them for flat structure preparation.
+#' Processes each field within a row of survey data, handling both simple
+#' vectors and nested lists.
 #'
 #' @param x A vector or list representing a field in the data.
-#' @param p The prefix or name associated with the field, used for naming during the flattening process.
+#' @param p The prefix or name associated with the field.
 #' @return Modified field, either unchanged, unnested, or appropriately renamed.
 #' @keywords internal
 #' @export
 flatten_field <- function(x, p) {
-  # If the field is a simple vector do nothing but if the field is a list we
-  # need more logic
   if (inherits(x, "list")) {
     if (length(x) > 0) {
       if (purrr::vec_depth(x) == 2) {
-        # If the field-list has named elements is we just need to rename the list
         x <- list(x) %>%
           rlang::set_names(p) %>%
           unlist() %>%
           as.list()
       } else {
-        # If the field-list is an "array" we need to iterate over its children
         x <- purrr::imap(x, rename_child, p = p)
       }
     } else {
-      # Handle empty lists by returning NULL (will be removed by compact)
       return(NULL)
     }
   } else {
@@ -251,14 +230,15 @@ flatten_field <- function(x, p) {
   x
 }
 
+
 #' Rename Nested Survey Data Elements
 #'
-#' Appends a parent name or index to child elements within a nested list, assisting in creating a coherent and traceable data structure during the flattening process.
+#' Appends a parent name or index to child elements within a nested list.
 #'
 #' @param x A list element, possibly nested, to be renamed.
 #' @param i The index or key of the element within the parent list.
-#' @param p The parent name to prepend to the element's existing name for context.
-#' @return A renamed list element, structured to maintain contextual relevance in a flattened dataset.
+#' @param p The parent name to prepend.
+#' @return A renamed list element.
 #' @keywords internal
 #' @export
 rename_child <- function(x, i, p) {
@@ -278,64 +258,28 @@ rename_child <- function(x, i, p) {
   x
 }
 
+
+# ---- PDS ingestion -----------------------------------------------------------
+
 #' Ingest Pelagic Data Systems (PDS) Trip Data
 #'
 #' @description
-#' This function handles the automated ingestion of GPS boat trip data from Pelagic Data Systems (PDS).
-#' It performs the following operations:
-#' 1. Retrieves device metadata from the configured source
-#' 2. Downloads trip data from PDS API using device IMEIs
-#' 3. Converts the data to parquet format
-#' 4. Uploads the processed file to configured cloud storage
+#' Handles the automated ingestion of GPS boat trip data from Pelagic Data
+#' Systems (PDS). Retrieves device metadata, downloads trip data, converts to
+#' Parquet format, and uploads to cloud storage.
 #'
-#' @details
-#' The function requires specific configuration in the `config.yml` file with the following structure:
+#' @param log_threshold Logging threshold level (default: logger::DEBUG).
 #'
-#' ```yaml
-#' pds:
-#'   token: "your_pds_token"               # PDS API token
-#'   secret: "your_pds_secret"             # PDS API secret
-#'   pds_trips:
-#'     file_prefix: "pds_trips"            # Prefix for output files
-#' storage:
-#'   google:                               # Storage provider name
-#'     key: "google"                       # Storage provider identifier
-#'     options:
-#'       project: "project-id"             # Cloud project ID
-#'       bucket: "bucket-name"             # Storage bucket name
-#'       service_account_key: "path/to/key.json"
-#' ```
+#' @return None (invisible). Creates a Parquet file and uploads it to cloud storage.
 #'
-#' The function processes trips sequentially:
-#' - Retrieves device metadata using `get_metadata()`
-#' - Downloads trip data using the `get_trips()` function
-#' - Converts the data to parquet format
-#' - Uploads the resulting file to configured storage provider
-#'
-#' @param log_threshold The logging threshold to use. Default is logger::DEBUG.
-#'   See `logger::log_levels` for available options.
-#'
-#' @return None (invisible). The function performs its operations for side effects:
-#'   - Creates a parquet file locally with trip data
-#'   - Uploads file to configured cloud storage
-#'   - Generates logs of the process
+#' @seealso [get_trips()], [upload_cloud_file()]
+#' @keywords workflow ingestion
+#' @export
 #'
 #' @examples
 #' \dontrun{
-#' # Run with default debug logging
 #' ingest_pds_trips()
-#'
-#' # Run with info-level logging only
-#' ingest_pds_trips(logger::INFO)
 #' }
-#'
-#' @seealso
-#' * [get_trips()] for details on the PDS trip data retrieval process
-#' * [get_metadata()] for details on the device metadata retrieval
-#' * [upload_cloud_file()] for details on the cloud upload process
-#'
-#' @keywords workflow ingestion
-#' @export
 ingest_pds_trips <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
   conf <- read_config()
@@ -385,18 +329,19 @@ ingest_pds_trips <- function(log_threshold = logger::DEBUG) {
     options = conf$storage$google$options
   )
 }
+
+
 #' Ingest Pelagic Data Systems (PDS) Track Data
 #'
 #' @description
-#' This function handles the automated ingestion of GPS boat track data from Pelagic Data Systems (PDS).
-#' It downloads and stores only new tracks that haven't been previously uploaded to Google Cloud Storage.
+#' Handles the automated ingestion of GPS boat track data from PDS.
+#' Downloads and stores only new tracks that haven't been previously uploaded.
 #' Uses parallel processing for improved performance.
 #'
-#' @param log_threshold The logging threshold to use. Default is logger::DEBUG.
-#' @param batch_size Optional number of tracks to process. If NULL, processes all new tracks.
+#' @param log_threshold Logging threshold level (default: logger::DEBUG).
+#' @param batch_size Optional number of tracks to process. If NULL, processes all.
 #'
-#' @return None (invisible). The function performs its operations for side effects.
-#'
+#' @return None (invisible). Processes and uploads track data.
 #' @keywords workflow ingestion
 #' @export
 ingest_pds_tracks <- function(
@@ -429,7 +374,6 @@ ingest_pds_tracks <- function(
     dplyr::pull("Trip") %>%
     unique()
 
-  # Clean up downloaded file
   unlink(pds_trips_parquet)
 
   # List existing files in GCS bucket
@@ -454,110 +398,53 @@ ingest_pds_tracks <- function(
   logger::log_info("Setting up parallel processing with {workers} workers...")
   future::plan(future::multisession, workers = workers)
 
-  # Select tracks to process
   process_ids <- if (!is.null(batch_size)) {
-    new_trip_ids[1:batch_size]
+    new_trip_ids[seq_len(min(batch_size, length(new_trip_ids)))]
   } else {
     new_trip_ids
   }
   logger::log_info("Processing {length(process_ids)} new tracks in parallel...")
 
-  # Process tracks in parallel with progress bar
   results <- furrr::future_map(
     process_ids,
-    function(trip_id) {
-      tryCatch(
-        {
-          # Create filename for this track
-          track_filename <- sprintf(
-            "%s_%s.parquet",
-            conf$pds$pds_tracks$file_prefix,
-            trip_id
-          )
-
-          # Get track data
-          track_data <- get_trip_points(
-            token = conf$pds$token,
-            secret = conf$pds$secret,
-            id = as.character(trip_id),
-            deviceInfo = TRUE
-          )
-
-          # Save to parquet
-          arrow::write_parquet(
-            x = track_data,
-            sink = track_filename,
-            compression = "lz4",
-            compression_level = 12
-          )
-
-          # Upload to cloud
-          logger::log_info("Uploading track for trip {trip_id}")
-          upload_cloud_file(
-            file = track_filename,
-            provider = conf$pds_storage$google$key,
-            options = conf$pds_storage$google$options
-          )
-
-          # Clean up local file
-          unlink(track_filename)
-
-          list(
-            status = "success",
-            trip_id = trip_id,
-            message = "Successfully processed"
-          )
-        },
-        error = function(e) {
-          list(
-            status = "error",
-            trip_id = trip_id,
-            message = e$message
-          )
-        }
-      )
-    },
+    ~ process_single_track(.x, conf),
     .options = furrr::furrr_options(seed = TRUE),
     .progress = TRUE
   )
 
-  # Clean up parallel processing
   future::plan(future::sequential)
 
   # Summarize results
-  successes <- sum(purrr::map_chr(results, "status") == "success")
-  failures <- sum(purrr::map_chr(results, "status") == "error")
+  statuses <- purrr::map_chr(results, "status")
+  successes <- sum(statuses == "success")
+  failures <- sum(statuses == "error")
 
   logger::log_info(
     "Processing complete. Successfully processed {successes} tracks."
   )
   if (failures > 0) {
     logger::log_warn("Failed to process {failures} tracks.")
-    failed_results <- results[purrr::map_chr(results, "status") == "error"]
-    failed_trips <- purrr::map_chr(failed_results, "trip_id")
-    failed_messages <- purrr::map_chr(failed_results, "message")
-
-    logger::log_warn("Failed trip IDs and reasons:")
-    purrr::walk2(
-      failed_trips,
-      failed_messages,
-      ~ logger::log_warn("Trip {.x}: {.y}")
+    failed_results <- results[statuses == "error"]
+    purrr::walk(
+      failed_results,
+      ~ logger::log_warn("Trip {.x$trip_id}: {.x$message}")
     )
   }
 }
 
+
 #' Extract Trip IDs from Track Filenames
 #'
-#' @param filenames Character vector of track filenames
-#' @return Character vector of trip IDs
+#' @param filenames Character vector of track filenames.
+#' @return Character vector of trip IDs.
 #' @keywords internal
 extract_trip_ids_from_filenames <- function(filenames) {
   if (length(filenames) == 0) {
     return(character(0))
   }
-  # Assuming filenames are in format: pds-tracks_TRIPID.parquet
   gsub(".*_([0-9]+)\\.parquet$", "\\1", filenames)
 }
+
 
 #' Process Single PDS Track
 #'
@@ -568,22 +455,19 @@ extract_trip_ids_from_filenames <- function(filenames) {
 process_single_track <- function(trip_id, conf) {
   tryCatch(
     {
-      # Create filename for this track
       track_filename <- sprintf(
         "%s_%s.parquet",
         conf$pds$pds_tracks$file_prefix,
         trip_id
       )
 
-      # Get track data
       track_data <- get_trip_points(
         token = conf$pds$token,
         secret = conf$pds$secret,
-        id = trip_id,
+        id = as.character(trip_id),
         deviceInfo = TRUE
       )
 
-      # Save to parquet
       arrow::write_parquet(
         x = track_data,
         sink = track_filename,
@@ -591,7 +475,6 @@ process_single_track <- function(trip_id, conf) {
         compression_level = 12
       )
 
-      # Upload to cloud
       logger::log_info("Uploading track for trip {trip_id}")
       upload_cloud_file(
         file = track_filename,
@@ -599,7 +482,6 @@ process_single_track <- function(trip_id, conf) {
         options = conf$pds_storage$google$options
       )
 
-      # Clean up local file
       unlink(track_filename)
 
       list(
@@ -609,11 +491,7 @@ process_single_track <- function(trip_id, conf) {
       )
     },
     error = function(e) {
-      list(
-        status = "error",
-        trip_id = trip_id,
-        message = e$message
-      )
+      list(status = "error", trip_id = trip_id, message = e$message)
     }
   )
 }

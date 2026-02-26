@@ -6,10 +6,6 @@
 \usage{
 preprocess_ba_surveys(log_threshold = logger::DEBUG)
 }
-\arguments{
-\item{log_threshold}{The logging threshold to use. Default is logger::DEBUG.
-See \code{logger::log_levels} for available options.}
-}
 \value{
 None; the function is used for its side effects.
 }

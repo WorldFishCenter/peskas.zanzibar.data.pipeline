@@ -11,12 +11,12 @@ rename_child(x, i, p)
 
 \item{i}{The index or key of the element within the parent list.}
 
-\item{p}{The parent name to prepend to the element's existing name for context.}
+\item{p}{The parent name to prepend.}
 }
 \value{
-A renamed list element, structured to maintain contextual relevance in a flattened dataset.
+A renamed list element.
 }
 \description{
-Appends a parent name or index to child elements within a nested list, assisting in creating a coherent and traceable data structure during the flattening process.
+Appends a parent name or index to child elements within a nested list.
 }
 \keyword{internal}

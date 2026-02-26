@@ -7,9 +7,6 @@
 preprocess_wf_surveys(log_threshold = logger::DEBUG, version = "v2")
 }
 \arguments{
-\item{log_threshold}{The logging threshold to use. Default is logger::DEBUG.
-See \code{logger::log_levels} for available options.}
-
 \item{version}{Character string, deprecated. Function now processes both versions automatically.}
 }
 \value{
