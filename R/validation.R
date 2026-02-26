@@ -52,7 +52,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   )
 
   logger::log_info("Uploading {validated_filename} to cloud storage")
-  upload_cloud_file(
+  coasts::upload_cloud_file(
     file = validated_filename,
     provider = conf$storage$google$key,
     options = conf$storage$google$options
@@ -113,7 +113,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   # 1. Load and preprocess survey data
   preprocessed_surveys <-
-    download_parquet_from_cloud(
+    coasts::download_parquet_from_cloud(
       prefix = conf$surveys$wf_v1$preprocessed$file_prefix,
       provider = conf$storage$google$key,
       options = conf$storage$google$options
@@ -126,7 +126,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         v1 = conf$ingestion$wf_v1$asset_id,
         v2 = conf$ingestion$wf_v2$asset_id
       ),
-      .f = ~ mdb_collection_pull(
+      .f = ~ coasts::mdb_collection_pull(
         connection_string = conf$storage$mongodb$connection_strings$validation,
         db_name = conf$storage$mongodb$databases$validation$database_name,
         collection_name = paste(
@@ -487,7 +487,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     validated_data |>
     dplyr::filter(!.data$submission_id %in% flags_ids$submission_id)
 
-  upload_parquet_to_cloud(
+  coasts::upload_parquet_to_cloud(
     data = clean_data,
     prefix = conf$surveys$wf_v1$validated$file_prefix,
     provider = conf$storage$google$key,
@@ -670,7 +670,7 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
   )
 
   logger::log_info("Uploading {validated_filename} to cloud storage")
-  upload_cloud_file(
+  coasts::upload_cloud_file(
     file = validated_filename,
     provider = conf$storage$google$key,
     options = conf$storage$google$options
@@ -737,7 +737,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
   conf <- read_config()
 
   submissions_versions <-
-    download_parquet_from_cloud(
+    coasts::download_parquet_from_cloud(
       prefix = conf$surveys$wf_v1$preprocessed$file_prefix,
       provider = conf$storage$google$key,
       options = conf$storage$google$options
@@ -747,7 +747,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 
   # Download validation flags
   validation_flags <-
-    download_parquet_from_cloud(
+    coasts::download_parquet_from_cloud(
       prefix = conf$surveys$wf_v1$validation$flags$file_prefix,
       provider = conf$storage$google$key,
       options = conf$storage$google$options
@@ -1018,7 +1018,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       dplyr::select(-c(dplyr::starts_with("valid")))
 
     # Push validation flags to MongoDB
-    mdb_collection_push(
+    coasts::mdb_collection_push(
       data = validation_flags_with_kobo_status,
       connection_string = conf$storage$mongodb$connection_strings$validation,
       collection_name = paste(
@@ -1030,7 +1030,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     )
 
     # Push enumerators statistics to MongoDB
-    mdb_collection_push(
+    coasts::mdb_collection_push(
       data = validation_flags_long,
       connection_string = conf$storage$mongodb$connection_strings$validation,
       collection_name = paste(
@@ -1165,7 +1165,7 @@ export_validation_flags <- function(
 
   asset_id <- survey_conf$asset_id
 
-  mdb_collection_push(
+  coasts::mdb_collection_push(
     data = validation_flags_with_kobo_status,
     connection_string = conf$storage$mongodb$connection_strings$validation,
     db_name = conf$storage$mongodb$databases$validation$database_name,
@@ -1176,7 +1176,7 @@ export_validation_flags <- function(
     )
   )
 
-  mdb_collection_push(
+  coasts::mdb_collection_push(
     data = validation_flags_long,
     connection_string = conf$storage$mongodb$connection_strings$validation,
     db_name = conf$storage$mongodb$databases$validation$database_name,

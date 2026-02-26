@@ -38,7 +38,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   conf <- read_config()
 
   catch_surveys_raw <-
-    download_parquet_from_cloud(
+    coasts::download_parquet_from_cloud(
       prefix = conf$surveys$wcs$raw$file_prefix,
       provider = conf$storage$google$key,
       options = conf$storage$google$options
@@ -96,7 +96,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     ~ dplyr::full_join(.x, .y, by = "survey_id")
   )
 
-  upload_parquet_to_cloud(
+  coasts::upload_parquet_to_cloud(
     data = wcs_surveys_nested,
     prefix = conf$surveys$wcs$preprocessed$file_prefix,
     provider = conf$storage$google$key,
@@ -174,7 +174,7 @@ preprocess_wf_surveys <- function(
 
   conf <- read_config()
 
-  asfis <- download_parquet_from_cloud(
+  asfis <- coasts::download_parquet_from_cloud(
     prefix = "asfis",
     provider = conf$storage$google$key,
     options = conf$storage$google$options
@@ -199,14 +199,14 @@ preprocess_wf_surveys <- function(
   )
 
   assets <-
-    cloud_object_name(
+    coasts::cloud_object_name(
       prefix = conf$metadata$airtable$assets,
       provider = conf$storage$google$key,
       version = "latest",
       extension = "rds",
       options = conf$storage$google$options_coasts
     ) |>
-    download_cloud_file(
+    coasts::download_cloud_file(
       provider = conf$storage$google$key,
       options = conf$storage$google$options_coasts
     ) |>
@@ -229,7 +229,7 @@ preprocess_wf_surveys <- function(
       logger::log_info("Processing Version 1 surveys...")
 
       catch_surveys_raw_v1 <-
-        download_parquet_from_cloud(
+        coasts::download_parquet_from_cloud(
           prefix = conf$surveys$wf_v1$raw$file_prefix,
           provider = conf$storage$google$key,
           options = conf$storage$google$options,
@@ -267,7 +267,7 @@ preprocess_wf_surveys <- function(
       logger::log_info("Processing Version 2 surveys...")
 
       catch_surveys_raw_v2 <-
-        download_parquet_from_cloud(
+        coasts::download_parquet_from_cloud(
           prefix = conf$surveys$wf_v2$raw$file_prefix,
           provider = conf$storage$google$key,
           options = conf$storage$google$options,
@@ -344,7 +344,7 @@ preprocess_wf_surveys <- function(
     ) |>
     dplyr::distinct()
 
-  upload_parquet_to_cloud(
+  coasts::upload_parquet_to_cloud(
     data = preprocessed_data_mapped,
     prefix = conf$surveys$wf_v1$preprocessed$file_prefix,
     provider = conf$storage$google$key,
@@ -440,7 +440,7 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
 
   conf <- read_config()
 
-  ba_surveys_csv <- cloud_object_name(
+  ba_surveys_csv <- coasts::cloud_object_name(
     prefix = conf$surveys$ba$raw$file_prefix,
     provider = conf$storage$google$key,
     extension = "csv",
@@ -449,7 +449,7 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
   )
 
   logger::log_info("Retrieving {ba_surveys_csv}")
-  download_cloud_file(
+  coasts::download_cloud_file(
     name = ba_surveys_csv,
     provider = conf$storage$google$key,
     options = conf$storage$google$options
@@ -512,7 +512,7 @@ preprocess_ba_surveys <- function(log_threshold = logger::DEBUG) {
       )
     )
 
-  upload_parquet_to_cloud(
+  coasts::upload_parquet_to_cloud(
     data = catch_surveys_preprocessed,
     prefix = conf$surveys$ba$preprocessed$file_prefix,
     provider = conf$storage$google$key,
@@ -541,7 +541,7 @@ preprocess_pds_tracks <- function(
 
   # Get already preprocessed tracks
   logger::log_info("Checking existing preprocessed tracks...")
-  preprocessed_filename <- cloud_object_name(
+  preprocessed_filename <- coasts::cloud_object_name(
     prefix = paste0(conf$pds$pds_tracks$file_prefix, "-preprocessed"),
     provider = conf$storage$google$key,
     extension = "parquet",
@@ -552,7 +552,7 @@ preprocess_pds_tracks <- function(
   # Get preprocessed trip IDs if file exists
   preprocessed_trips <- tryCatch(
     {
-      download_cloud_file(
+      coasts::download_cloud_file(
         name = preprocessed_filename,
         provider = conf$storage$google$key,
         options = conf$storage$google$options
@@ -592,7 +592,7 @@ preprocess_pds_tracks <- function(
   new_processed_data <- furrr::future_map_dfr(
     new_tracks,
     function(track_file) {
-      download_cloud_file(
+      coasts::download_cloud_file(
         name = track_file,
         provider = conf$pds_storage$google$key,
         options = conf$pds_storage$google$options
@@ -629,7 +629,7 @@ preprocess_pds_tracks <- function(
   )
 
   logger::log_info("Uploading preprocessed tracks...")
-  upload_cloud_file(
+  coasts::upload_cloud_file(
     file = output_filename,
     provider = conf$storage$google$key,
     options = conf$storage$google$options
@@ -656,7 +656,7 @@ preprocess_pds_tracks <- function(
   )
 
   logger::log_info("Uploading preprocessed tracks...")
-  upload_cloud_file(
+  coasts::upload_cloud_file(
     file = output_filename,
     provider = conf$storage$google$key,
     options = conf$storage$google$options

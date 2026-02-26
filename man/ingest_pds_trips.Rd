@@ -23,7 +23,7 @@ ingest_pds_trips()
 }
 }
 \seealso{
-\code{\link[=get_trips]{get_trips()}}, \code{\link[=upload_cloud_file]{upload_cloud_file()}}
+\code{\link[coasts:get_trips]{coasts::get_trips()}}, \code{\link[coasts:upload_cloud_file]{coasts::upload_cloud_file()}}
 }
 \keyword{ingestion}
 \keyword{workflow}

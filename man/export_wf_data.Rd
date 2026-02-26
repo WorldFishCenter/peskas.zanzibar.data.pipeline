@@ -53,8 +53,8 @@ export_wf_data(logger::INFO)
 \seealso{
 \itemize{
 \item \code{\link[=summarize_data]{summarize_data()}} for generating the summary datasets
-\item \code{\link[=download_parquet_from_cloud]{download_parquet_from_cloud()}} for retrieving data from cloud storage
-\item \code{\link[=mdb_collection_push]{mdb_collection_push()}} for uploading data to MongoDB
+\item \code{\link[coasts:download_parquet_from_cloud]{coasts::download_parquet_from_cloud()}} for retrieving data from cloud storage
+\item \code{\link[coasts:mdb_collection_push]{coasts::mdb_collection_push()}} for uploading data to MongoDB
 }
 }
 \keyword{export}

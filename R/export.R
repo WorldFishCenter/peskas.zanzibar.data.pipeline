@@ -39,8 +39,8 @@
 #'
 #' @seealso
 #' * [summarize_data()] for generating the summary datasets
-#' * [download_parquet_from_cloud()] for retrieving data from cloud storage
-#' * [mdb_collection_push()] for uploading data to MongoDB
+#' * [coasts::download_parquet_from_cloud()] for retrieving data from cloud storage
+#' * [coasts::mdb_collection_push()] for uploading data to MongoDB
 #'
 #' @keywords workflow export
 #' @export
@@ -48,14 +48,14 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
   conf <- read_config()
 
-  map <- cloud_object_name(
+  map <- coasts::cloud_object_name(
     prefix = conf$metadata$map_boundaries$prefix,
     provider = conf$storage$google$key,
     options = conf$storage$google$options_coasts,
     version = "latest",
     extension = "geojson"
   ) |>
-    download_cloud_file(
+    coasts::download_cloud_file(
       provider = conf$storage$google$key,
       options = conf$storage$google$options_coasts
     ) |>
@@ -79,7 +79,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     prefix <- conf$surveys$summaries$file_prefix %>%
       paste0("_", name)
 
-    data_summaries[[name]] <- download_parquet_from_cloud(
+    data_summaries[[name]] <- coasts::download_parquet_from_cloud(
       prefix = prefix,
       provider = conf$storage$google$key,
       options = conf$storage$google$options
@@ -113,7 +113,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
       "mean_price_kg"
     )
 
-  upload_parquet_to_cloud(
+  coasts::upload_parquet_to_cloud(
     data = region_monthly_summaries,
     prefix = paste0(conf$country, "_monthly_summaries_map"),
     provider = conf$storage$google$key,
@@ -121,14 +121,14 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
   )
 
   logger::log_info("Downloading aggregated catch data from cloud storage...")
-  aggregated_filename <- cloud_object_name(
+  aggregated_filename <- coasts::cloud_object_name(
     prefix = conf$surveys$aggregated$file_prefix,
     provider = conf$storage$google$key,
     extension = "rds",
     options = conf$storage$google$options
   )
 
-  download_cloud_file(
+  coasts::download_cloud_file(
     name = aggregated_filename,
     provider = conf$storage$google$key,
     options = conf$storage$google$options
@@ -196,7 +196,7 @@ export_wf_data <- function(log_threshold = logger::DEBUG) {
     .y = collection_names,
     .f = ~ {
       logger::log_info(paste("Uploading", .y, "data to MongoDB"))
-      mdb_collection_push(
+      coasts::mdb_collection_push(
         data = .x,
         connection_string = conf$storage$mongodb$connection_strings$main,
         collection_name = .y,

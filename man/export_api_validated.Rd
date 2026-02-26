@@ -74,8 +74,8 @@ export_api_validated(logger::INFO)
 \itemize{
 \item \code{\link[=preprocess_wf_surveys]{preprocess_wf_surveys()}} for generating the preprocessed survey data
 \item \code{\link[=validate_wf_surveys]{validate_wf_surveys()}} for the validation step that produces validated data
-\item \code{\link[=download_parquet_from_cloud]{download_parquet_from_cloud()}} for retrieving data from cloud storage
-\item \code{\link[=upload_cloud_file]{upload_cloud_file()}} for uploading data to cloud storage
+\item \code{\link[coasts:download_parquet_from_cloud]{coasts::download_parquet_from_cloud()}} for retrieving data from cloud storage
+\item \code{\link[coasts:upload_cloud_file]{coasts::upload_cloud_file()}} for uploading data to cloud storage
 \item \code{\link[=get_airtable_form_id]{get_airtable_form_id()}} for retrieving form-specific asset metadata
 }
 }

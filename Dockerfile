@@ -18,7 +18,6 @@ RUN install2.r --error --skipinstalled \
     config \
     dplyr \
     git2r \
-    googleAuthR \
     googleCloudStorageR \
     logger \
     magrittr \

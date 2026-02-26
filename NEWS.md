@@ -1,3 +1,9 @@
+# peskas.zanzibar.data.pipeline 4.6.0
+
+### Infrastructure & Workflow
+
+- **Delegating to `coasts` most of the core storage and databse-related functions**: Now core and other countries shared storage functions are delagated to central and upgraded features of the `coasts`pacakge for improved standardization and maintainability
+
 # peskas.zanzibar.data.pipeline 4.5.0
 
 ## Major Changes
