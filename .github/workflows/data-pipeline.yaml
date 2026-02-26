@@ -73,7 +73,7 @@ jobs:
 
   preprocess-surveys:
     name: Preprocess Kobo surveys
-    needs: build-container
+    needs: ingest-surveys
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
