@@ -18,7 +18,6 @@ Imports:
     dotenv,
     dplyr,
     git2r,
-    googleCloudStorageR,
     logger,
     magrittr,
     purrr,

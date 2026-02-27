@@ -18,7 +18,6 @@ RUN install2.r --error --skipinstalled \
     config \
     dplyr \
     git2r \
-    googleCloudStorageR \
     logger \
     magrittr \
     purrr \
@@ -52,7 +51,7 @@ RUN install2.r --error --skipinstalled \
     taxize
 
 # Install GitHub packages
-RUN Rscript -e 'remotes::install_github("WorldFishCenter/peskas.coasts", ref = "2.2.1")'
+RUN Rscript -e 'remotes::install_github("WorldFishCenter/peskas.coasts", ref = "2.2.6")'
 
 # Install local package
 COPY . /home
