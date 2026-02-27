@@ -107,11 +107,11 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_pds_trips()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_pds_trips()'
+        run: Rscript -e 'coasts::ingest_pds_trips(package = "peskas.zanzibar.data.pipeline")'
       - name: Call ingest_pds_tracks()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_pds_tracks()'
+        run: Rscript -e 'coasts::ingest_pds_tracks(package = "peskas.zanzibar.data.pipeline")'
       - name: Call preprocess_pds_tracks()
-        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_pds_tracks()'
+        run: Rscript -e 'coasts::preprocess_pds_tracks(package = "peskas.zanzibar.data.pipeline")'
 
   validate-sync-surveys:
     name: Validate and sync Kobo submissions
