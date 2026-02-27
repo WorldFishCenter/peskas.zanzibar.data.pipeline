@@ -36,8 +36,7 @@ ingest_pds_trips <- function(log_threshold = logger::DEBUG) {
     readr::read_rds() |>
     purrr::pluck("devices") |>
     dplyr::filter(
-      .data$customer_name %in%
-        c("WorldFish - Tanzania AP", "WorldFish - Zanzibar")
+      .data$customer_name %in% conf$pds$customers
     )
 
   boats_trips <- coasts::get_trips(

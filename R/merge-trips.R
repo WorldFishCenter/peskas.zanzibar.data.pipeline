@@ -666,7 +666,7 @@ merge_trips <- function(
   } else {
     # zanzibar
     list(
-      device_filter = c("WorldFish - Tanzania AP", "WorldFish - Zanzibar"),
+      device_filter = conf$pds$customers,
       survey_prefix = conf$surveys$wf_v1$validated$file_prefix,
       output_prefix = conf$surveys$wf_v1$merged$file_prefix,
       reg_col = "boat_reg_no",

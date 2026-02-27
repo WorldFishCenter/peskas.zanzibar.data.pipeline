@@ -86,6 +86,7 @@ default:
         K_price_max: 2
   pds:
     customers:
+      - "WorldFish - Tanzania AP"
       - "WorldFish - Zanzibar"
     token: !expr Sys.getenv('PDS_TOKEN')
     secret: !expr Sys.getenv('PDS_SECRET')
