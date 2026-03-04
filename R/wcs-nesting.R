@@ -36,7 +36,8 @@ pt_nest_length <- function(x) {
         .data$total_length
       ),
       .by = .data$survey_id
-    )
+    ) |>
+    dplyr::distinct()
 }
 
 #' Nest Market Group Columns
@@ -77,15 +78,14 @@ pt_nest_market <- function(x) {
       catch_kg_market = as.numeric(.data$catch_kg_market),
       catch_price = as.numeric(.data$catch_price)
     ) |>
-    tidyr::nest(
-      "market" = c(
-        .data$group_market,
-        .data$species_market,
-        .data$catch_kg_market,
-        .data$catch_price
-      ),
-      .by = .data$survey_id
-    )
+    dplyr::select(
+      "survey_id",
+      "n",
+      "species_market",
+      "catch_kg_market",
+      "catch_price"
+    ) |>
+    dplyr::distinct()
 }
 
 #' Nest Catch Group Columns
@@ -115,71 +115,38 @@ pt_nest_catch <- function(x) {
       )
     ) %>%
     tidyr::pivot_wider(names_from = .data$name, values_from = .data$value) %>%
-    dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) %>%
-    dplyr::filter(.data$n == 0 | !is.na(.data$content)) %>%
+    dplyr::mutate(content = dplyr::coalesce(!!!.[3:ncol(.)])) |>
+    dplyr::filter(.data$n == 0 | !is.na(.data$content)) |>
+    dplyr::rename(
+      length_individual = "len_ind_catch",
+      individuals = "nb_ind_catch",
+      weight_individuals = "wgt_ind_catch",
+      n_buckets = "nb_buckets_catch",
+      weight_bucket = "wgt_buckets_catch"
+    ) |>
     dplyr::mutate(
       type_measure = dplyr::case_when(
-        !is.na(.data$nb_ind_catch) ~ "individual",
-        !is.na(.data$nb_buckets_catch) ~ "bucket",
+        !is.na(.data$individuals) |
+          !is.na(.data$weight_individuals) ~ "individual",
+        !is.na(.data$n_buckets) |
+          !is.na(.data$weight_bucket) ~ "bucket",
+        !is.na(.data$weight_catch) ~ "weight",
         TRUE ~ .data$type_measure
       )
     ) |>
-    dplyr::mutate(
-      weight_kg = dplyr::coalesce(
-        .data$weight_catch,
-        .data$wgt_ind_catch,
-        .data$wgt_buckets_catch
-      ),
-      nb_elements = dplyr::coalesce(.data$nb_ind_catch, .data$nb_buckets_catch)
-    ) %>%
+    tidyr::separate_longer_delim("species_catch", delim = " ") |>
     dplyr::select(
-      -c(
-        .data$content,
-        .data$weight_catch,
-        .data$wgt_ind_catch,
-        .data$wgt_buckets_catch,
-        .data$nb_ind_catch,
-        .data$nb_buckets_catch
-      )
-    ) %>%
-    dplyr::rename(
-      n_elements = .data$nb_elements,
-      length_individual = .data$len_ind_catch,
-      all_catch_in_boat = .data$All_catch_in_boat,
-      catch_kg = .data$weight_kg
+      "survey_id",
+      "n",
+      "type_measure",
+      "species_catch",
+      weight = "weight_catch",
+      "individuals",
+      "weight_individuals",
+      "n_buckets",
+      "weight_bucket"
     ) |>
-    dplyr::mutate(
-      all_catch_in_boat = tolower(.data$all_catch_in_boat),
-      all_catch_in_boat = cleaner::clean_character(.data$all_catch_in_boat),
-      length_individual = as.numeric(.data$length_individual),
-      catch_kg = as.numeric(.data$catch_kg),
-      n_elements = as.numeric(.data$n_elements)
-    ) |>
-    dplyr::mutate(
-      group_catch = dplyr::case_when(
-        .data$group_catch %in%
-          c("reef_fish", "goatfish", "parrotfish", "rabbitfish", "scavengers") ~
-          "reef_fish",
-        .data$group_catch %in% c("sharks_rays") ~ "sharks_rays",
-        .data$group_catch %in% c("small_pelagic") ~ "small_pelagic",
-        .data$group_catch %in% c("large_pelagic", "pelagic") ~ "large_pelagic",
-        .data$group_catch %in% c("tuna_like", "tunalike") ~ "tuna_like",
-        .data$group_catch %in% c("molluscs_crustaceans", "octopus", "squid") ~
-          "molluscs_crustaceans",
-        TRUE ~ .data$group_catch
-      )
-    ) |>
-    tidyr::nest(
-      "catch" = c(
-        .data$type_measure,
-        .data$all_catch_in_boat,
-        .data$group_catch,
-        .data$species_catch,
-        .data$n_elements,
-        .data$catch_kg
-      ),
-      .by = .data$survey_id
-    )
+    dplyr::distinct()
 }
 
 #' Nest Trip Group Columns
@@ -219,27 +186,15 @@ pt_nest_trip <- function(x) {
       gear_other = .data$gear_type_other,
     ) |>
     dplyr::mutate(
-      gear = dplyr::case_when(
-        .data$gear == "spear" ~ "spear_gun",
-        TRUE ~ .data$gear
-      ),
-      boat_engine = ifelse(
-        .data$boat_engine == "yes",
-        "motorised",
-        "unmotorised"
-      ),
       fishing_location = tolower(.data$fishing_location),
       fishing_location = cleaner::clean_character(.data$fishing_location),
       gear_other = tolower(.data$gear_other),
       gear_other = cleaner::clean_character(.data$gear_other),
       fishing_ground_name = tolower(.data$fishing_ground_name),
       fishing_ground_name = cleaner::clean_character(.data$fishing_ground_name),
-      engine_hp = as.numeric(.data$engine_hp),
-      trip_length_days = dplyr::case_when(
-        trip_length_days == ">3" ~ 4,
-        TRUE ~ as.numeric(.data$trip_length_days)
-      )
-    )
+      engine_hp = as.numeric(.data$engine_hp)
+    ) |>
+    dplyr::distinct()
 }
 
 #' Nest Attachment Columns
@@ -295,5 +250,6 @@ pt_nest_attachments <- function(x) {
         .data$`_attachments`,
         ~ dplyr::filter(., !dplyr::if_all(dplyr::everything(), is.na))
       )
-    )
+    ) |>
+    dplyr::distinct()
 }

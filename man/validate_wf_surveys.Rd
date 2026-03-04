@@ -2,7 +2,7 @@
 % Please edit documentation in R/validation.R
 \name{validate_wf_surveys}
 \alias{validate_wf_surveys}
-\title{Validate Wild Fishing Survey Data}
+\title{Validate worldfish Survey Data}
 \usage{
 validate_wf_surveys(log_threshold = logger::DEBUG)
 }
@@ -17,7 +17,7 @@ The function processes and uploads two datasets to cloud storage:
 }
 }
 \description{
-Validates survey data from wild fishing activities by applying quality control checks
+Validates survey data from worldfish activities by applying quality control checks
 and flagging potential data issues. The function filters out submissions that don't
 meet validation criteria and processes catch data.
 }
