@@ -21,50 +21,345 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   logger::log_threshold(log_threshold)
   conf <- read_config()
 
-  # 1. Load and preprocess survey data
-  preprocessed_surveys <- coasts::download_parquet_from_cloud(
-    prefix = conf$survey$wcs$preprocessed$file_prefix,
+  # Load and preprocess survey data
+  preprocessed_surveys <-
+    coasts::download_parquet_from_cloud(
+      prefix = conf$surveys$wcs$preprocessed$file_prefix,
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options
+    )
+
+  # check for manual validates submissions (only possible among not approved submissions)
+  not_approved_ids <-
+    coasts::mdb_collection_pull(
+      connection_string = conf$storage$mongodb$connection_strings$validation,
+      db_name = conf$storage$mongodb$databases$validation$database_name,
+      collection_name = paste(
+        conf$storage$mongodb$databases$validation$collections$flags,
+        conf$ingestion$wcs$asset_id,
+        sep = "-"
+      )
+    ) |>
+    dplyr::filter(
+      .data$validation_status == "validation_status_not_approved"
+    ) |>
+    dplyr::pull("submission_id") |>
+    unique()
+
+  # future::plan(
+  #   strategy = future::multisession,
+  #   workers = future::availableCores() - 2
+  # )
+
+  # # Query validation status from ADNAP asset
+  # logger::log_info(
+  #   "Querying validation status from ADNAP asset for {length(not_approved_ids)} submissions"
+  # )
+
+  # validation_statuses <- not_approved_ids %>%
+  #   furrr::future_map_dfr(
+  #     get_validation_status,
+  #     asset_id = conf$ingestion$`adnap`$asset_id,
+  #     token = conf$ingestion$`lurio`$token,
+  #     .options = furrr::furrr_options(seed = TRUE)
+  #   )
+
+  # future::plan(strategy = future::sequential)
+
+  max_bucket_weight_kg <- 50
+  max_n_buckets <- 300
+  max_n_individuals <- 200
+  price_kg_max <- 2500 # Mozambican metical -> 30 eur
+  cpue_max <- 30
+  rpue_max <- 2500
+
+  catch_df <-
+    preprocessed_surveys |>
+    # dplyr::filter(
+    #   .data$survey_activity == "1" &
+    #     .data$collect_data_today == "1"
+    # ) |>
+    dplyr::select(
+      "submission_id",
+      "n_catch",
+      "submission_date",
+      # dplyr::ends_with("fishers"),
+      # "catch_outcome",
+      "catch_price",
+      catch_taxon = "alpha3_code",
+      "individuals",
+      "n_buckets",
+      "weight_bucket",
+      "catch_kg"
+    )
+  # dplyr::mutate(n_fishers = rowSums(across(c("no_men_fishers", "no_women_fishers", "no_child_fishers")),
+  #                                 na.rm = TRUE)) |>
+  # dplyr::select(-c("no_men_fishers", "no_women_fishers", "no_child_fishers")) |>
+  # dplyr::relocate("n_fishers", .after = "has_boat")
+
+  catch_flags <-
+    catch_df |>
+    dplyr::mutate(
+      alert_form_incomplete = dplyr::case_when(
+        !is.na(.data$catch_kg) & is.na(.data$catch_taxon) ~ "1",
+        TRUE ~ NA_character_
+      ),
+      alert_catch_info_incomplete = dplyr::case_when(
+        !is.na(.data$catch_taxon) &
+          is.na(.data$n_buckets) &
+          is.na(.data$catch_kg) &
+          is.na(.data$individuals) ~
+          "2",
+        TRUE ~ NA_character_
+      ),
+      alert_bucket_weight = dplyr::case_when(
+        !is.na(.data$weight_bucket) &
+          .data$weight_bucket > max_bucket_weight_kg ~
+          "5",
+        TRUE ~ NA_character_
+      ),
+      alert_n_buckets = dplyr::case_when(
+        !is.na(.data$n_buckets) & .data$n_buckets > max_n_buckets ~ "6",
+        TRUE ~ NA_character_
+      ),
+      alert_n_individuals = dplyr::case_when(
+        !is.na(.data$individuals) & .data$individuals > max_n_individuals ~ "7",
+        TRUE ~ NA_character_
+      )
+    )
+
+  flags_id <-
+    catch_flags |>
+    dplyr::select(
+      "submission_id",
+      "n_catch",
+      "submission_date",
+      dplyr::contains("alert_")
+    ) |>
+    dplyr::mutate(
+      alert_flag = paste(
+        .data$alert_bucket_weight,
+        .data$alert_n_buckets,
+        .data$alert_n_individuals,
+        .data$alert_form_incomplete,
+        .data$alert_catch_info_incomplete,
+        sep = ","
+      ) |>
+        stringr::str_remove_all("NA,") |>
+        stringr::str_remove_all(",NA") |>
+        stringr::str_remove_all("^NA$")
+    ) |>
+    dplyr::mutate(
+      alert_flag = ifelse(
+        .data$alert_flag == "",
+        NA_character_,
+        .data$alert_flag
+      ),
+      submission_date = lubridate::as_datetime(.data$submission_date)
+    ) |>
+    dplyr::select(
+      "submission_id",
+      "n_catch",
+      "submission_date",
+      "alert_flag"
+    ) |>
+    dplyr::group_by(.data$submission_id) %>%
+    # Summarize to get values
+    dplyr::summarise(
+      submission_date = dplyr::first(.data$submission_date),
+      alert_flag = if (all(is.na(.data$alert_flag))) {
+        NA_character_
+      } else {
+        paste(.data$alert_flag[!is.na(.data$alert_flag)], collapse = ", ")
+      }
+    ) %>%
+    # Clean up empty strings
+    dplyr::mutate(
+      alert_flag = ifelse(
+        .data$alert_flag == "",
+        NA_character_,
+        .data$alert_flag
+      )
+    )
+
+  flags_id |>
+    dplyr::filter(!is.na(.data$alert_flag))
+
+  catch_df_validated <-
+    catch_df |>
+    dplyr::left_join(flags_id, by = c("submission_id", "submission_date")) |>
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::mutate(
+      submission_alerts = paste(
+        unique(.data$alert_flag[!is.na(.data$alert_flag)]),
+        collapse = ","
+      )
+    ) |>
+    dplyr::mutate(
+      submission_alerts = ifelse(
+        .data$submission_alerts == "",
+        NA_character_,
+        .data$submission_alerts
+      )
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::filter(is.na(.data$submission_alerts))
+
+  surveys_basic_validated <-
+    preprocessed_surveys |>
+    dplyr::left_join(catch_df_validated) |>
+    dplyr::select(
+      -c("alert_flag", "submission_alerts")
+    )
+
+  ### get flags for composite indicators ###
+  no_flag_ids <-
+    flags_id |>
+    dplyr::filter(is.na(.data$alert_flag)) |>
+    dplyr::select("submission_id") |>
+    dplyr::distinct()
+
+  indicators <-
+    surveys_basic_validated |>
+    dplyr::filter(.data$submission_id %in% no_flag_ids$submission_id) |>
+    dplyr::select(
+      "submission_id",
+      "submission_date",
+      "landing_site",
+      "gear",
+      "trip_length_days",
+      "vessel_type",
+      "n_fishers",
+      "catch_taxon",
+      "catch_price",
+      "catch_kg"
+    ) |>
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::summarise(
+      dplyr::across(
+        .cols = c(
+          "submission_date",
+          "landing_site",
+          "gear",
+          "trip_length_days",
+          "vessel_type",
+          "n_fishers",
+          "catch_price"
+        ),
+        ~ dplyr::first(.x)
+      ),
+      catch_kg = sum(.data$catch_kg)
+    ) |>
+    dplyr::transmute(
+      submission_id = .data$submission_id,
+      n_fishers = .data$n_fishers,
+      price_kg = .data$catch_price / .data$catch_kg,
+      price_kg_USD = .data$price_kg * 0.016,
+      cpue = .data$catch_kg / .data$n_fishers / .data$trip_length_days,
+      rpue = .data$catch_price / .data$n_fishers / .data$trip_length_days,
+      rpue_USD = .data$rpue * 0.016
+    )
+
+  composite_flags <-
+    indicators |>
+    dplyr::mutate(
+      alert_price_kg = dplyr::case_when(
+        .data$price_kg > price_kg_max ~ "8",
+        TRUE ~ NA_character_
+      ),
+      alert_cpue = dplyr::case_when(
+        !.data$cpue == Inf & .data$cpue > cpue_max ~ "9",
+        TRUE ~ NA_character_
+      ),
+      alert_rpue = dplyr::case_when(
+        !.data$rpue == Inf & .data$rpue > rpue_max ~ "10",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::mutate(
+      alert_flag_composite = paste(
+        .data$alert_price_kg,
+        .data$alert_cpue,
+        .data$alert_rpue,
+        sep = ","
+      ) |>
+        stringr::str_remove_all("NA,") |>
+        stringr::str_remove_all(",NA") |>
+        stringr::str_remove_all("^NA$")
+    ) |>
+    dplyr::mutate(
+      alert_flag_composite = ifelse(
+        .data$alert_flag_composite == "",
+        NA_character_,
+        .data$alert_flag_composite
+      )
+    ) |>
+    dplyr::select("submission_id", "alert_flag_composite")
+
+  # bind new flags to flags dataframe
+  flags_combined <-
+    flags_id |>
+    dplyr::full_join(composite_flags, by = "submission_id") |>
+    dplyr::mutate(
+      alert_flag = dplyr::case_when(
+        # If both are non-NA, combine them
+        !is.na(.data$alert_flag) & !is.na(.data$alert_flag_composite) ~
+          paste(.data$alert_flag, .data$alert_flag_composite, sep = ", "),
+        # If only one is non-NA, use that one
+        is.na(.data$alert_flag) ~ .data$alert_flag_composite,
+        is.na(.data$alert_flag_composite) ~ .data$alert_flag,
+        # If both are NA, keep it NA
+        TRUE ~ NA_character_
+      )
+    ) |>
+    # Remove the now redundant alert_flag_composite column
+    dplyr::select(-"alert_flag_composite") |>
+    dplyr::left_join(
+      surveys_basic_validated |>
+        dplyr::select("submission_id", "submitted_by") |>
+        dplyr::distinct(),
+      by = "submission_id"
+    ) |>
+    dplyr::relocate("submitted_by", .after = "submission_id") |>
+    dplyr::distinct()
+
+  flags_ids <-
+    flags_combined |>
+    dplyr::filter(!is.na(.data$alert_flag)) |>
+    dplyr::pull(.data$submission_id) |>
+    unique()
+
+  clean_landings <-
+    surveys_basic_validated |>
+    dplyr::filter(!.data$submission_id %in% flags_ids)
+
+  clean_landings |>
+    dplyr::filter(submission_id == "119664836") |>
+    dplyr::distinct() |>
+    View()
+
+  coasts::upload_parquet_to_cloud(
+    data = clean_landings,
+    prefix = conf$surveys$`adnap`$validated$file_prefix,
     provider = conf$storage$google$key,
     options = conf$storage$google$options
-  ) |>
-    dplyr::filter(!.data$trip_info == "no")
-
-  # 2. Extract and process data
-  trips_info <- extract_trips_info(preprocessed_surveys)
-  catch_data <- process_catch_data(preprocessed_surveys, trips_info)
-  validated <- validate_catches(catch_data)
-
-  # 3. Calculate prices and revenue
-  market_table <- validate_prices(preprocessed_surveys)
-  catch_price_table <- calculate_catch_revenue(validated, market_table)
-
-  # 4. Aggregate catches and calculate final metrics
-  validated_surveys <- aggregate_survey_data(catch_price_table, trips_info)
-
-  # 5. Save and upload results
-  validated_filename <- conf$surveys$wcs$validated$file_prefix %>%
-    add_version(extension = "parquet")
-
-  arrow::write_parquet(
-    x = validated_surveys,
-    sink = validated_filename,
-    compression = "lz4",
-    compression_level = 12
   )
 
-  logger::log_info("Uploading {validated_filename} to cloud storage")
-  coasts::upload_cloud_file(
-    file = validated_filename,
-    provider = conf$storage$google$key,
-    options = conf$storage$google$options
+  export_validation_flags(
+    conf = conf,
+    asset_id = "adnap",
+    all_flags = flags_combined,
+    validation_statuses = validation_statuses
   )
+
+  invisible(NULL)
 }
 
 
-#' Validate Wild Fishing Survey Data
+#' Validate worldfish Survey Data
 #'
 #' @description
-#' Validates survey data from wild fishing activities by applying quality control checks
+#' Validates survey data from worldfish activities by applying quality control checks
 #' and flagging potential data issues. The function filters out submissions that don't
 #' meet validation criteria and processes catch data.
 #'
@@ -506,7 +801,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     .x = names(flags_combined_versions),
     .f = ~ export_validation_flags(
       conf = conf,
-      asset_id = paste0("surveys_v", .x),
+      asset_id = paste0("v", .x),
       all_flags = flags_combined_versions[[.x]],
       validation_statuses = validation_statuses[[paste0("v", .x)]]
     )
@@ -1126,7 +1421,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 #' @export
 export_validation_flags <- function(
   conf = NULL,
-  asset_id = c("surveys_v1", "surveys_v2"),
+  asset_id = c("v1", "v2"),
   all_flags = NULL,
   validation_statuses = NULL
 ) {
@@ -1134,7 +1429,7 @@ export_validation_flags <- function(
   config_key <- paste0("wf_", asset_id)
 
   # Get the survey-specific config
-  survey_conf <- conf$surveys[[config_key]]
+  survey_conf <- conf$ingestion[[config_key]]
 
   validation_flags_with_kobo_status <-
     all_flags |>

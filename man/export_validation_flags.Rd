@@ -6,7 +6,7 @@
 \usage{
 export_validation_flags(
   conf = NULL,
-  asset_id = c("surveys_v1", "surveys_v2"),
+  asset_id = c("v1", "v2"),
   all_flags = NULL,
   validation_statuses = NULL
 )
