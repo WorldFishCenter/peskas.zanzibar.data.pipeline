@@ -801,7 +801,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     .x = names(flags_combined_versions),
     .f = ~ export_validation_flags(
       conf = conf,
-      asset_id = paste0("surveys_v", .x),
+      asset_id = paste0("v", .x),
       all_flags = flags_combined_versions[[.x]],
       validation_statuses = validation_statuses[[paste0("v", .x)]]
     )
@@ -1421,7 +1421,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 #' @export
 export_validation_flags <- function(
   conf = NULL,
-  asset_id = c("surveys_v1", "surveys_v2"),
+  asset_id = c("v1", "v2"),
   all_flags = NULL,
   validation_statuses = NULL
 ) {
@@ -1429,7 +1429,7 @@ export_validation_flags <- function(
   config_key <- paste0("wf_", asset_id)
 
   # Get the survey-specific config
-  survey_conf <- conf$surveys[[config_key]]
+  survey_conf <- conf$ingestion[[config_key]]
 
   validation_flags_with_kobo_status <-
     all_flags |>
