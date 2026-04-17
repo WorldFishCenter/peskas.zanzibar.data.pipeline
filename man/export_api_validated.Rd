@@ -7,77 +7,26 @@
 export_api_validated(log_threshold = logger::DEBUG)
 }
 \arguments{
-\item{log_threshold}{The logging level threshold for the logger package (e.g., DEBUG, INFO).
-See \code{logger::log_levels} for available options. Default is logger::DEBUG.}
+\item{log_threshold}{Logging level (default \code{logger::DEBUG}).}
 }
 \value{
-NULL (invisible). The function uploads data to cloud storage as a side effect.
+NULL invisibly. Side effect: uploads merged parquet to cloud storage.
 }
 \description{
-Processes WorldFish preprocessed survey data into a simplified API-friendly format
-and exports it to cloud storage for external consumption. This function exports the
-\strong{validated} version of trip data.
+Downloads validated WF and WCS survey data, transforms both into the
+canonical API schema, merges them, and uploads a single parquet file to
+cloud storage. This is the \strong{validated} stage of the two-stage API export
+pipeline.
 }
 \details{
-The function performs the following operations:
-\itemize{
-\item Downloads \strong{validated} WF survey data from cloud storage
-\item Loads form-specific assets (taxa, geography, gear, vessels) from Airtable metadata
-\item Generates unique trip IDs using xxhash64 algorithm
-\item Transforms nested survey structure to flat API format
-\item Joins with standardized lookup tables (districts, gear types, vessel types)
-\item Exports to the \strong{validated} cloud storage path (before validation)
-}
-
-\strong{Data Pipeline Context}:
-This function exports raw preprocessed data and is part of a two-stage API export pipeline:
-\enumerate{
-\item \code{raw()} - Exports raw/preprocessed data
-\item \code{export_api_validated()} - Exports validated data (this function)
-}
-
-\strong{Output Schema}:
-The exported dataset includes the following fields:
-\itemize{
-\item \code{trip_id}: Unique identifier (TRIP_xxxxxxxxxxxx format)
-\item \code{landing_date}: Date of landing
-\item \code{gaul_2_name}: Standardized district name (GAUL level 2)
-\item \code{n_fishers}: Total number of fishers (men + women + children)
-\item \code{trip_duration_hrs}: Duration in hours
-\item \code{gear}: Standardized gear type
-\item \code{vessel_type}: Standardized vessel type
-\item \code{catch_habitat}: Habitat where catch occurred
-\item \code{catch_outcome}: Outcome of catch (landed, sold, etc.)
-\item \code{n_catch}: Number of individual catch items
-\item \code{catch_taxon}: Species or taxonomic group
-\item \code{scientific_name}: Scientific name
-\item \code{length_cm}: Length measurement in centimeters
-\item \code{catch_kg}: Weight in kilograms
-\item \code{catch_price}: Price in local currency
-}
-
-\strong{Cloud Storage Location}:
-Files are uploaded to the path specified in \code{conf$api$trips$validated$cloud_path}
-(e.g., \verb{zanzibar/validated/}) with versioned filenames following the pattern:
-\verb{\{file_prefix\}__\{timestamp\}_\{git_sha\}__.parquet}
-}
-\examples{
-\dontrun{
-# Export raw API trip data with default debug logging
-export_api_validated()
-
-# Export with info-level logging only
-export_api_validated(logger::INFO)
-}
-
+See \code{\link[=export_api_raw]{export_api_raw()}} for the full output schema. This function reads from
+the validated cloud paths and writes to
+\code{conf$api$trips$validated$cloud_path}.
 }
 \seealso{
 \itemize{
-\item \code{\link[=preprocess_wf_surveys]{preprocess_wf_surveys()}} for generating the preprocessed survey data
-\item \code{\link[=validate_wf_surveys]{validate_wf_surveys()}} for the validation step that produces validated data
-\item \code{\link[coasts:download_parquet_from_cloud]{coasts::download_parquet_from_cloud()}} for retrieving data from cloud storage
-\item \code{\link[coasts:upload_cloud_file]{coasts::upload_cloud_file()}} for uploading data to cloud storage
-\item \code{\link[=get_airtable_form_id]{get_airtable_form_id()}} for retrieving form-specific asset metadata
+\item \code{\link[=export_api_raw]{export_api_raw()}} for the raw/preprocessed counterpart
+\item \code{\link[=validate_wf_surveys]{validate_wf_surveys()}} and \code{\link[=validate_wcs_surveys]{validate_wcs_surveys()}} for upstream steps
 }
 }
 \keyword{export}

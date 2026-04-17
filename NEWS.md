@@ -1,3 +1,19 @@
+# peskas.zanzibar.data.pipeline 4.7.0
+
+## New Features
+
+- **Unified API export across survey programs**: The raw and validated API exports now combine data from both WCS and WorldFish surveys into a single output file. Previously only WorldFish data was exported; WCS trips are now included alongside them with a consistent set of fields.
+
+## Improvements
+
+- **WCS validation enhancements**:
+  - Added two new quality checks: one that catches contradictions between bucket count and bucket weight (e.g. buckets recorded but no weight, or vice versa), and one that flags implausible negative values in catch measurements
+  - Price and revenue validation thresholds corrected to Tanzanian Shilling values (previous values were in Mozambican metical)
+  - Submissions recorded before 2020 are now excluded from the validated dataset
+  - Catch outcome is now correctly carried through to the validation step
+
+- **WCS price calculation corrected**: Catch prices are now split proportionally across species within a trip. Missing species prices now fall back to the species-level median rather than being left empty.
+
 # peskas.zanzibar.data.pipeline 4.6.0
 
 ### Infrastructure & Workflow

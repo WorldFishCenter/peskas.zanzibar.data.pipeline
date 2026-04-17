@@ -37,6 +37,35 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   conf <- read_config()
 
+  target_form_id <- get_airtable_form_id(
+    kobo_asset_id = conf$ingestion$wcs$asset_id,
+    conf = conf
+  )
+
+  assets <-
+    coasts::cloud_object_name(
+      prefix = conf$metadata$airtable$assets,
+      provider = conf$storage$google$key,
+      version = "latest",
+      extension = "rds",
+      options = conf$storage$google$options_coasts
+    ) |>
+    coasts::download_cloud_file(
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options_coasts
+    ) |>
+    readr::read_rds() |>
+    purrr::keep_at(c("taxa", "gear", "vessels", "sites", "geo")) |>
+    purrr::map(
+      ~ dplyr::filter(
+        .x,
+        stringr::str_detect(
+          .data$form_id,
+          paste0("(^|,\\s*)", !!target_form_id, "(\\s*,|$)")
+        )
+      )
+    )
+
   catch_surveys_raw <-
     coasts::download_parquet_from_cloud(
       prefix = conf$surveys$wcs$raw$file_prefix,
@@ -45,7 +74,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::filter(.data$survey_real == "real")
 
-  other_info <-
+  general_info <-
     catch_surveys_raw %>%
     tidyr::separate(
       .data$gps,
@@ -55,6 +84,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::select(
       "survey_id" = "submission_id",
       submission_date = "today",
+      submitted_by = "data_collector",
       "survey_type",
       "landing_site",
       "lat",
@@ -80,24 +110,137 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       )
     )
 
-  logger::log_info("Nesting survey groups' fields")
-  group_surveys <-
-    list(
-      survey_trip = pt_nest_trip(catch_surveys_raw),
-      other_info = other_info,
-      survey_catch = pt_nest_catch(catch_surveys_raw),
-      # survey_length = pt_nest_length(catch_surveys_raw),
-      survey_market = pt_nest_market(catch_surveys_raw),
-      survey_attachments = pt_nest_attachments(catch_surveys_raw)
+  trip_info = pt_nest_trip(catch_surveys_raw)
+  catch_info = pt_nest_catch(catch_surveys_raw)
+  market_info = pt_nest_market(catch_surveys_raw)
+
+  wcs_surveys <-
+    general_info |>
+    dplyr::left_join(trip_info, by = "survey_id") |>
+    dplyr::left_join(catch_info, by = "survey_id")
+
+  geo <-
+    assets$geo |>
+    dplyr::select(
+      "gaul_1_name",
+      "gaul_1_code",
+      "gaul_2_name",
+      "gaul_2_code"
     )
 
-  wcs_surveys_nested <- purrr::reduce(
-    group_surveys,
-    ~ dplyr::full_join(.x, .y, by = "survey_id")
-  )
+  processed_surveys <-
+    wcs_surveys |>
+    dplyr::left_join(assets$taxa, by = c("species_catch" = "survey_label")) |>
+    dplyr::select(-c("species_catch", "form_id", "english_name")) |>
+    dplyr::relocate("scientific_name", .after = "n") |>
+    dplyr::relocate("alpha3_code", .after = "scientific_name") |>
+    dplyr::left_join(assets$gear, by = c("gear" = "survey_label")) |>
+    # label multiple gears
+    dplyr::mutate(
+      n_gears = stringr::str_count(.data$gear, " ") + 1,
+      standard_name = dplyr::case_when(
+        n_gears > 1 ~ "Mixed gears",
+        TRUE ~ .data$standard_name
+      )
+    ) |>
+    dplyr::select(-c("gear", "form_id")) |>
+    dplyr::relocate("standard_name", .after = "vessel_type") |>
+    dplyr::rename(gear = "standard_name") |>
+    dplyr::left_join(
+      assets$vessels,
+      by = c("vessel_type" = "survey_label")
+    ) |>
+    dplyr::select(-c("vessel_type", "form_id")) |>
+    dplyr::relocate("standard_name", .after = "habitat") |>
+    dplyr::rename(vessel_type = "standard_name") |>
+    dplyr::left_join(
+      assets$sites,
+      by = c("landing_site" = "site_code")
+    ) |>
+    dplyr::select(-c("landing_site", "form_id")) |>
+    #dplyr::relocate("site", .after = "district") |>
+    dplyr::rename(landing_site = "site") |>
+    dplyr::left_join(assets$geo, by = c("gaul_2_code")) |>
+    dplyr::select(
+      submission_id = "survey_id",
+      "submission_date",
+      "submitted_by",
+      "landing_site",
+      "gaul_1_name",
+      "gaul_1_code",
+      "gaul_2_name",
+      "gaul_2_code",
+      "survey_type",
+      "trip_info",
+      "n_fishers",
+      "trip_length_days",
+      "habitat",
+      "gear",
+      "gear_other",
+      "vessel_type",
+      n_catch = "n",
+      "alpha3_code",
+      "scientific_name",
+      "weight":"weight_bucket"
+    ) |>
+    # FIX fields
+    dplyr::mutate(
+      dplyr::across(
+        c(
+          "trip_length_days",
+          "weight",
+          "individuals",
+          "weight_individuals",
+          "n_buckets",
+          "weight_bucket"
+        ),
+        ~ as.numeric(.x)
+      ),
+      trip_length_hrs = .data$trip_length_days * 24
+    )
+
+  wcs_processed_landings <-
+    calculate_catch_prices(
+      processed_surveys = processed_surveys,
+      market_info = market_info,
+      assets = assets
+    ) |>
+    dplyr::right_join(
+      processed_surveys,
+      by = c("submission_id", "n_catch", "alpha3_code")
+    ) |>
+    dplyr::select(
+      -c(
+        "survey_type",
+        "weight"
+      )
+    ) |>
+    dplyr::relocate(
+      "n_catch",
+      "alpha3_code",
+      "scientific_name",
+      "individuals",
+      "weight_individuals",
+      "n_buckets",
+      "weight_bucket",
+      "catch_kg",
+      "catch_price",
+      .after = "vessel_type"
+    ) |>
+    # add catch outcome
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::mutate(
+      catch_outcome = dplyr::if_else(
+        any(!is.na(.data$catch_kg) & .data$catch_kg > 0),
+        1L,
+        0L
+      ),
+      catch_outcome = as.character(.data$catch_outcome)
+    ) |>
+    dplyr::ungroup()
 
   coasts::upload_parquet_to_cloud(
-    data = wcs_surveys_nested,
+    data = wcs_processed_landings,
     prefix = conf$surveys$wcs$preprocessed$file_prefix,
     provider = conf$storage$google$key,
     options = conf$storage$google$options
@@ -601,4 +744,83 @@ map_surveys <- function(
     dplyr::select(-c("landing_site", "form_id")) |>
     dplyr::relocate("site", .after = "district") |>
     dplyr::rename(landing_site = "site")
+}
+
+calculate_catch_prices <- function(
+  processed_surveys = NULL,
+  market_info = NULL,
+  assets = NULL
+) {
+  prices <-
+    market_info |>
+    dplyr::mutate(
+      price_kg = (.data$catch_price / .data$catch_kg_market),
+    ) |>
+    dplyr::select("species_market", "price_kg") |>
+    dplyr::distinct() |>
+    dplyr::group_by(.data$species_market) |>
+    dplyr::summarise(price_kg = stats::median(.data$price_kg)) |>
+    dplyr::arrange(-.data$price_kg) |>
+    dplyr::left_join(assets$taxa, by = c("species_market" = "survey_label")) |>
+    dplyr::select("alpha3_code", "scientific_name", "price_kg") |>
+    dplyr::filter(!is.na(.data$alpha3_code)) |>
+    dplyr::distinct() |>
+    dplyr::mutate(
+      price_kg = dplyr::if_else(
+        is.na(.data$price_kg),
+        stats::median(.data$price_kg, na.rm = TRUE),
+        .data$price_kg
+      )
+    )
+
+  catch <- processed_surveys |>
+    dplyr::select(
+      "submission_id",
+      "n_catch",
+      "alpha3_code",
+      catch = "weight",
+      "individuals":"weight_bucket"
+    ) |>
+    dplyr::mutate(
+      catch_bucket = .data$n_buckets * .data$weight_bucket,
+      catch_ind = .data$individuals * .data$weight_individuals
+    ) |>
+    dplyr::mutate(
+      catch_kg = dplyr::coalesce(
+        .data$catch,
+        .data$catch_bucket,
+        .data$catch_ind
+      )
+    ) |>
+    dplyr::select(
+      -c(
+        "individuals",
+        "weight_individuals",
+        "n_buckets",
+        "weight_bucket",
+        "catch_bucket",
+        "catch_ind",
+        "catch"
+      )
+    ) |>
+    dplyr::distinct()
+
+  prices_catch_tab <-
+    catch |>
+    dplyr::left_join(prices, by = c("alpha3_code")) |>
+    dplyr::group_by(.data$submission_id, .data$n_catch) |>
+    dplyr::mutate(
+      catch_kg_per_species = .data$catch_kg / dplyr::n(),
+      price = .data$price_kg * .data$catch_kg_per_species
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::select(
+      "submission_id",
+      "n_catch",
+      "alpha3_code",
+      catch_kg = "catch_kg_per_species",
+      catch_price = "price"
+    )
+
+  return(prices_catch_tab)
 }
