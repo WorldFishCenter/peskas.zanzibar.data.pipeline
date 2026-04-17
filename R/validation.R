@@ -27,24 +27,25 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       prefix = conf$surveys$wcs$preprocessed$file_prefix,
       provider = conf$storage$google$key,
       options = conf$storage$google$options
-    )
+    ) |>
+    dplyr::filter(.data$submission_date > "2020-01-01")
 
   # check for manual validates submissions (only possible among not approved submissions)
-  not_approved_ids <-
-    coasts::mdb_collection_pull(
-      connection_string = conf$storage$mongodb$connection_strings$validation,
-      db_name = conf$storage$mongodb$databases$validation$database_name,
-      collection_name = paste(
-        conf$storage$mongodb$databases$validation$collections$flags,
-        conf$ingestion$wcs$asset_id,
-        sep = "-"
-      )
-    ) |>
-    dplyr::filter(
-      .data$validation_status == "validation_status_not_approved"
-    ) |>
-    dplyr::pull("submission_id") |>
-    unique()
+  # not_approved_ids <-
+  #   coasts::mdb_collection_pull(
+  #     connection_string = conf$storage$mongodb$connection_strings$validation,
+  #     db_name = conf$storage$mongodb$databases$validation$database_name,
+  #     collection_name = paste(
+  #       conf$storage$mongodb$databases$validation$collections$flags,
+  #       conf$ingestion$wcs$asset_id,
+  #       sep = "-"
+  #     )
+  #   ) |>
+  #   dplyr::filter(
+  #     .data$validation_status == "validation_status_not_approved"
+  #   ) |>
+  #   dplyr::pull("submission_id") |>
+  #   unique()
 
   # future::plan(
   #   strategy = future::multisession,
@@ -56,11 +57,12 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   #   "Querying validation status from ADNAP asset for {length(not_approved_ids)} submissions"
   # )
 
-  # validation_statuses <- not_approved_ids %>%
+  # validation_statuses <-
+  #   not_approved_ids |>
   #   furrr::future_map_dfr(
   #     get_validation_status,
-  #     asset_id = conf$ingestion$`adnap`$asset_id,
-  #     token = conf$ingestion$`lurio`$token,
+  #     asset_id = conf$ingestion$wcs$asset_id,
+  #     token = conf$ingestion$wcs$token,
   #     .options = furrr::furrr_options(seed = TRUE)
   #   )
 
@@ -69,28 +71,23 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
   max_bucket_weight_kg <- 50
   max_n_buckets <- 300
   max_n_individuals <- 200
-  price_kg_max <- 2500 # Mozambican metical -> 30 eur
+  price_kg_max <- 78225 # Tanzanian Shilling -> 30 eur
   cpue_max <- 30
-  rpue_max <- 2500
+  rpue_max <- 78225
 
   catch_df <-
     preprocessed_surveys |>
-    # dplyr::filter(
-    #   .data$survey_activity == "1" &
-    #     .data$collect_data_today == "1"
-    # ) |>
     dplyr::select(
       "submission_id",
       "n_catch",
       "submission_date",
-      # dplyr::ends_with("fishers"),
-      # "catch_outcome",
       "catch_price",
       catch_taxon = "alpha3_code",
       "individuals",
       "n_buckets",
       "weight_bucket",
-      "catch_kg"
+      "catch_kg",
+      "catch_outcome"
     )
   # dplyr::mutate(n_fishers = rowSums(across(c("no_men_fishers", "no_women_fishers", "no_child_fishers")),
   #                                 na.rm = TRUE)) |>
@@ -108,14 +105,32 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
         !is.na(.data$catch_taxon) &
           is.na(.data$n_buckets) &
           is.na(.data$catch_kg) &
-          is.na(.data$individuals) ~
-          "2",
+          is.na(.data$individuals) ~ "2",
+        TRUE ~ NA_character_
+      ),
+      # NEW: bucket count vs weight contradiction
+      alert_bucket_contradiction = dplyr::case_when(
+        !is.na(.data$n_buckets) &
+          .data$n_buckets == 0 &
+          !is.na(.data$weight_bucket) &
+          .data$weight_bucket > 0 ~ "3",
+        !is.na(.data$n_buckets) &
+          .data$n_buckets > 0 &
+          (is.na(.data$weight_bucket) | .data$weight_bucket == 0) ~ "3",
+        TRUE ~ NA_character_
+      ),
+      # NEW: negative values in fields that must be non-negative
+      # (zero catch_kg is handled separately by flag 11)
+      alert_implausible_values = dplyr::case_when(
+        (!is.na(.data$catch_kg) & .data$catch_kg < 0) |
+          (!is.na(.data$weight_bucket) & .data$weight_bucket < 0) |
+          (!is.na(.data$n_buckets) & .data$n_buckets < 0) |
+          (!is.na(.data$individuals) & .data$individuals < 0) ~ "4",
         TRUE ~ NA_character_
       ),
       alert_bucket_weight = dplyr::case_when(
         !is.na(.data$weight_bucket) &
-          .data$weight_bucket > max_bucket_weight_kg ~
-          "5",
+          .data$weight_bucket > max_bucket_weight_kg ~ "5",
         TRUE ~ NA_character_
       ),
       alert_n_buckets = dplyr::case_when(
@@ -124,6 +139,14 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       ),
       alert_n_individuals = dplyr::case_when(
         !is.na(.data$individuals) & .data$individuals > max_n_individuals ~ "7",
+        TRUE ~ NA_character_
+      ),
+      # NEW: taxon recorded but no weight — only meaningful when the trip has catch
+      # (if catch_outcome = 0, all rows having NA/zero catch_kg is expected)
+      alert_zero_or_missing_catch = dplyr::case_when(
+        .data$catch_outcome == 1L &
+          !is.na(.data$catch_taxon) &
+          (is.na(.data$catch_kg) | .data$catch_kg == 0) ~ "11",
         TRUE ~ NA_character_
       )
     )
@@ -143,6 +166,9 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
         .data$alert_n_individuals,
         .data$alert_form_incomplete,
         .data$alert_catch_info_incomplete,
+        .data$alert_bucket_contradiction,
+        .data$alert_implausible_values,
+        .data$alert_zero_or_missing_catch,
         sep = ","
       ) |>
         stringr::str_remove_all("NA,") |>
@@ -182,9 +208,6 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       )
     )
 
-  flags_id |>
-    dplyr::filter(!is.na(.data$alert_flag))
-
   catch_df_validated <-
     catch_df |>
     dplyr::left_join(flags_id, by = c("submission_id", "submission_date")) |>
@@ -207,7 +230,20 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   surveys_basic_validated <-
     preprocessed_surveys |>
-    dplyr::left_join(catch_df_validated) |>
+    dplyr::select(
+      -c("catch_price", "individuals", "n_buckets", "weight_bucket", "catch_kg")
+    ) |>
+    dplyr::left_join(
+      catch_df_validated,
+      by = c(
+        "submission_id",
+        "submission_date",
+        "n_catch",
+        "alpha3_code" = "catch_taxon",
+        "catch_outcome"
+      )
+    ) |>
+    dplyr::rename(catch_taxon = "alpha3_code") |>
     dplyr::select(
       -c("alert_flag", "submission_alerts")
     )
@@ -224,15 +260,17 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::filter(.data$submission_id %in% no_flag_ids$submission_id) |>
     dplyr::select(
       "submission_id",
+      "n_catch",
       "submission_date",
       "landing_site",
       "gear",
-      "trip_length_days",
+      "trip_length_hrs",
       "vessel_type",
       "n_fishers",
       "catch_taxon",
       "catch_price",
-      "catch_kg"
+      "catch_kg",
+      "catch_outcome"
     ) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::summarise(
@@ -241,38 +279,59 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
           "submission_date",
           "landing_site",
           "gear",
-          "trip_length_days",
+          "trip_length_hrs",
           "vessel_type",
           "n_fishers",
-          "catch_price"
+          "catch_outcome" # <-- add
         ),
         ~ dplyr::first(.x)
       ),
-      catch_kg = sum(.data$catch_kg)
+      catch_kg = sum(.data$catch_kg, na.rm = TRUE),
+      catch_price = sum(.data$catch_price, na.rm = TRUE)
     ) |>
+    dplyr::distinct() |>
     dplyr::transmute(
       submission_id = .data$submission_id,
+      catch_outcome = .data$catch_outcome,
+      trip_length_hrs = .data$trip_length_hrs,
       n_fishers = .data$n_fishers,
-      price_kg = .data$catch_price / .data$catch_kg,
-      price_kg_USD = .data$price_kg * 0.016,
-      cpue = .data$catch_kg / .data$n_fishers / .data$trip_length_days,
-      rpue = .data$catch_price / .data$n_fishers / .data$trip_length_days,
-      rpue_USD = .data$rpue * 0.016
+      # price_kg is meaningless (NaN) for zero-catch trips — suppress it
+      price_kg = dplyr::if_else(
+        .data$catch_outcome == 1L,
+        .data$catch_price / .data$catch_kg,
+        NA_real_
+      ),
+      cpue_day = (.data$catch_kg / .data$n_fishers) /
+        (.data$trip_length_hrs / 24),
+      cpue = (.data$catch_kg / .data$n_fishers) / .data$trip_length_hrs,
+      rpue_day = (.data$catch_price / .data$n_fishers) /
+        (.data$trip_length_hrs / 24),
+      rpue = (.data$catch_price / .data$n_fishers) / .data$trip_length_hrs
     )
 
   composite_flags <-
     indicators |>
     dplyr::mutate(
       alert_price_kg = dplyr::case_when(
-        .data$price_kg > price_kg_max ~ "8",
+        !is.na(.data$price_kg) & .data$price_kg > price_kg_max ~ "8",
         TRUE ~ NA_character_
       ),
       alert_cpue = dplyr::case_when(
-        !.data$cpue == Inf & .data$cpue > cpue_max ~ "9",
+        !is.infinite(.data$cpue_day) & .data$cpue_day > cpue_max ~ "9",
         TRUE ~ NA_character_
       ),
       alert_rpue = dplyr::case_when(
-        !.data$rpue == Inf & .data$rpue > rpue_max ~ "10",
+        !is.infinite(.data$rpue_day) & .data$rpue_day > rpue_max ~ "10",
+        TRUE ~ NA_character_
+      ),
+      # NEW: Inf indicators signal n_fishers = 0 or trip_length_hrs = 0
+      alert_inf_indicators = dplyr::case_when(
+        is.infinite(.data$cpue_day) | is.infinite(.data$rpue_day) ~ "12",
+        TRUE ~ NA_character_
+      ),
+      # NEW: zero or negative fisher count makes all effort-based indicators invalid
+      alert_zero_fishers = dplyr::case_when(
+        !is.na(.data$n_fishers) & .data$n_fishers <= 0 ~ "13",
         TRUE ~ NA_character_
       )
     ) |>
@@ -281,6 +340,8 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
         .data$alert_price_kg,
         .data$alert_cpue,
         .data$alert_rpue,
+        .data$alert_inf_indicators,
+        .data$alert_zero_fishers,
         sep = ","
       ) |>
         stringr::str_remove_all("NA,") |>
@@ -333,24 +394,18 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     surveys_basic_validated |>
     dplyr::filter(!.data$submission_id %in% flags_ids)
 
-  clean_landings |>
-    dplyr::filter(submission_id == "119664836") |>
-    dplyr::distinct() |>
-    View()
-
   coasts::upload_parquet_to_cloud(
     data = clean_landings,
-    prefix = conf$surveys$`adnap`$validated$file_prefix,
+    prefix = conf$surveys$wcs$validated$file_prefix,
     provider = conf$storage$google$key,
     options = conf$storage$google$options
   )
-
-  export_validation_flags(
-    conf = conf,
-    asset_id = "adnap",
-    all_flags = flags_combined,
-    validation_statuses = validation_statuses
-  )
+  # export_validation_flags(
+  #   conf = conf,
+  #   asset_id = conf$ingestion$wcs$asset_id,
+  #   all_flags = flags_combined,
+  #   validation_statuses = validation_statuses
+  # )
 
   invisible(NULL)
 }

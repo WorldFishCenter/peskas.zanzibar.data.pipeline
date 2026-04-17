@@ -7,78 +7,49 @@
 export_api_raw(log_threshold = logger::DEBUG)
 }
 \arguments{
-\item{log_threshold}{The logging level threshold for the logger package (e.g., DEBUG, INFO).
-See \code{logger::log_levels} for available options. Default is logger::DEBUG.}
+\item{log_threshold}{Logging level (default \code{logger::DEBUG}).}
 }
 \value{
-NULL (invisible). The function uploads data to cloud storage as a side effect.
+NULL invisibly. Side effect: uploads merged parquet to cloud storage.
 }
 \description{
-Processes WorldFish preprocessed survey data into a simplified API-friendly format
-and exports it to cloud storage for external consumption. This function exports the
-\strong{raw/preprocessed} version of trip data without validation filters. For validated
-API exports, see the companion function that will process validated surveys.
+Downloads preprocessed WF and WCS survey data, transforms both into the
+canonical API schema, merges them, and uploads a single parquet file to
+cloud storage. This is the \strong{raw/preprocessed} stage of the two-stage API
+export pipeline.
 }
 \details{
-The function performs the following operations:
-\itemize{
-\item Downloads \strong{preprocessed} (not validated) WF survey data from cloud storage
-\item Loads form-specific assets (taxa, geography, gear, vessels) from Airtable metadata
-\item Generates unique trip IDs using xxhash64 algorithm
-\item Transforms nested survey structure to flat API format
-\item Joins with standardized lookup tables (districts, gear types, vessel types)
-\item Exports to the \strong{raw} cloud storage path (before validation)
-}
-
-\strong{Data Pipeline Context}:
-This function exports raw preprocessed data and is part of a two-stage API export pipeline:
-\enumerate{
-\item \code{export_api_raw()} - Exports raw/preprocessed data (this function)
-\item (Future) \code{export_api_validated()} - Will export quality-controlled validated data
-}
-
 \strong{Output Schema}:
-The exported dataset includes the following fields:
 \itemize{
-\item \code{trip_id}: Unique identifier (TRIP_xxxxxxxxxxxx format)
+\item \code{survey_id}: Kobo asset ID identifying the source survey form
+\item \code{trip_id}: Unique identifier (\verb{TRIP_<submission_id>} format)
 \item \code{landing_date}: Date of landing
-\item \code{gaul_2_name}: Standardized district name (GAUL level 2)
-\item \code{n_fishers}: Total number of fishers (men + women + children)
-\item \code{trip_duration_hrs}: Duration in hours
-\item \code{gear}: Standardized gear type
-\item \code{vessel_type}: Standardized vessel type
+\item \code{gaul_1_code}, \code{gaul_1_name}: GAUL level 1 region
+\item \code{gaul_2_code}, \code{gaul_2_name}: GAUL level 2 district
+\item \code{n_fishers}: Total fishers (men + women + children)
+\item \code{trip_duration_hrs}: Trip duration in hours
+\item \code{gear}: Standardised gear type
+\item \code{vessel_type}: Standardised vessel type
 \item \code{catch_habitat}: Habitat where catch occurred
-\item \code{catch_outcome}: Outcome of catch (landed, sold, etc.)
-\item \code{n_catch}: Number of individual catch items
-\item \code{catch_taxon}: Species or taxonomic group
+\item \code{catch_outcome}: Outcome of catch
+\item \code{n_catch}: Number of catch items
+\item \code{catch_taxon}: Species alpha-3 code
 \item \code{scientific_name}: Scientific name
-\item \code{length_cm}: Length measurement in centimeters
-\item \code{catch_kg}: Weight in kilograms
-\item \code{catch_price}: Price in local currency
+\item \code{length_cm}: Length in cm (NA for WCS surveys)
+\item \code{catch_kg}: Catch weight in kg
+\item \code{catch_price}: Individual-level price (NA — not resolved at this stage)
+\item \code{tot_catch_kg}: Total catch weight per trip
+\item \code{tot_catch_price}: Total catch price per trip
 }
 
 \strong{Cloud Storage Location}:
-Files are uploaded to the path specified in \code{conf$api$trips$raw$cloud_path}
-(e.g., \verb{zanzibar/raw/}) with versioned filenames following the pattern:
+\code{conf$api$trips$raw$cloud_path} /
 \verb{\{file_prefix\}__\{timestamp\}_\{git_sha\}__.parquet}
-}
-\examples{
-\dontrun{
-# Export raw API trip data with default debug logging
-export_api_raw()
-
-# Export with info-level logging only
-export_api_raw(logger::INFO)
-}
-
 }
 \seealso{
 \itemize{
-\item \code{\link[=preprocess_wf_surveys]{preprocess_wf_surveys()}} for generating the preprocessed survey data
-\item \code{\link[=validate_wf_surveys]{validate_wf_surveys()}} for the validation step that produces validated data
-\item \code{\link[coasts:download_parquet_from_cloud]{coasts::download_parquet_from_cloud()}} for retrieving data from cloud storage
-\item \code{\link[coasts:upload_cloud_file]{coasts::upload_cloud_file()}} for uploading data to cloud storage
-\item \code{\link[=get_airtable_form_id]{get_airtable_form_id()}} for retrieving form-specific asset metadata
+\item \code{\link[=export_api_validated]{export_api_validated()}} for the validated-data counterpart
+\item \code{\link[=preprocess_wf_surveys]{preprocess_wf_surveys()}} and \code{\link[=preprocess_wcs_surveys]{preprocess_wcs_surveys()}} for upstream steps
 }
 }
 \keyword{export}

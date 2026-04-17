@@ -137,7 +137,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::left_join(assets$gear, by = c("gear" = "survey_label")) |>
     # label multiple gears
     dplyr::mutate(
-      n_gears = stringr::str_count(gear, " ") + 1,
+      n_gears = stringr::str_count(.data$gear, " ") + 1,
       standard_name = dplyr::case_when(
         n_gears > 1 ~ "Mixed gears",
         TRUE ~ .data$standard_name
@@ -184,17 +184,20 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       "weight":"weight_bucket"
     ) |>
     # FIX fields
-    dplyr::mutate(dplyr::across(
-      c(
-        "trip_length_days",
-        "weight",
-        "individuals",
-        "weight_individuals",
-        "n_buckets",
-        "weight_bucket"
+    dplyr::mutate(
+      dplyr::across(
+        c(
+          "trip_length_days",
+          "weight",
+          "individuals",
+          "weight_individuals",
+          "n_buckets",
+          "weight_bucket"
+        ),
+        ~ as.numeric(.x)
       ),
-      ~ as.numeric(.x)
-    ))
+      trip_length_hrs = .data$trip_length_days * 24
+    )
 
   wcs_processed_landings <-
     calculate_catch_prices(
@@ -223,7 +226,18 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       "catch_kg",
       "catch_price",
       .after = "vessel_type"
-    )
+    ) |>
+    # add catch outcome
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::mutate(
+      catch_outcome = dplyr::if_else(
+        any(!is.na(.data$catch_kg) & .data$catch_kg > 0),
+        1L,
+        0L
+      ),
+      catch_outcome = as.character(.data$catch_outcome)
+    ) |>
+    dplyr::ungroup()
 
   coasts::upload_parquet_to_cloud(
     data = wcs_processed_landings,
@@ -740,7 +754,7 @@ calculate_catch_prices <- function(
   prices <-
     market_info |>
     dplyr::mutate(
-      price_kg = (.data$catch_price / .data$catch_kg_market) * 0.00039,
+      price_kg = (.data$catch_price / .data$catch_kg_market),
     ) |>
     dplyr::select("species_market", "price_kg") |>
     dplyr::distinct() |>
@@ -750,7 +764,14 @@ calculate_catch_prices <- function(
     dplyr::left_join(assets$taxa, by = c("species_market" = "survey_label")) |>
     dplyr::select("alpha3_code", "scientific_name", "price_kg") |>
     dplyr::filter(!is.na(.data$alpha3_code)) |>
-    dplyr::distinct()
+    dplyr::distinct() |>
+    dplyr::mutate(
+      price_kg = dplyr::if_else(
+        is.na(.data$price_kg),
+        stats::median(.data$price_kg, na.rm = TRUE),
+        .data$price_kg
+      )
+    )
 
   catch <- processed_surveys |>
     dplyr::select(
@@ -787,25 +808,19 @@ calculate_catch_prices <- function(
   prices_catch_tab <-
     catch |>
     dplyr::left_join(prices, by = c("alpha3_code")) |>
+    dplyr::group_by(.data$submission_id, .data$n_catch) |>
     dplyr::mutate(
-      price = .data$price_kg * .data$catch_kg
+      catch_kg_per_species = .data$catch_kg / dplyr::n(),
+      price = .data$price_kg * .data$catch_kg_per_species
     ) |>
-    dplyr::group_by(.data$submission_id) |>
-    dplyr::mutate(
-      catch_price = dplyr::if_else(
-        all(is.na(.data$price)),
-        NA_real_,
-        sum(.data$price, na.rm = TRUE)
-      )
-    ) |>
+    dplyr::ungroup() |>
     dplyr::select(
       "submission_id",
       "n_catch",
       "alpha3_code",
-      "catch_kg",
-      "catch_price"
-    ) |>
-    dplyr::ungroup()
+      catch_kg = "catch_kg_per_species",
+      catch_price = "price"
+    )
 
   return(prices_catch_tab)
 }
