@@ -62,6 +62,8 @@ jobs:
           context: .
           file: Dockerfile.prod
           push: true
+          build-args: |
+            COASTS_REF=${{ steps.coasts.outputs.ref }}
           tags: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
           cache-from: type=registry,ref=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:buildcache
           cache-to: type=registry,ref=ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:buildcache,mode=max
