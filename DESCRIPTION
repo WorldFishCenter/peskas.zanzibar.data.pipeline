@@ -55,7 +55,8 @@ Suggests:
     stringi,
     taxize
 Remotes:
-    WorldFishCenter/peskas.coasts    
+    WorldFishCenter/peskas.coasts,
+    github::WorldFishCenter/ssf-ai-toolkit/Rplug@plug-R
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
