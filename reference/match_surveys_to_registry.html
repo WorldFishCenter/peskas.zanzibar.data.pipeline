@@ -11,7 +11,7 @@ the specified distance thresholds."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -88,7 +88,7 @@ for boat name and fisher name matching. Default is 0.25.</p></dd>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The matching algorithm:</p><ol><li><p>Computes Levenshtein distance matrices between surveys and registry
 for each field (registration, boat name, fisher name)</p></li>
-<li><p>Normalizes distances by maximum string length to get values in 0,1</p></li>
+<li><p>Normalizes distances by maximum string length to get values in [0,1]</p></li>
 <li><p>For each survey, counts how many fields match each registry entry
 (within thresholds)</p></li>
 <li><p>Assigns survey to the registry entry with the most matching fields</p></li>

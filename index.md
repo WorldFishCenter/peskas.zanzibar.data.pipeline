@@ -59,7 +59,7 @@ function
 which generally includes a timestamp and the commit sha. This approach
 allow us to trace each artifact to a unique run of the pipeline. When
 retrieving jobs can call
-[`cloud_object_name()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/cloud_object_name.md)
+[`coasts::cloud_object_name()`](https://rdrr.io/pkg/coasts/man/cloud_object_name.html)
 to obtain the latest or an specific version of an artifact.
 
 ## Environment parameters are specified in the config file

@@ -15,9 +15,7 @@ preprocess_wf_surveys(log_threshold = logger::DEBUG, version = "v2")
 
 - log_threshold:
 
-  The logging threshold to use. Default is logger::DEBUG. See
-  [`logger::log_levels`](https://daroczig.github.io/logger/reference/log_levels.html)
-  for available options.
+  Logging threshold level (default: logger::DEBUG).
 
 - version:
 
@@ -58,7 +56,7 @@ applies appropriate processing logic for each dataset.
 the function continues with the available data and logs warnings. The
 function only fails if both versions are unavailable.
 
-Configurations are read from `conf.yml` with the following necessary
+Configurations are read from `config.yml` with the following necessary
 parameters:
 
     surveys:

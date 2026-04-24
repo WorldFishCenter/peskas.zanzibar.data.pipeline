@@ -1,8 +1,6 @@
 # Rename Nested Survey Data Elements
 
-Appends a parent name or index to child elements within a nested list,
-assisting in creating a coherent and traceable data structure during the
-flattening process.
+Appends a parent name or index to child elements within a nested list.
 
 ## Usage
 
@@ -22,9 +20,8 @@ rename_child(x, i, p)
 
 - p:
 
-  The parent name to prepend to the element's existing name for context.
+  The parent name to prepend.
 
 ## Value
 
-A renamed list element, structured to maintain contextual relevance in a
-flattened dataset.
+A renamed list element.

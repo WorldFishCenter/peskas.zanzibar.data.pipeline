@@ -1,7 +1,6 @@
-# Flatten Survey Data Rows
+# Flatten a Single Row of Kobotoolbox Data
 
-Transforms each row of nested survey data into a flat tabular format
-using a mapping and flattening process.
+Transforms each row of nested survey data into a flat tabular format.
 
 ## Usage
 
@@ -13,9 +12,8 @@ flatten_row(x)
 
 - x:
 
-  A list representing a row of data, potentially containing nested lists
-  or vectors.
+  A list representing a single row of Kobotoolbox data.
 
 ## Value
 
-A tibble with each row representing flattened survey data.
+A flattened tibble representing the input row.

@@ -1,6 +1,6 @@
 # Read configuration file
 
-Reads configuration file in `conf.yml` and adds some logging lines.
+Reads configuration file in `config.yml` and adds some logging lines.
 Wrapped for convenience
 
 ## Usage

@@ -58,17 +58,13 @@ grid_summaries
 
 ## See also
 
-- [`summarize_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/summarize_data.md)
-  for generating the summary datasets
+- `summarize_data()` for generating the summary datasets
 
-- [`download_parquet_from_cloud()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/download_parquet_from_cloud.md)
+- [`coasts::download_parquet_from_cloud()`](https://rdrr.io/pkg/coasts/man/download_parquet_from_cloud.html)
   for retrieving data from cloud storage
 
-- [`mdb_collection_push()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/mdb_collection_push.md)
+- [`coasts::mdb_collection_push()`](https://rdrr.io/pkg/coasts/man/mdb_collection_push.html)
   for uploading data to MongoDB
-
-- [`create_geos()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/create_geos.md)
-  for generating geographic summaries
 
 ## Examples
 

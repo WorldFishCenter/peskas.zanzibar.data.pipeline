@@ -16,9 +16,7 @@ preprocess_wcs_surveys(log_threshold = logger::DEBUG)
 
 - log_threshold:
 
-  The logging threshold to use. Default is logger::DEBUG. See
-  [`logger::log_levels`](https://daroczig.github.io/logger/reference/log_levels.html)
-  for available options.
+  Logging threshold level (default: logger::DEBUG).
 
 ## Value
 
@@ -26,7 +24,7 @@ None; the function is used for its side effects.
 
 ## Details
 
-Configurations are read from `conf.yml` with the following necessary
+Configurations are read from `config.yml` with the following necessary
 parameters:
 
     surveys:

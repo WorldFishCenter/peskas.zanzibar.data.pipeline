@@ -59,7 +59,8 @@ The matching algorithm:
 1.  Computes Levenshtein distance matrices between surveys and registry
     for each field (registration, boat name, fisher name)
 
-2.  Normalizes distances by maximum string length to get values in 0,1
+2.  Normalizes distances by maximum string length to get values in
+    \[0,1\]
 
 3.  For each survey, counts how many fields match each registry entry
     (within thresholds)

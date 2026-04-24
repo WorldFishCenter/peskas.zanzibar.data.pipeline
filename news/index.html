@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,83 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.7.0" id="peskaszanzibardatapipeline-470">peskas.zanzibar.data.pipeline 4.7.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-470"></a></h2>
+<div class="section level3">
+<h3 id="new-features-4-7-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-4-7-0"></a></h3>
+<ul><li>
+<strong>Unified API export across survey programs</strong>: The raw and validated API exports now combine data from both WCS and WorldFish surveys into a single output file. Previously only WorldFish data was exported; WCS trips are now included alongside them with a consistent set of fields.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-4-7-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-4-7-0"></a></h3>
+<ul><li>
+<strong>WCS validation enhancements</strong>:
+<ul><li>Added two new quality checks: one that catches contradictions between bucket count and bucket weight (e.g. buckets recorded but no weight, or vice versa), and one that flags implausible negative values in catch measurements</li>
+<li>Price and revenue validation thresholds corrected to Tanzanian Shilling values (previous values were in Mozambican metical)</li>
+<li>Submissions recorded before 2020 are now excluded from the validated dataset</li>
+<li>Catch outcome is now correctly carried through to the validation step</li>
+</ul></li>
+<li>
+<strong>WCS price calculation corrected</strong>: Catch prices are now split proportionally across species within a trip. Missing species prices now fall back to the species-level median rather than being left empty.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.6.0" id="peskaszanzibardatapipeline-460">peskas.zanzibar.data.pipeline 4.6.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-460"></a></h2>
+<div class="section level4">
+<h4 id="infrastructure--workflow-4-6-0">Infrastructure &amp; Workflow<a class="anchor" aria-label="anchor" href="#infrastructure--workflow-4-6-0"></a></h4>
+<ul><li>
+<strong>Delegating to <code>coasts</code> most of the core storage and databse-related functions</strong>: Now core and other countries shared storage functions are delagated to central and upgraded features of the <code>coasts</code>pacakge for improved standardization and maintainability</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.5.0" id="peskaszanzibardatapipeline-450">peskas.zanzibar.data.pipeline 4.5.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-450"></a></h2>
+<div class="section level3">
+<h3 id="major-changes-4-5-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-4-5-0"></a></h3>
+<ul><li>
+<strong>Adopted <code>coasts</code> as the shared multicountry analytics engine</strong>: Aggregated data summarization and dashboard export are now delegated to <a href="https://github.com/WorldFishCenter/peskas.coasts" class="external-link"><code>WorldFishCenter/peskas.coasts</code></a> (dev branch). This centralizes the logic for producing monthly, taxa, district, and gear summaries — as well as fishery metrics — across all Peskas country deployments (Zanzibar, Kenya, Mozambique), ensuring consistent outputs and a single place to maintain and improve the shared pipeline logic.
+<ul><li>Added <code>coasts</code> to <code>Imports</code> and <code>Remotes</code> in <code>DESCRIPTION</code>
+</li>
+<li>Added <code>remotes::install_github("WorldFishCenter/peskas.coasts", ref = "dev")</code> to both <code>Dockerfile</code> and <code>Dockerfile.prod</code> so the image ships the package</li>
+<li>Pipeline steps that previously used local <code>summarize_data()</code> and <code>generate_fleet_analysis()</code> now call the equivalent <code>coasts::</code> functions, passing <code>package = "peskas.zanzibar.data.pipeline"</code> so they read the country-specific <code>inst/conf.yml</code>
+</li>
+</ul></li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.4.0" id="peskaszanzibardatapipeline-440">peskas.zanzibar.data.pipeline 4.4.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-440"></a></h2>
+<div class="section level3">
+<h3 id="improvements-4-4-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-4-4-0"></a></h3>
+<ul><li>
+<strong>Standardized configuration structure</strong>: Replaced <code>inst/conf.yml</code> with a unified multi-country template harmonized across all Peskas deployments (Zanzibar, Kenya, Mozambique). Key structural changes:
+<ul><li>Survey credentials moved from <code>surveys.*</code> into a new top-level <code>ingestion.*</code> section</li>
+<li>Stage keys shortened (<code>raw_surveys</code> → <code>raw</code>, <code>preprocessed_surveys</code> → <code>preprocessed</code>, etc.)</li>
+<li>Source names shortened (<code>wcs_surveys</code> → <code>wcs</code>, <code>wf_surveys_v1</code> → <code>wf_v1</code>, etc.)</li>
+<li>MongoDB structure reorganized: connection strings under <code>connection_strings.*</code>, databases under <code>databases.*</code>, collections key pluralized, <code>portal</code> renamed to <code>dashboard</code>
+</li>
+<li>Airtable config moved from top-level <code>airtable.*</code> to <code>metadata.airtable.*</code>
+</li>
+<li>All R code updated to use the new config paths</li>
+</ul></li>
+<li>
+<strong><code>summarize_data()</code> correctness and clarity fixes</strong>:
+<ul><li>Fixed data quality bug: <code>taxa_summaries</code> was incorrectly summing trip-total catch kg per taxon instead of the actual per-taxon catch weight — values are now correct</li>
+<li>Fixed <code>districts_summaries</code> round-trip pivot: data is now stored wide and pivoted once in <code><a href="../reference/export_wf_data.html">export_wf_data()</a></code> instead of pivot-long → store → pivot-wide → pivot-long</li>
+<li>Fixed <code>gear_summaries</code> <code>complete()</code> running after <code>pivot_longer</code> with wrong column names in the fill list; now completes before pivoting across all gear × district × month combinations</li>
+<li>Replaced fragile <code>across(everything(), first)</code> pattern in trip-level collapse with explicit <code>slice(1)</code>, which is clearer and avoids silent column overwrites</li>
+<li>Fixed inconsistent <code>na.rm</code> usage in gear summaries</li>
+</ul></li>
+<li>
+<strong>Removed dead code</strong>: Deleted <code>create_geos()</code> and <code>create_geos_v1()</code> from <code>export.R</code>; the geographic summary logic had already been inlined into <code><a href="../reference/export_wf_data.html">export_wf_data()</a></code>
+</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-4-4-0">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-4-4-0"></a></h3>
+<ul><li>Fixed <code>match_surveys_to_registry.Rd</code> cross-reference warning caused by <code>[0,1]</code> being parsed as a markdown link</li>
+<li>Documented missing <code>devices_table</code> argument in <code>process_trip_data()</code>
+</li>
+<li>Added <code>stringdist</code> to <code>Imports</code> in <code>DESCRIPTION</code> (was used via <code>::</code> but not declared)</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.3.0" id="peskaszanzibardatapipeline-430">peskas.zanzibar.data.pipeline 4.3.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-430"></a></h2>
 <div class="section level3">
 <h3 id="new-features-4-3-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-4-3-0"></a></h3>
@@ -53,7 +130,7 @@
 <h3 id="improvements-4-3-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-4-3-0"></a></h3>
 <ul><li>
 <strong>PDS Data Ingestion</strong>:
-<ul><li>Updated <code><a href="../reference/ingest_pds_trips.html">ingest_pds_trips()</a></code> to load device registry from cloud storage instead of Airtable metadata</li>
+<ul><li>Updated <code>ingest_pds_trips()</code> to load device registry from cloud storage instead of Airtable metadata</li>
 <li>Added device info retrieval and proper filtering for Zanzibar devices</li>
 <li>Improved configuration variable naming (pars → conf)</li>
 </ul></li>
@@ -181,26 +258,26 @@
 <li>
 <strong>New Modeling and Summarization Functions:</strong>
 <ul><li>
-<code><a href="../reference/prepare_boat_registry.html">prepare_boat_registry()</a></code>: Summarizes boat registry data by district.</li>
+<code>prepare_boat_registry()</code>: Summarizes boat registry data by district.</li>
 <li>
-<code><a href="../reference/process_trip_data.html">process_trip_data()</a></code>: Processes trip data with district information and filters outliers.</li>
+<code>process_trip_data()</code>: Processes trip data with district information and filters outliers.</li>
 <li>
-<code><a href="../reference/calculate_monthly_trip_stats.html">calculate_monthly_trip_stats()</a></code>: Computes monthly fishing activity statistics by district.</li>
+<code>calculate_monthly_trip_stats()</code>: Computes monthly fishing activity statistics by district.</li>
 <li>
-<code><a href="../reference/estimate_fleet_activity.html">estimate_fleet_activity()</a></code>: Scales up sample-based trip statistics to fleet-wide estimates.</li>
+<code>estimate_fleet_activity()</code>: Scales up sample-based trip statistics to fleet-wide estimates.</li>
 <li>
-<code><a href="../reference/calculate_district_totals.html">calculate_district_totals()</a></code>: Combines fleet activity and catch data for district-level totals.</li>
+<code>calculate_district_totals()</code>: Combines fleet activity and catch data for district-level totals.</li>
 <li>
-<code><a href="../reference/generate_fleet_analysis.html">generate_fleet_analysis()</a></code>: Orchestrates the full analysis pipeline and uploads results.</li>
+<code>generate_fleet_analysis()</code>: Orchestrates the full analysis pipeline and uploads results.</li>
 <li>
-<code><a href="../reference/summarize_data.html">summarize_data()</a></code>: Generates and uploads summary datasets (monthly, taxa, district, gear, grid) for WorldFish survey data.</li>
+<code>summarize_data()</code>: Generates and uploads summary datasets (monthly, taxa, district, gear, grid) for WorldFish survey data.</li>
 </ul></li>
 <li>
 <strong>Enhanced Data Export and Integration:</strong>
 <ul><li>
 <code><a href="../reference/export_wf_data.html">export_wf_data()</a></code>: Exports summarized WorldFish survey data and modeled estimates to MongoDB, including new geographic regional summaries.</li>
 <li>
-<code><a href="../reference/create_geos.html">create_geos()</a></code>: Generates geospatial regional summaries and exports as GeoJSON for spatial visualization.</li>
+<code>create_geos()</code>: Generates geospatial regional summaries and exports as GeoJSON for spatial visualization.</li>
 </ul></li>
 <li>
 <strong>Expanded Documentation:</strong> New and updated Rd files for all major new functions, with improved examples and cross-references.</li>
@@ -253,9 +330,9 @@
 <h2 class="pkg-version" data-toc-text="3.1.0" id="peskaszanzibardatapipeline-310">peskas.zanzibar.data.pipeline 3.1.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-310"></a></h2>
 <div class="section level4">
 <h4 id="new-features-3-1-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-3-1-0"></a></h4>
-<ul><li>Added <code><a href="../reference/create_geos.html">create_geos()</a></code> function to generate geospatial regional summaries of fishery data</li>
+<ul><li>Added <code>create_geos()</code> function to generate geospatial regional summaries of fishery data</li>
 <li>Added support for GPS track data visualization through new grid-based analytics</li>
-<li>Added <code><a href="../reference/generate_track_summaries.html">generate_track_summaries()</a></code> function to process GPS tracks into 1km grid cells</li>
+<li>Added <code>generate_track_summaries()</code> function to process GPS tracks into 1km grid cells</li>
 </ul></div>
 <div class="section level4">
 <h4 id="improvements-3-1-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-3-1-0"></a></h4>
@@ -315,7 +392,7 @@
 <div class="section level4">
 <h4 id="major-changes-2-4-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-2-4-0"></a></h4>
 <ul><li>Implemented support for multiple survey data sources:
-<ul><li>Refactored <code><a href="../reference/get_validated_surveys.html">get_validated_surveys()</a></code> to handle WCS, WF, and BA sources</li>
+<ul><li>Refactored <code>get_validated_surveys()</code> to handle WCS, WF, and BA sources</li>
 <li>Added source parameter to specify which datasets to retrieve</li>
 <li>Improved handling of data sources with different column structures</li>
 </ul></li>
@@ -492,7 +569,7 @@
 <p>Drop parent repository code (peskas.timor.pipeline), add infrastructure to download WCS survey data and upload it to cloud storage providers</p>
 <div class="section level4">
 <h4 id="new-features-0-1-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-0"></a></h4>
-<ul><li>The ingestion of WCS Zanzibar surveys is implemented in <code>ingest_wcs_surveys()</code>.</li>
+<ul><li>The ingestion of WCS Zanzibar surveys is implemented in <code><a href="../reference/ingest_wcs_surveys.html">ingest_wcs_surveys()</a></code>.</li>
 <li>The functions <code>retrieve_wcs_surveys()</code> downloads WCS Zanzibar surveys data</li>
 </ul><div class="section level5">
 <h5 id="changes-0-1-0">Changes<a class="anchor" aria-label="anchor" href="#changes-0-1-0"></a></h5>

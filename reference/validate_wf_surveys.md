@@ -1,6 +1,6 @@
-# Validate Wild Fishing Survey Data
+# Validate worldfish Survey Data
 
-Validates survey data from wild fishing activities by applying quality
+Validates survey data from worldfish activities by applying quality
 control checks and flagging potential data issues. The function filters
 out submissions that don't meet validation criteria and processes catch
 data.

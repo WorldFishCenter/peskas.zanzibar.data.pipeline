@@ -1,10 +1,9 @@
 # Export Raw API-Ready Trip Data
 
-Processes WorldFish preprocessed survey data into a simplified
-API-friendly format and exports it to cloud storage for external
-consumption. This function exports the **raw/preprocessed** version of
-trip data without validation filters. For validated API exports, see the
-companion function that will process validated surveys.
+Downloads preprocessed WF and WCS survey data, transforms both into the
+canonical API schema, merges them, and uploads a single parquet file to
+cloud storage. This is the **raw/preprocessed** stage of the two-stage
+API export pipeline.
 
 ## Usage
 
@@ -16,104 +15,65 @@ export_api_raw(log_threshold = logger::DEBUG)
 
 - log_threshold:
 
-  The logging level threshold for the logger package (e.g., DEBUG,
-  INFO). See
-  [`logger::log_levels`](https://daroczig.github.io/logger/reference/log_levels.html)
-  for available options. Default is logger::DEBUG.
+  Logging level (default
+  [`logger::DEBUG`](https://daroczig.github.io/logger/reference/log_levels.html)).
 
 ## Value
 
-NULL (invisible). The function uploads data to cloud storage as a side
-effect.
+NULL invisibly. Side effect: uploads merged parquet to cloud storage.
 
 ## Details
 
-The function performs the following operations:
+**Output Schema**:
 
-- Downloads **preprocessed** (not validated) WF survey data from cloud
-  storage
+- `survey_id`: Kobo asset ID identifying the source survey form
 
-- Loads form-specific assets (taxa, geography, gear, vessels) from
-  Airtable metadata
-
-- Generates unique trip IDs using xxhash64 algorithm
-
-- Transforms nested survey structure to flat API format
-
-- Joins with standardized lookup tables (districts, gear types, vessel
-  types)
-
-- Exports to the **raw** cloud storage path (before validation)
-
-**Data Pipeline Context**: This function exports raw preprocessed data
-and is part of a two-stage API export pipeline:
-
-1.  `export_api_raw()` - Exports raw/preprocessed data (this function)
-
-2.  (Future)
-    [`export_api_validated()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_validated.md) -
-    Will export quality-controlled validated data
-
-**Output Schema**: The exported dataset includes the following fields:
-
-- `trip_id`: Unique identifier (TRIP_xxxxxxxxxxxx format)
+- `trip_id`: Unique identifier (`TRIP_<submission_id>` format)
 
 - `landing_date`: Date of landing
 
-- `gaul_2_name`: Standardized district name (GAUL level 2)
+- `gaul_1_code`, `gaul_1_name`: GAUL level 1 region
 
-- `n_fishers`: Total number of fishers (men + women + children)
+- `gaul_2_code`, `gaul_2_name`: GAUL level 2 district
 
-- `trip_duration_hrs`: Duration in hours
+- `n_fishers`: Total fishers (men + women + children)
 
-- `gear`: Standardized gear type
+- `trip_duration_hrs`: Trip duration in hours
 
-- `vessel_type`: Standardized vessel type
+- `gear`: Standardised gear type
+
+- `vessel_type`: Standardised vessel type
 
 - `catch_habitat`: Habitat where catch occurred
 
-- `catch_outcome`: Outcome of catch (landed, sold, etc.)
+- `catch_outcome`: Outcome of catch
 
-- `n_catch`: Number of individual catch items
+- `n_catch`: Number of catch items
 
-- `catch_taxon`: Species or taxonomic group
+- `catch_taxon`: Species alpha-3 code
 
-- `length_cm`: Length measurement in centimeters
+- `scientific_name`: Scientific name
 
-- `catch_kg`: Weight in kilograms
+- `length_cm`: Length in cm (NA for WCS surveys)
 
-- `catch_price`: Price in local currency
+- `catch_kg`: Catch weight in kg
 
-**Cloud Storage Location**: Files are uploaded to the path specified in
-`conf$api$trips$raw$cloud_path` (e.g., `zanzibar/raw/`) with versioned
-filenames following the pattern:
+- `catch_price`: Individual-level price (NA — not resolved at this
+  stage)
+
+- `tot_catch_kg`: Total catch weight per trip
+
+- `tot_catch_price`: Total catch price per trip
+
+**Cloud Storage Location**: `conf$api$trips$raw$cloud_path` /
 `{file_prefix}__{timestamp}_{git_sha}__.parquet`
 
 ## See also
 
+- [`export_api_validated()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_validated.md)
+  for the validated-data counterpart
+
 - [`preprocess_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_surveys.md)
-  for generating the preprocessed survey data
-
-- [`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md)
-  for the validation step that produces validated data
-
-- [`download_parquet_from_cloud()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/download_parquet_from_cloud.md)
-  for retrieving data from cloud storage
-
-- [`upload_cloud_file()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/upload_cloud_file.md)
-  for uploading data to cloud storage
-
-- [`get_airtable_form_id()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_airtable_form_id.md)
-  for retrieving form-specific asset metadata
-
-## Examples
-
-``` r
-if (FALSE) { # \dontrun{
-# Export raw API trip data with default debug logging
-export_api_raw()
-
-# Export with info-level logging only
-export_api_raw(logger::INFO)
-} # }
-```
+  and
+  [`preprocess_wcs_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wcs_surveys.md)
+  for upstream steps

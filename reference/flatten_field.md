@@ -1,8 +1,7 @@
-# Flatten Survey Data Fields
+# Flatten a Single Field of Kobotoolbox Data
 
 Processes each field within a row of survey data, handling both simple
-vectors and nested lists. For lists with named elements, renames and
-unlists them for flat structure preparation.
+vectors and nested lists.
 
 ## Usage
 
@@ -18,8 +17,7 @@ flatten_field(x, p)
 
 - p:
 
-  The prefix or name associated with the field, used for naming during
-  the flattening process.
+  The prefix or name associated with the field.
 
 ## Value
 
