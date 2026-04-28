@@ -475,31 +475,43 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     purrr::map(
       .x = c(
         v1 = conf$ingestion$wf_v1$asset_id,
-        v2 = conf$ingestion$wf_v2$asset_id
+        v2 = conf$ingestion$wf_v2$asset_id,
+        v3 = conf$ingestion$wf_v3$asset_id
       ),
-      .f = ~ coasts::mdb_collection_pull(
-        connection_string = conf$storage$mongodb$connection_strings$validation,
-        db_name = conf$storage$mongodb$databases$validation$database_name,
-        collection_name = paste(
-          conf$storage$mongodb$databases$validation$collections$flags,
-          .x,
-          sep = "-"
+      .f = function(asset_id) {
+        flags <- coasts::mdb_collection_pull(
+          connection_string = conf$storage$mongodb$connection_strings$validation,
+          db_name = conf$storage$mongodb$databases$validation$database_name,
+          collection_name = paste(
+            conf$storage$mongodb$databases$validation$collections$flags,
+            asset_id,
+            sep = "-"
+          )
         )
-      ) |>
-        dplyr::filter(
-          .data$validation_status == "validation_status_not_approved"
-        ) |>
-        dplyr::pull("submission_id") |>
-        unique()
+        # collection may be empty (e.g. newly added survey version) — skip filter
+        if (
+          !is.data.frame(flags) ||
+            nrow(flags) == 0 ||
+            !"validation_status" %in% names(flags)
+        ) {
+          return(character(0))
+        }
+        flags |>
+          dplyr::filter(
+            .data$validation_status == "validation_status_not_approved"
+          ) |>
+          dplyr::pull("submission_id") |>
+          unique()
+      }
     )
   future::plan(
     strategy = future::multisession,
     workers = future::availableCores() - 2
   )
 
-  # Query validation status from both survey versions using same credentials
+  # Query validation status from all survey versions using same credentials
   logger::log_info(
-    "Querying validation status from both wf_surveys_v1 and wf_surveys_v2 assets"
+    "Querying validation status from wf_surveys_v1, wf_surveys_v2, and wf_surveys_v3 assets"
   )
 
   validation_statuses <- list()
@@ -513,12 +525,21 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       .options = furrr::furrr_options(seed = TRUE)
     )
 
-  # Query wf_surveys v2 (new asset)
+  # Query wf_surveys v2
   validation_statuses$v2 <- not_approved_ids$v2 %>%
     furrr::future_map_dfr(
       get_validation_status,
       asset_id = conf$ingestion$wf_v2$asset_id,
       token = conf$ingestion$wf_v2$token,
+      .options = furrr::furrr_options(seed = TRUE)
+    )
+
+  # Query wf_surveys v3
+  validation_statuses$v3 <- not_approved_ids$v3 %>%
+    furrr::future_map_dfr(
+      get_validation_status,
+      asset_id = conf$ingestion$wf_v3$asset_id,
+      token = conf$ingestion$wf_v3$token,
       .options = furrr::furrr_options(seed = TRUE)
     )
 
@@ -1123,7 +1144,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
     "Fetching current validation status for {length(all_submission_ids)} submissions to identify manual approvals"
   )
 
-  # Helper function to get validation status from both assets
+  # Helper function to get validation status from all assets
   get_validation_status_both_assets <- function(id) {
     # Try v1 first
     result_v1 <- tryCatch(
@@ -1149,13 +1170,27 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       error = function(e) NULL
     )
 
+    # Try v3
+    result_v3 <- tryCatch(
+      {
+        get_validation_status(
+          submission_id = id,
+          asset_id = conf$ingestion$wf_v3$asset_id,
+          token = conf$ingestion$wf_v3$token
+        )
+      },
+      error = function(e) NULL
+    )
+
     # Return the first successful result
     if (!is.null(result_v1) && nrow(result_v1) > 0) {
       return(result_v1)
     } else if (!is.null(result_v2) && nrow(result_v2) > 0) {
       return(result_v2)
+    } else if (!is.null(result_v3) && nrow(result_v3) > 0) {
+      return(result_v3)
     } else {
-      # Return empty tibble if both failed
+      # Return empty tibble if all failed
       return(dplyr::tibble(
         submission_id = id,
         validation_status = "not_validated",
@@ -1227,11 +1262,26 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
       error = function(e) NULL
     )
 
+    # Try wf_surveys v3 (will silently fail if submission doesn't exist in this asset)
+    result_v3 <- tryCatch(
+      {
+        update_validation_status(
+          submission_id = id,
+          asset_id = conf$ingestion$wf_v3$asset_id,
+          token = conf$ingestion$wf_v3$token,
+          status = status
+        )
+      },
+      error = function(e) NULL
+    )
+
     # Return the first successful result, or create a failure record
     if (!is.null(result_v1) && nrow(result_v1) > 0) {
       return(result_v1)
     } else if (!is.null(result_v2) && nrow(result_v2) > 0) {
       return(result_v2)
+    } else if (!is.null(result_v3) && nrow(result_v3) > 0) {
+      return(result_v3)
     } else {
       return(dplyr::tibble(
         submission_id = id,
@@ -1345,7 +1395,8 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
   # Define version-specific info
   versions <- list(
     list(key = "1", asset_id = conf$ingestion$wf_v1$asset_id),
-    list(key = "2", asset_id = conf$ingestion$wf_v2$asset_id)
+    list(key = "2", asset_id = conf$ingestion$wf_v2$asset_id),
+    list(key = "3", asset_id = conf$ingestion$wf_v3$asset_id)
   )
 
   for (v in versions) {
@@ -1476,7 +1527,7 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 #' @export
 export_validation_flags <- function(
   conf = NULL,
-  asset_id = c("v1", "v2"),
+  asset_id = c("v1", "v2", "v3"),
   all_flags = NULL,
   validation_statuses = NULL
 ) {

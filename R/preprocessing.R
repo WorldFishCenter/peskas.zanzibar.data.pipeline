@@ -294,7 +294,6 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #' ```
 #'
 #' @inheritParams ingest_wf_surveys
-#' @param version Character string, deprecated. Function now processes both versions automatically.
 #' @return None; the function is used for its side effects.
 #' @export
 #' @keywords workflow preprocessing
@@ -310,8 +309,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #' }
 #'
 preprocess_wf_surveys <- function(
-  log_threshold = logger::DEBUG,
-  version = "v2"
+  log_threshold = logger::DEBUG
 ) {
   logger::log_threshold(log_threshold)
 
@@ -323,15 +321,9 @@ preprocess_wf_surveys <- function(
     options = conf$storage$google$options
   )
 
-  target_form_ids <- c(
-    get_airtable_form_id(
-      kobo_asset_id = conf$ingestion$wf_v1$asset_id,
-      conf = conf
-    ),
-    get_airtable_form_id(
-      kobo_asset_id = conf$ingestion$wf_v2$asset_id,
-      conf = conf
-    )
+  target_form_ids <- purrr::map_chr(
+    conf$ingestion[c("wf_v1", "wf_v2", "wf_v3")],
+    ~ get_airtable_form_id(kobo_asset_id = .x$asset_id, conf = conf)
   )
 
   # Build a single regex that matches any of the IDs
@@ -442,12 +434,51 @@ preprocess_wf_surveys <- function(
     }
   )
 
+  # Process Version 3 if available
+  v3_data <- tryCatch(
+    {
+      logger::log_info("Processing Version 3 surveys...")
+
+      catch_surveys_raw_v3 <-
+        coasts::download_parquet_from_cloud(
+          prefix = conf$surveys$wf_v3$raw$file_prefix,
+          provider = conf$storage$google$key,
+          options = conf$storage$google$options,
+          version = conf$surveys$wf_v3$raw$version
+        )
+
+      # Ensure we have a data frame, not a file path
+      if (is.character(catch_surveys_raw_v3)) {
+        catch_surveys_raw_v3 <- arrow::read_parquet(catch_surveys_raw_v3)
+      }
+
+      catch_surveys_raw_v3 <- catch_surveys_raw_v3 |>
+        dplyr::select(-dplyr::starts_with("_att"))
+
+      general_info_v3 <- preprocess_general(data = catch_surveys_raw_v3)
+      catch_info_v3 <- preprocess_catch(
+        data = catch_surveys_raw_v3,
+        version = "v3"
+      )
+
+      # Calculate catch data for v3
+      process_version_data(catch_info_v3, general_info_v3, asfis)
+    },
+    error = function(e) {
+      logger::log_warn(
+        "Version 3 data not available or failed to process: {e$message}"
+      )
+      NULL
+    }
+  )
+
   # Combine available datasets
-  if (!is.null(v1_data) && !is.null(v2_data)) {
-    logger::log_info("Combining Version 1 and Version 2 datasets")
+  if (!is.null(v1_data) && !is.null(v2_data) && !is.null(v3_data)) {
+    logger::log_info("Combining Version 1, Version 2, and Version 3 datasets")
     preprocessed_data <- dplyr::bind_rows(
       v1_data,
       v2_data,
+      v3_data,
       .id = "survey_version"
     )
   } else {

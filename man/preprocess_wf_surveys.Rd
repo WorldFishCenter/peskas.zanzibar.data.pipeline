@@ -4,12 +4,10 @@
 \alias{preprocess_wf_surveys}
 \title{Pre-process and Combine WorldFish Surveys - Both Versions}
 \usage{
-preprocess_wf_surveys(log_threshold = logger::DEBUG, version = "v2")
+preprocess_wf_surveys(log_threshold = logger::DEBUG)
 }
 \arguments{
 \item{log_threshold}{Logging threshold level (default: logger::DEBUG).}
-
-\item{version}{Character string, deprecated. Function now processes both versions automatically.}
 }
 \value{
 None; the function is used for its side effects.

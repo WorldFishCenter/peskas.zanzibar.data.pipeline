@@ -11,13 +11,16 @@ default:
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
-
     wf_v2:
       asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V2')
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
-
+    wf_v3:
+      asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V3')
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
     ba:
       asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
       username: !expr Sys.getenv('BA_SURVEYS_UNAME')
@@ -61,12 +64,14 @@ default:
       validation:
         flags:
           file_prefix: wf-flags
-
     wf_v2:
       raw:
         file_prefix: wf-v2-surveys-raw
         version: latest
-
+    wf_v3:
+      raw:
+        file_prefix: wf-v3-surveys-raw
+        version: latest
     ba:
       version:
         preprocess: latest

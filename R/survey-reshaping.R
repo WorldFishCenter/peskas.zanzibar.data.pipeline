@@ -627,8 +627,9 @@ preprocess_general <- function(data = NULL) {
 #' species field normalization and length group processing.
 #'
 #' @param data A data frame containing raw survey data with species groups
-#' @param version Character string specifying version ("v1" or "v2"). If NULL,
-#'   version will be auto-detected based on column patterns.
+#' @param version Character string specifying version ("v1", "v2", or "v3").
+#'   v2 and v3 share the same structure. If NULL, version will be auto-detected
+#'   based on column patterns.
 #'
 #' @return A data frame with processed catch data including:
 #'   submission_id, n_catch, count_method, catch_taxon, n_buckets, weight_bucket,

@@ -170,6 +170,19 @@ ingest_wf_surveys <- function(log_threshold = logger::DEBUG) {
         provider = conf$storage$google$key,
         options = conf$storage$google$options
       )
+    ),
+    wf_v3 = list(
+      kobo = list(
+        url = "eu.kobotoolbox.org",
+        asset_id = conf$ingestion$wf_v3$asset_id,
+        username = conf$ingestion$wf_v3$username,
+        password = conf$ingestion$wf_v3$password
+      ),
+      storage = list(
+        file_prefix = conf$surveys$wf_v3$raw$file_prefix,
+        provider = conf$storage$google$key,
+        options = conf$storage$google$options
+      )
     )
   )
 

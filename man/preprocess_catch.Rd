@@ -9,8 +9,9 @@ preprocess_catch(data = NULL, version = NULL)
 \arguments{
 \item{data}{A data frame containing raw survey data with species groups}
 
-\item{version}{Character string specifying version ("v1" or "v2"). If NULL,
-version will be auto-detected based on column patterns.}
+\item{version}{Character string specifying version ("v1", "v2", or "v3").
+v2 and v3 share the same structure. If NULL, version will be auto-detected
+based on column patterns.}
 }
 \value{
 A data frame with processed catch data including:

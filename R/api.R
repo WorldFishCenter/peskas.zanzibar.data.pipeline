@@ -13,7 +13,8 @@ format_api_wf <- function(surveys_df, conf) {
       trip_id = paste0("TRIP_", .data$submission_id),
       survey_id = dplyr::case_when(
         .data$survey_version == "1" ~ conf$ingestion$wf_v1$asset_id,
-        .data$survey_version == "2" ~ conf$ingestion$wf_v2$asset_id
+        .data$survey_version == "2" ~ conf$ingestion$wf_v2$asset_id,
+        .data$survey_version == "3" ~ conf$ingestion$wf_v3$asset_id
       )
     ) |>
     dplyr::ungroup() |>
