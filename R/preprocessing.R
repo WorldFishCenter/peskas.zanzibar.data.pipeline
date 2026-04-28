@@ -486,24 +486,52 @@ preprocess_wf_surveys <- function(
       "Versions can't be combined because at least one version is unavailable"
     )
   }
+
   # Sort final combined data
-  preprocessed_landings <-
+
+  # Fix incorrect entries
+  preprocessed_data_clean <-
     preprocessed_data |>
+    dplyr::mutate(
+      catch_taxon = dplyr::case_when(
+        .data$fish_group == "SR" & .data$catch_taxon == "MAC" ~ "AQX",
+        TRUE ~ .data$catch_taxon
+      )
+    )
+
+  frequent_groups <- preprocessed_data_clean |>
+    dplyr::filter(!is.na(.data$fish_group), !is.na(.data$catch_taxon)) |>
+    dplyr::count(.data$fish_group, .data$catch_taxon) |>
+    dplyr::group_by(.data$fish_group) |>
+    dplyr::slice_max(.data$n, n = 1, with_ties = FALSE) |>
+    dplyr::select("fish_group", frequent_taxon = "catch_taxon") |>
+    dplyr::ungroup()
+
+  preprocessed_landings <-
+    preprocessed_data_clean |>
     dplyr::relocate("fishing_days_week", .after = "survey_activity") |>
     dplyr::relocate("fish_group", .after = "catch_taxon") |>
     dplyr::relocate("boat_reg_no", "boat_name", .after = "has_boat") |>
     dplyr::arrange(.data$submission_id, .data$n_catch) |>
+    # Join the lookup table to get the 'frequent_taxon' column
+    dplyr::left_join(frequent_groups, by = "fish_group") |>
+    #TODO: Confirm if this is correct
     dplyr::mutate(
-      catch_taxon = dplyr::if_else(
-        !is.na(.data$fish_group) & is.na(.data$catch_taxon),
-        "UNK",
-        .data$catch_taxon
+      catch_taxon = dplyr::case_when(
+        # Condition: If fish_group exists but catch_taxon is NA
+        !is.na(.data$fish_group) &
+          .data$catch_taxon == "UNK" ~ .data$frequent_taxon,
+        # Default: Keep the original catch_taxon
+        TRUE ~ .data$catch_taxon
       )
-    )
+    ) |>
+    # Remove the helper column and relocate as before
+    dplyr::select(-"frequent_taxon")
 
   logger::log_info(
     "Combined dataset has {nrow(preprocessed_data)} rows from {length(unique(preprocessed_data$submission_id))} submissions"
   )
+
   preprocessed_data_mapped <-
     map_surveys(
       data = preprocessed_landings,
