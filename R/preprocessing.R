@@ -492,7 +492,14 @@ preprocess_wf_surveys <- function(
     dplyr::relocate("fishing_days_week", .after = "survey_activity") |>
     dplyr::relocate("fish_group", .after = "catch_taxon") |>
     dplyr::relocate("boat_reg_no", "boat_name", .after = "has_boat") |>
-    dplyr::arrange(.data$submission_id, .data$n_catch)
+    dplyr::arrange(.data$submission_id, .data$n_catch) |>
+    dplyr::mutate(
+      catch_taxon = dplyr::if_else(
+        !is.na(.data$fish_group) & is.na(.data$catch_taxon),
+        "UNK",
+        .data$catch_taxon
+      )
+    )
 
   logger::log_info(
     "Combined dataset has {nrow(preprocessed_data)} rows from {length(unique(preprocessed_data$submission_id))} submissions"
@@ -516,7 +523,8 @@ preprocess_wf_surveys <- function(
         .data$habitat == "7" ~ "Seagrass"
       )
     ) |>
-    dplyr::distinct()
+    dplyr::distinct() |>
+    dplyr::select(-"airtable_id")
 
   coasts::upload_parquet_to_cloud(
     data = preprocessed_data_mapped,
