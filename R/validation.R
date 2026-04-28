@@ -514,34 +514,44 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     "Querying validation status from wf_surveys_v1, wf_surveys_v2, and wf_surveys_v3 assets"
   )
 
-  validation_statuses <- list()
+  # empty-result fallback with the expected schema
+  empty_validation_status <- dplyr::tibble(
+    submission_id = integer(0),
+    validation_status = character(0),
+    validated_at = lubridate::as_datetime(character(0)),
+    validated_by = character(0)
+  )
 
-  # Query wf_surveys v1 (original asset)
-  validation_statuses$v1 <- not_approved_ids$v1 %>%
-    furrr::future_map_dfr(
-      get_validation_status,
-      asset_id = conf$ingestion$wf_v1$asset_id,
-      token = conf$ingestion$wf_v1$token,
-      .options = furrr::furrr_options(seed = TRUE)
-    )
+  query_validation_statuses <- function(ids, asset_id, token) {
+    if (length(ids) == 0) {
+      return(empty_validation_status)
+    }
+    ids %>%
+      furrr::future_map_dfr(
+        get_validation_status,
+        asset_id = asset_id,
+        token = token,
+        .options = furrr::furrr_options(seed = TRUE)
+      )
+  }
 
-  # Query wf_surveys v2
-  validation_statuses$v2 <- not_approved_ids$v2 %>%
-    furrr::future_map_dfr(
-      get_validation_status,
-      asset_id = conf$ingestion$wf_v2$asset_id,
-      token = conf$ingestion$wf_v2$token,
-      .options = furrr::furrr_options(seed = TRUE)
+  validation_statuses <- list(
+    v1 = query_validation_statuses(
+      not_approved_ids$v1,
+      conf$ingestion$wf_v1$asset_id,
+      conf$ingestion$wf_v1$token
+    ),
+    v2 = query_validation_statuses(
+      not_approved_ids$v2,
+      conf$ingestion$wf_v2$asset_id,
+      conf$ingestion$wf_v2$token
+    ),
+    v3 = query_validation_statuses(
+      not_approved_ids$v3,
+      conf$ingestion$wf_v3$asset_id,
+      conf$ingestion$wf_v3$token
     )
-
-  # Query wf_surveys v3
-  validation_statuses$v3 <- not_approved_ids$v3 %>%
-    furrr::future_map_dfr(
-      get_validation_status,
-      asset_id = conf$ingestion$wf_v3$asset_id,
-      token = conf$ingestion$wf_v3$token,
-      .options = furrr::furrr_options(seed = TRUE)
-    )
+  )
 
   # fix fields column
   validation_statuses <-
