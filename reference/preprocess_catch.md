@@ -19,8 +19,9 @@ preprocess_catch(data = NULL, version = NULL)
 
 - version:
 
-  Character string specifying version ("v1" or "v2"). If NULL, version
-  will be auto-detected based on column patterns.
+  Character string specifying version ("v1", "v2", or "v3"). v2 and v3
+  share the same structure. If NULL, version will be auto-detected based
+  on column patterns.
 
 ## Value
 

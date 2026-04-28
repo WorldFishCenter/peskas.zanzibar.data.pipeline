@@ -8,7 +8,7 @@ structures and merges the processed data.
 ## Usage
 
 ``` r
-preprocess_wf_surveys(log_threshold = logger::DEBUG, version = "v2")
+preprocess_wf_surveys(log_threshold = logger::DEBUG)
 ```
 
 ## Arguments
@@ -16,11 +16,6 @@ preprocess_wf_surveys(log_threshold = logger::DEBUG, version = "v2")
 - log_threshold:
 
   Logging threshold level (default: logger::DEBUG).
-
-- version:
-
-  Character string, deprecated. Function now processes both versions
-  automatically.
 
 ## Value
 

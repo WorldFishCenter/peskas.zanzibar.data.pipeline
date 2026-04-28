@@ -12,7 +12,7 @@ by human reviewers.
 ``` r
 export_validation_flags(
   conf = NULL,
-  asset_id = c("v1", "v2"),
+  asset_id = c("v1", "v2", "v3"),
   all_flags = NULL,
   validation_statuses = NULL
 )
