@@ -739,6 +739,7 @@ preprocess_catch <- function(data = NULL, version = NULL) {
         catch_taxon = dplyr::case_when(
           .data$catch_taxon == "TUN" ~ "TUS",
           .data$catch_taxon == "SKH" ~ "CVX",
+          is.na(.data$catch_taxon) & .data$fish_group == "MZZ" ~ "MZZ",
           TRUE ~ .data$catch_taxon
         )
       )
