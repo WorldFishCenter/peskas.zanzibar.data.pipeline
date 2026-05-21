@@ -21,8 +21,8 @@ calculate_catch(catch_data = NULL, lwcoeffs = NULL)
 \item{lwcoeffs}{A data frame containing length-weight coefficients with columns:
 \itemize{
 \item catch_taxon - FAO 3-alpha code
-\item a_6 - 60th percentile of parameter 'a'
-\item b_6 - 60th percentile of parameter 'b'
+\item lw_a - geometric mean of parameter 'a' across studies
+\item lw_b - arithmetic mean of parameter 'b' across studies
 }}
 }
 \value{
@@ -52,7 +52,8 @@ The function calculates catch weight using two methods:
 Where:
 \itemize{
 \item W is total weight in kg
-\item a and b are length-weight relationship coefficients (75th percentile)
+\item a and b are length-weight relationship coefficients aggregated across
+studies (geometric mean of a, arithmetic mean of b; cf. Froese 2006)
 \item L is length in cm
 \item N is number of individuals
 }
@@ -70,7 +71,9 @@ falling back to bucket-based calculation when length data is missing.
 }
 \note{
 \itemize{
-\item Length-based calculations use 75th percentile of length-weight coefficients
+\item Length-based calculations aggregate study-level (a, b) pairs as
+a = exp(mean(log(a))) (geometric mean), b = mean(b) (arithmetic mean).
+This preserves the log-linear nature of the length-weight relationship.
 \item All weights are returned in kilograms
 \item NA values are returned when neither calculation method is possible
 }

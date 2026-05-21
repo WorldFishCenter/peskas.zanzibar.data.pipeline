@@ -595,8 +595,8 @@ process_version_data <- function(catch_info, general_info, asfis) {
   fly_lwcoeffs <- dplyr::tibble(
     catch_taxon = "FLY",
     n = 0,
-    a_6 = 0.00631,
-    b_6 = 3.05
+    lw_a = 0.00631,
+    lw_b = 3.05
   )
   lwcoeffs$lw <- dplyr::bind_rows(lwcoeffs$lw, fly_lwcoeffs)
 
