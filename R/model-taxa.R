@@ -192,7 +192,6 @@ getLWCoeffs <- function(taxa_list = NULL, asfis_list = NULL) {
     lw_data$length_weight %>%
     dplyr::filter(!(.data$a3_code == "PEZ" & .data$type != "TL")) %>%
     dplyr::filter(!(.data$a3_code == "OCZ" & !.data$type == "ML")) %>%
-    dplyr::filter(!(.data$a3_code == "IAX" & !.data$type == "TL")) %>%
     dplyr::filter(.data$a > 0, !is.na(.data$a), !is.na(.data$b)) %>%
     dplyr::group_by(.data$a3_code) %>%
     dplyr::summarise(
