@@ -4,19 +4,22 @@
 \alias{process_version_data}
 \title{Process Version Data Helper Function}
 \usage{
-process_version_data(catch_info, general_info, asfis)
+process_version_data(catch_info, general_info, lwcoeffs)
 }
 \arguments{
-\item{catch_info}{Processed catch information}
+\item{catch_info}{Processed catch information for one form version}
 
-\item{general_info}{Processed general information}
+\item{general_info}{Processed general information for one form version}
 
-\item{asfis}{ASFIS species data}
+\item{lwcoeffs}{Precomputed length-weight coefficients (list with \code{lw} and
+\code{ml} elements). Computed once in \code{preprocess_wf_surveys()} across the
+union of taxa from all available versions, then reused for every version.}
 }
 \value{
-Combined and processed survey data
+Combined and processed survey data for one version
 }
 \description{
-Internal helper function to process catch and general info for a specific survey version
+Internal helper. Assembles per-version preprocessed data from already-reshaped
+catch/general info using precomputed length-weight coefficients.
 }
 \keyword{internal}
