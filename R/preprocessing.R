@@ -732,6 +732,7 @@ map_surveys <- function(
     dplyr::select(-c("catch_taxon", "form_id", "english_name")) |>
     dplyr::relocate("scientific_name", .after = "n_catch") |>
     dplyr::relocate("alpha3_code", .after = "scientific_name") |>
+    dplyr::distinct() |>
     dplyr::left_join(gear_mapping, by = c("gear" = "survey_label")) |>
     # label multiple gears
     dplyr::mutate(
