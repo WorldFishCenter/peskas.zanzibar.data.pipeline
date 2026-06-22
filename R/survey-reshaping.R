@@ -620,6 +620,7 @@ preprocess_general <- function(data = NULL) {
   general_info
 }
 
+
 #' Preprocess Catch Data for Both Survey Versions
 #'
 #' Processes catch data from WorldFish surveys, handling both version 1 and version 2
@@ -649,7 +650,7 @@ preprocess_catch <- function(data = NULL, version = NULL) {
     dplyr::select("submission_id", dplyr::starts_with("species_group")) |>
     reshape_catch_data_v2()
 
-  if (version == "v1") {
+  result <- if (version == "v1") {
     catch_info |>
       dplyr::mutate(
         count_method = dplyr::coalesce(
@@ -744,4 +745,6 @@ preprocess_catch <- function(data = NULL, version = NULL) {
         )
       )
   }
+
+  result
 }
