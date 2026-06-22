@@ -217,3 +217,41 @@ jobs:
       - name: Call export_portal()
         run: Rscript -e 'coasts::export_portal(package = "peskas.zanzibar.data.pipeline")'
         
+  # ============================================================================
+  # WF gleaning
+  # ============================================================================
+
+  ingest-preprocess-wf-gleaning-surveys:
+    name: Ingest and preprocess WF gleaning surveys
+    needs: build-container
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call ingest_wf_surveys()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::ingest_wf_surveys()'
+      - name: Call preprocess_wf_gleaning()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::preprocess_wf_gleaning()'
+
+  validate-wf-gleaning-surveys:
+    name: Validate and sync WF gleaning surveys
+    needs: ingest-preprocess-wf-gleaning-surveys
+    name: Ingest and preproces
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/worldfishcenter/peskas.zanzibar.data.pipeline/r-runner-peskas-zanzibar:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call validate_gleaning_surveys()
+        run: Rscript -e 'peskas.zanzibar.data.pipeline::validate_gleaning_surveys()'

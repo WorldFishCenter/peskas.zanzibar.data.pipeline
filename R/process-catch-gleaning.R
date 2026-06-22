@@ -159,7 +159,12 @@ preprocess_wf_gleaning <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::left_join(catch_totals, by = "submission_id")
 
-  return(gleaning)
+  coasts::upload_parquet_to_cloud(
+    data = gleaning,
+    prefix = conf$surveys$wf_gleaning$preprocessed$file_prefix,
+    provider = conf$storage$google$key,
+    options = conf$storage$google$options
+  )
 }
 
 #' Sanitize Gleaning Catch Inputs
