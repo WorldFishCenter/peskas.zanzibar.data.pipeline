@@ -566,8 +566,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   future::plan(strategy = future::sequential)
 
   max_bucket_weight_kg <- 50
-  max_n_buckets <- 300
-  max_n_individuals <- 200
+  max_n_buckets <- 250
+  max_n_individuals <- 500
   price_kg_max <- 81420 # 30 eur
   cpue_max <- 30
   rpue_max <- 81420

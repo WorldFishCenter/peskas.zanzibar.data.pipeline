@@ -356,47 +356,48 @@ preprocess_wf_surveys <- function(
   # Process both versions and combine results
   logger::log_info("Processing both survey versions and combining results")
 
-  logger::log_info("Loading and reshaping each form version (no rfishbase yet)...")
+  logger::log_info(
+    "Loading and reshaping each form version (no rfishbase yet)..."
+  )
 
   # ---- Phase 1: load + reshape each version (no rfishbase work here) --------
   load_and_reshape <- function(version_key) {
     raw <- coasts::download_parquet_from_cloud(
-      prefix   = conf$surveys[[version_key]]$raw$file_prefix,
+      prefix = conf$surveys[[version_key]]$raw$file_prefix,
       provider = conf$storage$google$key,
-      options  = conf$storage$google$options,
-      version  = conf$surveys[[version_key]]$raw$version
+      options = conf$storage$google$options,
+      version = conf$surveys[[version_key]]$raw$version
     )
-    if (is.character(raw)) raw <- arrow::read_parquet(raw)
+    if (is.character(raw)) {
+      raw <- arrow::read_parquet(raw)
+    }
     raw <- raw |> dplyr::select(-dplyr::starts_with("_att"))
 
-    ver <- sub("^wf_", "", version_key)  # "wf_v1" -> "v1"
+    ver <- sub("^wf_", "", version_key) # "wf_v1" -> "v1"
     list(
-      catch_info   = preprocess_catch(data = raw, version = ver),
+      catch_info = preprocess_catch(data = raw, version = ver),
       general_info = preprocess_general(data = raw)
     )
   }
 
-  v1_pre <- tryCatch(load_and_reshape("wf_v1"),
-                     error = function(e) {
-                       logger::log_warn(
-                         "Version 1 unavailable or failed to load/reshape: {e$message}"
-                       )
-                       NULL
-                     })
-  v2_pre <- tryCatch(load_and_reshape("wf_v2"),
-                     error = function(e) {
-                       logger::log_warn(
-                         "Version 2 unavailable or failed to load/reshape: {e$message}"
-                       )
-                       NULL
-                     })
-  v3_pre <- tryCatch(load_and_reshape("wf_v3"),
-                     error = function(e) {
-                       logger::log_warn(
-                         "Version 3 unavailable or failed to load/reshape: {e$message}"
-                       )
-                       NULL
-                     })
+  v1_pre <- tryCatch(load_and_reshape("wf_v1"), error = function(e) {
+    logger::log_warn(
+      "Version 1 unavailable or failed to load/reshape: {e$message}"
+    )
+    NULL
+  })
+  v2_pre <- tryCatch(load_and_reshape("wf_v2"), error = function(e) {
+    logger::log_warn(
+      "Version 2 unavailable or failed to load/reshape: {e$message}"
+    )
+    NULL
+  })
+  v3_pre <- tryCatch(load_and_reshape("wf_v3"), error = function(e) {
+    logger::log_warn(
+      "Version 3 unavailable or failed to load/reshape: {e$message}"
+    )
+    NULL
+  })
 
   # ---- Phase 2: compute length-weight coefficients ONCE across all versions -
   all_taxa <- unique(unlist(lapply(
@@ -422,13 +423,18 @@ preprocess_wf_surveys <- function(
 
   # Flying fish manual fallback (no published coefficients in our reference set)
   fly_lwcoeffs <- dplyr::tibble(
-    catch_taxon = "FLY", n = 0, lw_a = 0.00631, lw_b = 3.05
+    catch_taxon = "FLY",
+    n = 0,
+    lw_a = 0.00631,
+    lw_b = 3.05
   )
   lwcoeffs$lw <- dplyr::bind_rows(lwcoeffs$lw, fly_lwcoeffs)
 
   # ---- Phase 3: assemble preprocessed data per version using shared lwcoeffs
   process_one <- function(pre, version_label) {
-    if (is.null(pre)) return(NULL)
+    if (is.null(pre)) {
+      return(NULL)
+    }
     tryCatch(
       process_version_data(pre$catch_info, pre$general_info, lwcoeffs),
       error = function(e) {
