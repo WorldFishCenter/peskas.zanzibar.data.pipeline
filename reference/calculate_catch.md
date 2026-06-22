@@ -40,9 +40,9 @@ calculate_catch(catch_data = NULL, lwcoeffs = NULL)
 
   - catch_taxon - FAO 3-alpha code
 
-  - a_6 - 60th percentile of parameter 'a'
+  - lw_a - geometric mean of parameter 'a' across studies
 
-  - b_6 - 60th percentile of parameter 'b'
+  - lw_b - arithmetic mean of parameter 'b' across studies
 
 ## Value
 
@@ -72,8 +72,9 @@ The function calculates catch weight using two methods:
 
     - W is total weight in kg
 
-    - a and b are length-weight relationship coefficients (75th
-      percentile)
+    - a and b are length-weight relationship coefficients aggregated
+      across studies (geometric mean of a, arithmetic mean of b; cf.
+      Froese 2006)
 
     - L is length in cm
 
@@ -92,8 +93,10 @@ back to bucket-based calculation when length data is missing.
 
 ## Note
 
-- Length-based calculations use 75th percentile of length-weight
-  coefficients
+- Length-based calculations aggregate study-level (a, b) pairs as a =
+  exp(mean(log(a))) (geometric mean), b = mean(b) (arithmetic mean).
+  This preserves the log-linear nature of the length-weight
+  relationship.
 
 - All weights are returned in kilograms
 

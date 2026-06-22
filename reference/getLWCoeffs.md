@@ -28,11 +28,11 @@ A list with two elements:
 
   - catch_taxon - FAO 3-alpha code
 
-  - n - Number of measurements
+  - n - Number of (a, b) records aggregated
 
-  - a_6 - 60th percentile of parameter 'a'
+  - lw_a - Geometric mean of parameter 'a' across studies
 
-  - b_6 - 60th percentile of parameter 'b'
+  - lw_b - Arithmetic mean of parameter 'b' across studies
 
 - ml - A data frame with morphological data:
 

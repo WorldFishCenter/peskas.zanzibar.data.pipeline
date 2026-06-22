@@ -70,8 +70,8 @@ This accounts for species-specific differences in body morphology.</p>
 
 <dt id="arg-lwcoeffs">lwcoeffs<a class="anchor" aria-label="anchor" href="#arg-lwcoeffs"></a></dt>
 <dd><p>A data frame containing length-weight coefficients with columns:</p><ul><li><p>catch_taxon - FAO 3-alpha code</p></li>
-<li><p>a_6 - 60th percentile of parameter 'a'</p></li>
-<li><p>b_6 - 60th percentile of parameter 'b'</p></li>
+<li><p>lw_a - geometric mean of parameter 'a' across studies</p></li>
+<li><p>lw_b - arithmetic mean of parameter 'b' across studies</p></li>
 </ul></dd>
 
 </dl></div>
@@ -90,7 +90,8 @@ This accounts for species-specific differences in body morphology.</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The function calculates catch weight using two methods:</p><ol><li><p>Length-based calculation: W = a * L^b * N / 1000
 Where:</p><ul><li><p>W is total weight in kg</p></li>
-<li><p>a and b are length-weight relationship coefficients (75th percentile)</p></li>
+<li><p>a and b are length-weight relationship coefficients aggregated across
+studies (geometric mean of a, arithmetic mean of b; cf. Froese 2006)</p></li>
 <li><p>L is length in cm</p></li>
 <li><p>N is number of individuals</p></li>
 </ul></li>
@@ -105,7 +106,9 @@ falling back to bucket-based calculation when length data is missing.</p>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
 
-<ul><li><p>Length-based calculations use 75th percentile of length-weight coefficients</p></li>
+<ul><li><p>Length-based calculations aggregate study-level (a, b) pairs as
+a = exp(mean(log(a))) (geometric mean), b = mean(b) (arithmetic mean).
+This preserves the log-linear nature of the length-weight relationship.</p></li>
 <li><p>All weights are returned in kilograms</p></li>
 <li><p>NA values are returned when neither calculation method is possible</p></li>
 </ul></div>
