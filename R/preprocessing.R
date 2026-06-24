@@ -356,121 +356,97 @@ preprocess_wf_surveys <- function(
   # Process both versions and combine results
   logger::log_info("Processing both survey versions and combining results")
 
-  combined_data <- list()
+  logger::log_info(
+    "Loading and reshaping each form version (no rfishbase yet)..."
+  )
 
-  # Process Version 1 if available
-  v1_data <- tryCatch(
-    {
-      logger::log_info("Processing Version 1 surveys...")
+  # ---- Phase 1: load + reshape each version (no rfishbase work here) --------
+  load_and_reshape <- function(version_key) {
+    raw <- coasts::download_parquet_from_cloud(
+      prefix = conf$surveys[[version_key]]$raw$file_prefix,
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options,
+      version = conf$surveys[[version_key]]$raw$version
+    )
+    if (is.character(raw)) {
+      raw <- arrow::read_parquet(raw)
+    }
+    raw <- raw |> dplyr::select(-dplyr::starts_with("_att"))
 
-      catch_surveys_raw_v1 <-
-        coasts::download_parquet_from_cloud(
-          prefix = conf$surveys$wf_v1$raw$file_prefix,
-          provider = conf$storage$google$key,
-          options = conf$storage$google$options,
-          version = conf$surveys$wf_v1$raw$version
-        )
+    ver <- sub("^wf_", "", version_key) # "wf_v1" -> "v1"
+    list(
+      catch_info = preprocess_catch(data = raw, version = ver),
+      general_info = preprocess_general(data = raw)
+    )
+  }
 
-      # Ensure we have a data frame, not a file path
-      if (is.character(catch_surveys_raw_v1)) {
-        catch_surveys_raw_v1 <- arrow::read_parquet(catch_surveys_raw_v1)
-      }
+  v1_pre <- tryCatch(load_and_reshape("wf_v1"), error = function(e) {
+    logger::log_warn(
+      "Version 1 unavailable or failed to load/reshape: {e$message}"
+    )
+    NULL
+  })
+  v2_pre <- tryCatch(load_and_reshape("wf_v2"), error = function(e) {
+    logger::log_warn(
+      "Version 2 unavailable or failed to load/reshape: {e$message}"
+    )
+    NULL
+  })
+  v3_pre <- tryCatch(load_and_reshape("wf_v3"), error = function(e) {
+    logger::log_warn(
+      "Version 3 unavailable or failed to load/reshape: {e$message}"
+    )
+    NULL
+  })
 
-      catch_surveys_raw_v1 <- catch_surveys_raw_v1 |>
-        dplyr::select(-dplyr::starts_with("_att"))
+  # ---- Phase 2: compute length-weight coefficients ONCE across all versions -
+  all_taxa <- unique(unlist(lapply(
+    list(v1_pre, v2_pre, v3_pre),
+    function(p) if (!is.null(p)) p$catch_info$catch_taxon
+  )))
+  all_taxa <- all_taxa[!is.na(all_taxa)]
 
-      general_info_v1 <- preprocess_general(data = catch_surveys_raw_v1)
-      catch_info_v1 <- preprocess_catch(
-        data = catch_surveys_raw_v1,
-        version = "v1"
-      )
+  logger::log_info(
+    "Computing length-weight coefficients once for {length(all_taxa)} unique taxa across versions..."
+  )
 
-      # Calculate catch data for v1
-      process_version_data(catch_info_v1, general_info_v1, asfis)
-    },
+  lwcoeffs <- tryCatch(
+    getLWCoeffs(taxa_list = all_taxa, asfis_list = asfis),
     error = function(e) {
-      logger::log_warn(
-        "Version 1 data not available or failed to process: {e$message}"
-      )
-      NULL
+      message("Error in getLWCoeffs, using local fallback: ", e$message)
+      readr::read_rds(system.file(
+        "length_weight_params.rds",
+        package = "peskas.zanzibar.data.pipeline"
+      ))
     }
   )
 
-  # Process Version 2 if available
-  v2_data <- tryCatch(
-    {
-      logger::log_info("Processing Version 2 surveys...")
-
-      catch_surveys_raw_v2 <-
-        coasts::download_parquet_from_cloud(
-          prefix = conf$surveys$wf_v2$raw$file_prefix,
-          provider = conf$storage$google$key,
-          options = conf$storage$google$options,
-          version = conf$surveys$wf_v2$raw$version
-        )
-
-      # Ensure we have a data frame, not a file path
-      if (is.character(catch_surveys_raw_v2)) {
-        catch_surveys_raw_v2 <- arrow::read_parquet(catch_surveys_raw_v2)
-      }
-
-      catch_surveys_raw_v2 <- catch_surveys_raw_v2 |>
-        dplyr::select(-dplyr::starts_with("_att"))
-
-      general_info_v2 <- preprocess_general(data = catch_surveys_raw_v2)
-      catch_info_v2 <- preprocess_catch(
-        data = catch_surveys_raw_v2,
-        version = "v2"
-      )
-
-      # Calculate catch data for v2
-      process_version_data(catch_info_v2, general_info_v2, asfis)
-    },
-    error = function(e) {
-      logger::log_warn(
-        "Version 2 data not available or failed to process: {e$message}"
-      )
-      NULL
-    }
+  # Flying fish manual fallback (no published coefficients in our reference set)
+  fly_lwcoeffs <- dplyr::tibble(
+    catch_taxon = "FLY",
+    n = 0,
+    lw_a = 0.00631,
+    lw_b = 3.05
   )
+  lwcoeffs$lw <- dplyr::bind_rows(lwcoeffs$lw, fly_lwcoeffs)
 
-  # Process Version 3 if available
-  v3_data <- tryCatch(
-    {
-      logger::log_info("Processing Version 3 surveys...")
-
-      catch_surveys_raw_v3 <-
-        coasts::download_parquet_from_cloud(
-          prefix = conf$surveys$wf_v3$raw$file_prefix,
-          provider = conf$storage$google$key,
-          options = conf$storage$google$options,
-          version = conf$surveys$wf_v3$raw$version
-        )
-
-      # Ensure we have a data frame, not a file path
-      if (is.character(catch_surveys_raw_v3)) {
-        catch_surveys_raw_v3 <- arrow::read_parquet(catch_surveys_raw_v3)
-      }
-
-      catch_surveys_raw_v3 <- catch_surveys_raw_v3 |>
-        dplyr::select(-dplyr::starts_with("_att"))
-
-      general_info_v3 <- preprocess_general(data = catch_surveys_raw_v3)
-      catch_info_v3 <- preprocess_catch(
-        data = catch_surveys_raw_v3,
-        version = "v3"
-      )
-
-      # Calculate catch data for v3
-      process_version_data(catch_info_v3, general_info_v3, asfis)
-    },
-    error = function(e) {
-      logger::log_warn(
-        "Version 3 data not available or failed to process: {e$message}"
-      )
-      NULL
+  # ---- Phase 3: assemble preprocessed data per version using shared lwcoeffs
+  process_one <- function(pre, version_label) {
+    if (is.null(pre)) {
+      return(NULL)
     }
-  )
+    tryCatch(
+      process_version_data(pre$catch_info, pre$general_info, lwcoeffs),
+      error = function(e) {
+        logger::log_warn("{version_label} processing failed: {e$message}")
+        NULL
+      }
+    )
+  }
+
+  v1_data <- process_one(v1_pre, "Version 1")
+  v2_data <- process_one(v2_pre, "Version 2")
+  v3_data <- process_one(v3_pre, "Version 3")
 
   # Combine available datasets
   if (!is.null(v1_data) && !is.null(v2_data) && !is.null(v3_data)) {
@@ -561,7 +537,6 @@ preprocess_wf_surveys <- function(
     options = conf$storage$google$options
   )
 }
-
 #' Process Version Data Helper Function
 #'
 #' Internal helper. Assembles per-version preprocessed data from already-reshaped
