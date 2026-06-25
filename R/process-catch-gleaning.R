@@ -160,7 +160,7 @@ preprocess_wf_gleaning <- function(log_threshold = logger::DEBUG) {
     dplyr::left_join(catch_totals, by = "submission_id") |>
     #fix fields
     dplyr::mutate(
-      size_class = dplyr::as.character(.data$size_class),
+      size_class = as.character(.data$size_class),
       happiness_rating = as.integer(.data$happiness_rating)
     )
 
