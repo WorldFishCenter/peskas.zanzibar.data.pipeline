@@ -28,14 +28,21 @@ storage.
   : Pre-process Blue Alliance Surveys
 - [`preprocess_wcs_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wcs_surveys.md)
   : Pre-process Zanzibar WCS Surveys
+- [`preprocess_wf_gleaning()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_gleaning.md)
+  : Pre-process WorldFish Zanzibar Gleaning Surveys
 - [`preprocess_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_surveys.md)
   : Pre-process and Combine WorldFish Surveys - Both Versions
+- [`reshape_gleaning_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_gleaning_catch.md)
+  : Reshape Gleaning Catch Data from Wide to Long Format
 - [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
   : Synchronize Validation Statuses with KoboToolbox
 - [`update_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/update_validation_status.md)
   : Update Validation Status in KoboToolbox
 - [`validate_ba_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_ba_surveys.md)
   : Validate Blue Alliance (BA) Surveys Data
+- [`validate_gleaning_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_gleaning_surveys.md)
+  : Validate Preprocessed Zanzibar Gleaning Surveys and Build a Clean
+  Dataset
 - [`validate_wcs_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wcs_surveys.md)
   : Validate WCS Surveys Data
 - [`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md)
@@ -87,6 +94,8 @@ reshaping, and trip processing.
   : Pre-process Blue Alliance Surveys
 - [`preprocess_wcs_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wcs_surveys.md)
   : Pre-process Zanzibar WCS Surveys
+- [`preprocess_wf_gleaning()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_gleaning.md)
+  : Pre-process WorldFish Zanzibar Gleaning Surveys
 - [`preprocess_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_surveys.md)
   : Pre-process and Combine WorldFish Surveys - Both Versions
 - [`process_species_list()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/process_species_list.md)
@@ -95,6 +104,8 @@ reshaping, and trip processing.
   : Reshape Catch Data with Length Groupings
 - [`reshape_catch_data_v2()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_catch_data_v2.md)
   : Reshape Catch Data with Length Groupings - Version 2
+- [`reshape_gleaning_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_gleaning_catch.md)
+  : Reshape Gleaning Catch Data from Wide to Long Format
 - [`reshape_species_groups()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_species_groups.md)
   : Reshape Species Groups from Wide to Long Format
 
@@ -153,6 +164,8 @@ rules.
   : Get length bounds for survey data
 - [`get_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_validation_status.md)
   : Get Validation Status from KoboToolbox
+- [`gleaning_validation_thresholds()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/gleaning_validation_thresholds.md)
+  : Default Thresholds for Gleaning Survey Validation
 - [`process_catch_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/process_catch_data.md)
   : Process catch data from surveys
 - [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
@@ -163,6 +176,9 @@ rules.
   : Validate Blue Alliance (BA) Surveys Data
 - [`validate_catches()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_catches.md)
   : Validate catches using quality flags
+- [`validate_gleaning_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_gleaning_surveys.md)
+  : Validate Preprocessed Zanzibar Gleaning Surveys and Build a Clean
+  Dataset
 - [`validate_prices()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_prices.md)
   : Validate market prices
 - [`validate_wcs_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wcs_surveys.md)
