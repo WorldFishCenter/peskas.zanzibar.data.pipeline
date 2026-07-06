@@ -582,6 +582,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::select(
       "submission_id",
       "n_catch",
+      "landing_date",
       "submission_date",
       # dplyr::ends_with("fishers"),
       "catch_outcome",
@@ -644,6 +645,10 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       alert_n_individuals = dplyr::case_when(
         !is.na(.data$individuals) & .data$individuals > max_n_individuals ~ "7",
         TRUE ~ NA_character_
+      ),
+      alert_n_date = dplyr::case_when(
+        .data$landing_date > .data$submission_date ~ "11",
+        TRUE ~ NA_character_
       )
     )
 
@@ -664,6 +669,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         .data$alert_n_individuals,
         .data$alert_form_incomplete,
         .data$alert_catch_info_incomplete,
+        .data$alert_n_date,
         sep = ","
       ) |>
         stringr::str_remove_all("NA,") |>
@@ -705,7 +711,10 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   catch_df_validated <-
     catch_df |>
-    dplyr::left_join(flags_id, by = c("submission_id", "submission_date")) |>
+    dplyr::left_join(
+      flags_id,
+      by = c("submission_id", "submission_date")
+    ) |>
     dplyr::group_by(.data$submission_id) |>
     dplyr::mutate(
       submission_alerts = paste(
