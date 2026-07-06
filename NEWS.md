@@ -1,3 +1,12 @@
+# peskas.zanzibar.data.pipeline 4.8.0
+
+## New Features
+
+- **Gleaning Survey Data Integration**: Added support for KoBoToolbox gleaning survey data collection and processing
+  - New survey type (`gleaning`) is now ingested from KoBoToolbox, preprocessed, and validated alongside existing catch surveys
+  - Gleaning data captures informal fisheries activity not covered by formal catch surveys, providing a more complete picture of small-scale fishing effort
+  - Gleaning submissions are now included in the unified validation pipeline with tailored quality checks
+
 # peskas.zanzibar.data.pipeline 4.7.0
 
 ## New Features

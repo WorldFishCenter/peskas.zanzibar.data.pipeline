@@ -5,7 +5,6 @@ default:
       asset_id: !expr Sys.getenv('WCS_SURVEYS_ID')
       username: !expr Sys.getenv('WCS_SURVEYS_UNAME')
       password: !expr Sys.getenv('WCS_SURVEYS_PSSW')
-
     wf_v1:
       asset_id: !expr Sys.getenv('WF_SURVEYS_ID')
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
@@ -18,6 +17,11 @@ default:
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
     wf_v3:
       asset_id: !expr Sys.getenv('WF_SURVEYS_ID_V3')
+      username: !expr Sys.getenv('WF_SURVEYS_UNAME')
+      password: !expr Sys.getenv('WF_SURVEYS_PSSW')
+      token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
+    wf_gleaning:
+      asset_id: !expr Sys.getenv('WF_GLEANING_ID')
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
@@ -47,7 +51,6 @@ default:
         K_weight_max: 2
         K_length_max: 2
         K_price_max: 2
-
     wf_v1:
       raw:
         file_prefix: wf-surveys-raw
@@ -71,6 +74,16 @@ default:
     wf_v3:
       raw:
         file_prefix: wf-v3-surveys-raw
+        version: latest
+    wf_gleaning:
+      raw:
+        file_prefix: wf-surveys_gleaning-raw
+        version: latest
+      preprocessed:
+        file_prefix: wf-surveys_gleaning-preprocessed
+        version: latest
+      validated:
+        file_prefix: wf-surveys_gleaning-validated
         version: latest
     ba:
       version:

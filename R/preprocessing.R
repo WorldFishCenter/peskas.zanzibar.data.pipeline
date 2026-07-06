@@ -110,9 +110,9 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       )
     )
 
-  trip_info = pt_nest_trip(catch_surveys_raw)
-  catch_info = pt_nest_catch(catch_surveys_raw)
-  market_info = pt_nest_market(catch_surveys_raw)
+  trip_info <- pt_nest_trip(catch_surveys_raw)
+  catch_info <- pt_nest_catch(catch_surveys_raw)
+  market_info <- pt_nest_market(catch_surveys_raw)
 
   wcs_surveys <-
     general_info |>
@@ -537,7 +537,6 @@ preprocess_wf_surveys <- function(
     options = conf$storage$google$options
   )
 }
-
 #' Process Version Data Helper Function
 #'
 #' Internal helper. Assembles per-version preprocessed data from already-reshaped
