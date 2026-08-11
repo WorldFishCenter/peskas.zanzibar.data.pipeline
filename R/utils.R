@@ -75,7 +75,14 @@ read_config <- function() {
   )
 
   logger::log_info("Using configutation: {attr(conf, 'config')}")
-  logger::log_debug("Running with parameters {conf}")
+  # Never log the resolved config: it carries the GCP service-account key,
+  # MongoDB connection strings, Kobo passwords and API tokens in plaintext.
+  # Log only the non-sensitive storage targets actually in use.
+  logger::log_debug(
+    "Buckets -> main: {conf$storage$google$options$bucket}, ",
+    "coasts: {conf$storage$google$options_coasts$bucket}, ",
+    "api: {conf$storage$google$options_api$bucket}"
+  )
 
   conf
 }
