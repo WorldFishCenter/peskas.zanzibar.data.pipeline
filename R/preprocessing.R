@@ -57,13 +57,10 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     readr::read_rds() |>
     purrr::keep_at(c("taxa", "gear", "vessels", "sites", "geo")) |>
     purrr::map(
-      ~ dplyr::filter(
-        .x,
-        stringr::str_detect(
-          .data$form_id,
-          paste0("(^|,\\s*)", !!target_form_id, "(\\s*,|$)")
-        )
-      )
+      ~ dplyr::filter(.x, stringr::str_detect(.data$form_id, ...))
+    ) |>
+    purrr::map(
+      ~ dplyr::select(.x, -dplyr::any_of(c("country", "latitude", "longitude")))
     )
 
   catch_surveys_raw <-
@@ -348,8 +345,10 @@ preprocess_wf_surveys <- function(
     readr::read_rds() |>
     purrr::keep_at(c("taxa", "gear", "vessels", "sites", "geo")) |>
     purrr::map(
-      ~ dplyr::filter(.x, stringr::str_detect(.data$form_id, ids_pattern)) |>
-        dplyr::distinct()
+      ~ dplyr::filter(.x, stringr::str_detect(.data$form_id, ...))
+    ) |>
+    purrr::map(
+      ~ dplyr::select(.x, -dplyr::any_of(c("country", "latitude", "longitude")))
     )
   # metadata <- get_metadata()
 
