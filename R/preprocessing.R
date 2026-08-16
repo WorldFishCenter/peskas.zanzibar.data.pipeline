@@ -37,9 +37,11 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 
   conf <- read_config()
 
-  target_form_id <- get_airtable_form_id(
-    kobo_asset_id = conf$ingestion$wcs$asset_id,
-    conf = conf
+  ids_pattern <- form_id_pattern(
+    get_airtable_form_id(
+      kobo_asset_id = conf$ingestion$wcs$asset_id,
+      conf = conf
+    )
   )
 
   assets <-
@@ -57,10 +59,17 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     readr::read_rds() |>
     purrr::keep_at(c("taxa", "gear", "vessels", "sites", "geo")) |>
     purrr::map(
-      ~ dplyr::filter(.x, stringr::str_detect(.data$form_id, ...))
+      ~ dplyr::filter(
+        .x,
+        stringr::str_detect(.data$form_id, .env$ids_pattern)
+      )
     ) |>
     purrr::map(
-      ~ dplyr::select(.x, -dplyr::any_of(c("country", "latitude", "longitude")))
+      ~ dplyr::select(
+        .x,
+        -dplyr::any_of(c("country", "latitude", "longitude"))
+      ) |>
+        dplyr::distinct()
     )
 
   catch_surveys_raw <-
@@ -318,16 +327,12 @@ preprocess_wf_surveys <- function(
     options = conf$storage$google$options
   )
 
-  target_form_ids <- purrr::map_chr(
-    conf$ingestion[c("wf_v1", "wf_v2", "wf_v3")],
-    ~ get_airtable_form_id(kobo_asset_id = .x$asset_id, conf = conf)
-  )
-
-  # Build a single regex that matches any of the IDs
-  ids_pattern <- paste0(
-    "(^|,\\s*)(",
-    paste(target_form_ids, collapse = "|"),
-    ")(\\s*,|$)"
+  # Assets are shared across form versions, so match any of the three IDs
+  ids_pattern <- form_id_pattern(
+    purrr::map_chr(
+      conf$ingestion[c("wf_v1", "wf_v2", "wf_v3")],
+      ~ get_airtable_form_id(kobo_asset_id = .x$asset_id, conf = conf)
+    )
   )
 
   assets <-
@@ -345,10 +350,17 @@ preprocess_wf_surveys <- function(
     readr::read_rds() |>
     purrr::keep_at(c("taxa", "gear", "vessels", "sites", "geo")) |>
     purrr::map(
-      ~ dplyr::filter(.x, stringr::str_detect(.data$form_id, ...))
+      ~ dplyr::filter(
+        .x,
+        stringr::str_detect(.data$form_id, .env$ids_pattern)
+      )
     ) |>
     purrr::map(
-      ~ dplyr::select(.x, -dplyr::any_of(c("country", "latitude", "longitude")))
+      ~ dplyr::select(
+        .x,
+        -dplyr::any_of(c("country", "latitude", "longitude"))
+      ) |>
+        dplyr::distinct()
     )
   # metadata <- get_metadata()
 
