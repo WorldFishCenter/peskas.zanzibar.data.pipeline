@@ -73,6 +73,8 @@ reshaping, and trip processing.
 - [`calculate_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_catch.md)
   : Calculate Catch Weight from Length-Weight Relationships or Bucket
   Measurements
+- [`form_id_pattern()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/form_id_pattern.md)
+  : Build a Form-ID Match Pattern for Airtable Asset Tables
 - [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md)
   : Get Length-Weight Coefficients and Morphological Data for Species
 - [`get_airtable_form_id()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_airtable_form_id.md)
@@ -212,6 +214,8 @@ common data manipulation and processing capabilities.
 
 - [`add_version()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/add_version.md)
   : Add timestamp and sha string to a file name
+- [`form_id_pattern()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/form_id_pattern.md)
+  : Build a Form-ID Match Pattern for Airtable Asset Tables
 - [`get_airtable_form_id()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_airtable_form_id.md)
   : Get Airtable Form ID from KoBoToolbox Asset ID
 - [`map_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/map_surveys.md)
