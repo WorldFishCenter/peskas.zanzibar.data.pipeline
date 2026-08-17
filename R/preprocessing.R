@@ -125,6 +125,9 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::left_join(trip_info, by = "survey_id") |>
     dplyr::left_join(catch_info, by = "survey_id")
 
+  # Only the GAUL columns are joined onto the surveys; narrowing here (rather
+  # than joining the whole districts table and discarding the extras later)
+  # also makes the join 1:1, so a duplicated district row cannot fan out.
   geo <-
     assets$geo |>
     dplyr::select(
@@ -132,7 +135,8 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
       "gaul_1_code",
       "gaul_2_name",
       "gaul_2_code"
-    )
+    ) |>
+    dplyr::distinct()
 
   processed_surveys <-
     wcs_surveys |>
@@ -166,7 +170,7 @@ preprocess_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::select(-c("landing_site", "form_id")) |>
     #dplyr::relocate("site", .after = "district") |>
     dplyr::rename(landing_site = "site") |>
-    dplyr::left_join(assets$geo, by = c("gaul_2_code")) |>
+    dplyr::left_join(geo, by = c("gaul_2_code")) |>
     dplyr::select(
       submission_id = "survey_id",
       "submission_date",
