@@ -1,5 +1,188 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.9.0
+
+### Bug Fixes
+
+- **FishBase releases are now pinned, and a missing coefficient fails
+  the run**: `rfishbase` reads a remote parquet dataset over the
+  network, so an unpinned `"latest"` let a new FishBase release reach
+  the pipeline the moment a container was rebuilt, with no code change.
+  Release 26.06 dissolved `Caesionidae` into `Lutjanidae` and `Scaridae`
+  into `Labridae` — both family names survive with zero species in them
+  — so any taxon named after one expanded to nothing, got no
+  length-weight coefficients, and weighed `NA`, which sums to zero. The
+  releases are now pinned per server in `inst/config.yml` under
+  `metadata:fishbase` and threaded through all five `rfishbase` reads in
+  [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md),
+  which previously could mix snapshots within a single run. `rfishbase`
+  is additionally pinned to 5.0.1 in both Dockerfiles as the last
+  install step, because `remotes::install_local(dependencies = TRUE)`
+  upgrades it otherwise.
+
+- **[`assert_taxa_coverage()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/assert_taxa_coverage.md)
+  fails the run when a taxon resolves to no coefficients**: previously a
+  taxon that matched nothing was dropped in silence and the pipeline
+  stayed green while publishing a hole.
+
+- **Unmatched taxa are now logged**:
+  [`match_species_from_taxa()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/match_species_from_taxa.md)
+  dropped any name that matched no species without a warning.
+
+- **SeaLifeBase routing corrected**:
+  [`process_species_list()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/process_species_list.md)
+  routed only ISSCAAP groups 57, 45, 43, 42 and 56 to SeaLifeBase,
+  sending sea cucumbers, gastropods, oysters, mussels, scallops and
+  mantis shrimp to FishBase, where they matched nothing and were
+  dropped. Routing is now ISSCAAP \>= 40.
+
+- **Species names ending in “idae” are no longer read as families**: the
+  rank test placed the family suffix before the species test, so
+  `Haliotis midae` and `Jordanella floridae` were searched as families
+  and matched nothing.
+
+- **Length-type conversion recovers 16 taxa that weighed `NA`**
+  ([`get_length_conversions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_conversions.md),
+  [`convert_lw_to_tl()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/convert_lw_to_tl.md)):
+  FishBase tags every published length-weight pair with the length type
+  the original study measured, and for tunas, billfish and several
+  carangids that is fork length.
+  [`get_length_weight_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_weight_batch.md)
+  kept only `Type == "TL"`, so those taxa got no coefficients at all and
+  every length-measured catch row of them weighed `NA`. The conversions
+  are published data in FishBase’s POPLL table, which this pipeline
+  never read;
+  [`coasts::get_taxa_morphometrics()`](https://rdrr.io/pkg/coasts/man/get_taxa_morphometrics.html)
+  already does. Reading it restates `a` on a total-length basis
+  (`a_TL = a * ratio^b`, `b` unchanged) and recovers
+  `ALB BET BLM BUM CJC EWM FLY LJK LTQ LWO MLS NAB NXM NXP QJR SWO`.
+  Coverage goes from 98 to 114 of 134 codes, and **none of the 98
+  coefficients that already resolved changed** — the conversion is
+  applied only to taxa that would otherwise have nothing.
+
+  Validated against the 632 species carrying both a native TL pair and
+  an FL one: converting halves the median error in predicted weight
+  (15.6% against 27.5% for using the FL pair as-is), and against the
+  1,186 with both TL and SL pairs it cuts it fourfold (16.8% against
+  70.6%). Ratios are physically sensible (median FL/TL 0.962, SL/TL
+  0.831). Compared against FishBase’s independent TL-basis Bayesian
+  estimates for the recovered taxa, converting is closer than raw on 10
+  of 15.
+
+- **Retired survey codes are remapped on read**
+  ([`reshape_catch_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_catch_data.md)):
+  editing a KoBoToolbox form’s choice list does not rewrite submissions
+  already collected, so a retired code persists in historical data
+  indefinitely. `AHI` (171 rows) and `BFL` (6 rows) had additionally
+  been removed from the Airtable taxa table, which orphaned them —
+  [`map_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/map_surveys.md)
+  left those rows with `NA` scientific name and alpha3 code. They now
+  remap to `BAF` (*Ablennes hians*) and `TEI` (*Pterocaesio pisang*),
+  joining the `TUN` and `SKH` remaps that were already there.
+
+- **The `MAC` correction now runs early enough to matter**: `MAC` was
+  wrongly offered under the sharks-and-rays group in the form, and all
+  150 rows carrying it are `fish_group == "SR"` with a median length of
+  85 cm — eagle rays, not the Atlantic mackerel ASFIS maps `MAC` to. The
+  `SR`/`MAC` → `AQX` rule existed in
+  [`preprocess_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_surveys.md)
+  but ran *after*
+  [`calculate_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_catch.md),
+  so the rows were weighed as `MAC` (which resolves to no coefficients,
+  giving `NA`) and only relabelled afterwards. Moving it into
+  [`reshape_catch_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_catch_data.md)
+  lets them pick up the `AQX` coefficients: 137 of 190 `AQX` rows now
+  carry a weight, median 34.9 kg, where the 150 previously carried none.
+
+- **Morphology bounds no longer silently disable length validation**:
+  `min(CommonLength, na.rm = TRUE)` returns `Inf` for a taxon whose
+  matched species all lack that field, and the permissiveness step then
+  computed `Inf - 0.75 * Inf` = `NaN`. Every comparison against `NaN` is
+  `NA`, which `case_when()` treats as no-match, so alert codes 3 and 4
+  never fired for those taxa — a missing bound was indistinguishable
+  from a passed check. `safe_min()` now yields `NA` rather than `Inf`,
+  and because FishBase populates `CommonLength` for only 10% of species
+  against 91% for `Length`, missing values are estimated as
+  `0.625 * Length` — the median ratio across the 3,748 species carrying
+  both (`common_length_ratio()`). All 128 taxa with morphology now have
+  usable bounds, against 20 previously broken. Expect a wave of new
+  length alerts on the first run: those records were never checked
+  before.
+
+- **Search-name aliases fix six taxa the ASFIS names could not match**
+  ([`taxa_search_aliases()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/taxa_search_aliases.md),
+  [`apply_taxa_aliases()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/apply_taxa_aliases.md)):
+  a handful of ASFIS reference names match nothing in the taxonomic
+  backbone, so the taxon is dropped and every catch row of it weighs
+  `NA`. `CLP` is named `Clupeidae`, which FishBase emptied of
+  Indo-Pacific species in 2022 — it now searches `Dorosomatidae`,
+  matching the row already in Timor’s equivalent table. The rest are
+  synonyms that have moved on: `ESR` to *Stolephorus commersonnii*,
+  `RPO` to *Parupeneus macronemus*, `LZV` to *Ellochelon vaigiensis*,
+  `OQC` to *Octopus cyanea*, and `VMX` — *Valamugil*, a genus the
+  backbone no longer carries — to *Osteomugil* and *Moolgarda*. The
+  table carries an explicit `rank` because the suffix rules in
+  [`process_species_list()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/process_species_list.md)
+  cannot recognise a bare genus name.
+
+  `CRA` (“marine crabs nei”, *Brachyura*) is deliberately not aliased:
+  it is an infraorder, and SeaLifeBase carries no rank between order
+  *Decapoda* and family, so choosing a target means deciding which crab
+  families Zanzibar lands.
+
+- **`OQC` now gets the octopus mantle-length conversion**: `OCZ`
+  (*Octopus spp*) was special-cased in three places — an ML-only
+  coefficient filter, the arm-span-to-mantle `/5.5` conversion in
+  [`calculate_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_catch.md),
+  and the `min_length` floor — but `OQC` (*Octopus cyaneus*) was not,
+  despite being the larger of the two in the data at 694 rows with 484
+  lengths, median 85 cm. `OQC` resolves to a mantle-length pair, so
+  applying it to arm-span unconverted weighed a single octopus at **263
+  kg** instead of 2.43 kg. This was latent while `OQC` had no
+  coefficients and would have gone live with the alias above.
+
+- **Fixed a duplicate join key for `FLY`**:
+  [`preprocess_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_surveys.md)
+  appended a hardcoded flying-fish coefficient unconditionally. Now that
+  the conversion recovers Exocoetidae pairs,
+  [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md)
+  returns a `FLY` row of its own, and two rows on the same key would
+  have doubled every flying fish catch record in
+  [`calculate_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_catch.md).
+  The manual value now replaces rather than appends, and stays
+  authoritative: FishBase’s recovered pairs weigh a 30 cm flying fish at
+  498 g against the hardcoded 202 g, and changing that is a separate
+  decision.
+
+- **Removed a dead fallback in
+  [`preprocess_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_surveys.md)**:
+  the `tryCatch` around
+  [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md)
+  read `inst/length_weight_params.rds`, which is not in the package, so
+  the fallback could only ever fail — while hiding the original error
+  behind it.
+
+### Known Issues
+
+Measured 2026-09-06 against FishBase 25.04 / SeaLifeBase 24.07 over the
+live KoBo data: **122 of 134 codes resolve length-weight coefficients**,
+up from 98 before this release. The other 12 form the documented
+baseline in
+[`assert_taxa_coverage()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/assert_taxa_coverage.md),
+so any *new* loss fails the run. `CJX` and `PWT` are deliberately not in
+it — they resolve at 25.04 and are the two codes that break at 26.06, so
+a release move fails the check.
+
+- **Wrong reference name (2)** — `MAE`, `TAG` name species absent from
+  FAO 51.
+- **No published coefficients (1)** — `GQT` (*Plectorhinchus gaterinus*)
+  occurs in FAO 51 but FishBase carries no length-weight pair for it in
+  any length type. Nothing to convert, nothing to alias.
+- **No convertible length type (5)** — `KAK`, `LHV`, `RMB`, `RTY`,
+  `SSP`.
+- **Not a taxon, or a rank the backbone omits (4)** — `MZZ`, `UNKN`,
+  `UNK`, and `CRA` (the infraorder *Brachyura*).
+
 ## peskas.zanzibar.data.pipeline 4.8.0
 
 ### New Features

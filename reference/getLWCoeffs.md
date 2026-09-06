@@ -7,7 +7,13 @@ single workflow.
 ## Usage
 
 ``` r
-getLWCoeffs(taxa_list = NULL, asfis_list = NULL)
+getLWCoeffs(
+  taxa_list = NULL,
+  asfis_list = NULL,
+  fb_version = "latest",
+  slb_version = "latest",
+  fao_areas = 51
+)
 ```
 
 ## Arguments
@@ -19,6 +25,22 @@ getLWCoeffs(taxa_list = NULL, asfis_list = NULL)
 - asfis_list:
 
   ASFIS list data frame
+
+- fb_version:
+
+  FishBase release to read, e.g. `"25.04"`. Pinned in `inst/config.yml`
+  under `metadata:fishbase`; `"latest"` is unsafe.
+
+- slb_version:
+
+  SeaLifeBase release to read, e.g. `"24.07"`.
+
+- fao_areas:
+
+  FAO major fishing areas to keep species from. Zanzibar, Kenya and
+  Mozambique are all area 51 (Western Indian Ocean); set it from
+  `metadata:fishbase:fao_areas` in config when porting to another
+  country.
 
 ## Value
 
