@@ -41,9 +41,10 @@ A tibble with the following columns:
 \description{
 Calculates total catch weight using either length-weight relationships or bucket measurements.
 The function prioritizes length-based calculations when available, falling back to bucket-based
-measurements when length data is missing. For Octopus (OCZ), the function converts total length (TL)
-to mantle length (ML) by dividing TL by 5.5 before applying the length-weight formula.
-This accounts for species-specific differences in body morphology.
+measurements when length data is missing. For octopus (\code{OCZ} and \code{OQC}), the
+function converts the recorded arm-span to mantle length by dividing by 5.5
+before applying the length-weight formula, because the published
+coefficients for both are fitted on mantle length.
 }
 \details{
 The function calculates catch weight using two methods:

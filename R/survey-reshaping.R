@@ -694,11 +694,14 @@ preprocess_catch <- function(data = NULL, version = NULL) {
       dplyr::mutate(
         dplyr::across(c("n_buckets":"length"), ~ as.double(.x))
       ) |>
-      # replace TUN with TUS and SKH to Carcharhiniformes as more pertinent
+      # Retired codes stay in historical submissions -- editing a Kobo form does
+      # not rewrite data already collected. Remap them on read.
       dplyr::mutate(
         catch_taxon = dplyr::case_when(
           .data$catch_taxon == "TUN" ~ "TUS",
           .data$catch_taxon == "SKH" ~ "CVX",
+          .data$catch_taxon == "AHI" ~ "BAF",
+          .data$catch_taxon == "BFL" ~ "TEI",
           TRUE ~ .data$catch_taxon
         )
       )
@@ -735,11 +738,18 @@ preprocess_catch <- function(data = NULL, version = NULL) {
       dplyr::mutate(
         dplyr::across(c("n_buckets":"length"), ~ as.double(.x))
       ) |>
-      # replace TUN with TUS and SKH to Carcharhiniformes as more pertinent
+      # Retired codes stay in historical submissions -- editing a Kobo form does
+      # not rewrite data already collected. Remap them on read.
       dplyr::mutate(
         catch_taxon = dplyr::case_when(
           .data$catch_taxon == "TUN" ~ "TUS",
           .data$catch_taxon == "SKH" ~ "CVX",
+          .data$catch_taxon == "AHI" ~ "BAF",
+          .data$catch_taxon == "BFL" ~ "TEI",
+          # MAC was wrongly offered under the sharks-and-rays group; those rows
+          # are eagle rays. Must run before the taxa list is built, or the
+          # weight is computed against MAC and lost.
+          .data$fish_group == "SR" & .data$catch_taxon == "MAC" ~ "AQX",
           is.na(.data$catch_taxon) & .data$fish_group == "MZZ" ~ "MZZ",
           TRUE ~ .data$catch_taxon
         )

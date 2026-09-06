@@ -425,25 +425,31 @@ preprocess_wf_surveys <- function(
     "Computing length-weight coefficients once for {length(all_taxa)} unique taxa across versions..."
   )
 
-  lwcoeffs <- tryCatch(
-    getLWCoeffs(taxa_list = all_taxa, asfis_list = asfis),
-    error = function(e) {
-      message("Error in getLWCoeffs, using local fallback: ", e$message)
-      readr::read_rds(system.file(
-        "length_weight_params.rds",
-        package = "peskas.zanzibar.data.pipeline"
-      ))
-    }
+  # Releases are pinned in config. Left at "latest", a container rebuild can
+  # silently change published catch.
+  lwcoeffs <- getLWCoeffs(
+    taxa_list = all_taxa,
+    asfis_list = asfis,
+    fb_version = conf$metadata$fishbase$fishbase_version %||% "latest",
+    slb_version = conf$metadata$fishbase$sealifebase_version %||% "latest",
+    fao_areas = conf$metadata$fishbase$fao_areas %||% 51
   )
 
-  # Flying fish manual fallback (no published coefficients in our reference set)
+  # FLY now also resolves from FishBase, so replace rather than append -- two
+  # rows would duplicate the join key. The manual value stays authoritative,
+  # since the two disagree by roughly 2.5x and switching needs its own review.
   fly_lwcoeffs <- dplyr::tibble(
     catch_taxon = "FLY",
     n = 0,
     lw_a = 0.00631,
     lw_b = 3.05
   )
-  lwcoeffs$lw <- dplyr::bind_rows(lwcoeffs$lw, fly_lwcoeffs)
+  lwcoeffs$lw <- lwcoeffs$lw |>
+    dplyr::filter(.data$catch_taxon != "FLY") |>
+    dplyr::bind_rows(fly_lwcoeffs)
+
+  # Assert after the manual coefficients are pooled in, so FLY counts as covered
+  assert_taxa_coverage(taxa_list = all_taxa, lw = lwcoeffs$lw)
 
   # ---- Phase 3: assemble preprocessed data per version using shared lwcoeffs
   process_one <- function(pre, version_label) {
@@ -481,14 +487,9 @@ preprocess_wf_surveys <- function(
   # Sort final combined data
 
   # Fix incorrect entries
-  preprocessed_data_clean <-
-    preprocessed_data |>
-    dplyr::mutate(
-      catch_taxon = dplyr::case_when(
-        .data$fish_group == "SR" & .data$catch_taxon == "MAC" ~ "AQX",
-        TRUE ~ .data$catch_taxon
-      )
-    )
+  # The SR/MAC -> AQX fix moved into reshape_catch_data(). Here it ran after
+  # calculate_catch(), so rows were relabelled but never weighed.
+  preprocessed_data_clean <- preprocessed_data
 
   frequent_groups <- preprocessed_data_clean |>
     dplyr::filter(!is.na(.data$fish_group), !is.na(.data$catch_taxon)) |>

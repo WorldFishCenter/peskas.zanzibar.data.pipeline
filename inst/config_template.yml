@@ -420,6 +420,21 @@ default:
       #     countries: Countries
       #     pds_devices: pds_devices
 
+    # Pinned FishBase/SeaLifeBase data releases. rfishbase reads a remote
+    # parquet dataset over the network, so an unpinned "latest" lets a new
+    # release reach the pipeline the moment a container is rebuilt, with no code
+    # change. Release 26.06 dissolved Caesionidae into Lutjanidae and Scaridae
+    # into Labridae; both family names survive with zero species in them, so any
+    # taxon named after one silently lost its coefficients and weighed NA --
+    # which sums to zero. Move these deliberately, with a before/after
+    # measurement, and keep the two servers pinned independently.
+    fishbase:
+      # FAO major fishing area(s) to keep species from. 51 is the
+      # Western Indian Ocean; Timor uses [57, 71].
+      fao_areas: [51]
+      fishbase_version: "25.04"
+      sealifebase_version: "24.07"      # 25.04 SLB schema breaks rfishbase 5.0.1
+
   # ===========================================================================
   # VALIDATION — Statistical validation thresholds
   # ===========================================================================
