@@ -103,6 +103,10 @@ default:
         K_length_max: 2
         K_price_max: 2
   pds:
+    # Keep trips that happened at these customers' communities, rather than
+    # trips whose device is under them today. A retired or reassigned tracker
+    # keeps its history this way. See `?coasts::select_country_trips`.
+    select_by: community
     customers:
       - "WorldFish - Tanzania AP"
       - "WorldFish - Zanzibar"
