@@ -46,7 +46,7 @@ recovered \code{CLP}, \code{ESR}, \code{LZV}, \code{OQC}, \code{RPO} and \code{V
 (\emph{Brachyura}) is left: an infraorder, a rank the backbone omits.}
 \item{No TL-type coefficients}{The species resolves and occurs in FAO 51
 and has published (a, b) pairs, but every one is fork, standard or
-another length type. \code{\link[=get_length_conversions]{get_length_conversions()}} now restates most of
+another length type. \code{\link[coasts:convert_lw_to_tl]{coasts::convert_lw_to_tl()}} now restates most of
 these on a total-length basis, which recovered 15 codes including
 swordfish, the tunas, the marlins and the trevallies. The five left
 are \code{KAK}, \code{LHV}, \code{RMB}, \code{RTY} and \code{SSP}, which have no usable
