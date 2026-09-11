@@ -1,5 +1,25 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.9.1
+
+### Refactor
+
+- **The total-length restatement now comes from coasts**:
+  `get_length_conversions()` and `convert_lw_to_tl()` are deleted;
+  [`get_length_weight_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_weight_batch.md)
+  calls
+  [`coasts::convert_lw_to_tl()`](https://github.com/WorldFishCenter/peskas.coasts)
+  instead. The same arithmetic existed here, in Mozambique and in Timor,
+  written three times with different semantics. coasts passes
+  unconvertible rows through rather than dropping them, so the call site
+  keeps `Type == "TL"` to preserve the behaviour this pipeline had.
+  Verified against the live taxa list at FishBase 25.04 / SeaLifeBase
+  24.07, area 51: the same 16 rows restated for the same 7 taxa (`BET`,
+  `BLM`, `BUM`, `MLS`, `NXT`, `QJR`, `SWO`), and the final table is
+  [`identical()`](https://rdrr.io/r/base/identical.html) across all 43
+  codes — zero change to any published coefficient.
+- **`coasts (>= 4.13.0)`** is now a declared floor in `DESCRIPTION`.
+
 ## peskas.zanzibar.data.pipeline 4.9.0
 
 ### Bug Fixes
@@ -42,11 +62,10 @@
   and matched nothing.
 
 - **Length-type conversion recovers 16 taxa that weighed `NA`**
-  ([`get_length_conversions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_conversions.md),
-  [`convert_lw_to_tl()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/convert_lw_to_tl.md)):
-  FishBase tags every published length-weight pair with the length type
-  the original study measured, and for tunas, billfish and several
-  carangids that is fork length.
+  (`get_length_conversions()`, `convert_lw_to_tl()`): FishBase tags
+  every published length-weight pair with the length type the original
+  study measured, and for tunas, billfish and several carangids that is
+  fork length.
   [`get_length_weight_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_weight_batch.md)
   kept only `Type == "TL"`, so those taxa got no coefficients at all and
   every length-measured catch row of them weighed `NA`. The conversions

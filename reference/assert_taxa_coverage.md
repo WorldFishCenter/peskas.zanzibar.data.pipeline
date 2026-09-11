@@ -86,7 +86,7 @@ assert_taxa_coverage(
 
   :   The species resolves and occurs in FAO 51 and has published (a, b)
       pairs, but every one is fork, standard or another length type.
-      [`get_length_conversions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_conversions.md)
+      [`coasts::convert_lw_to_tl()`](https://rdrr.io/pkg/coasts/man/convert_lw_to_tl.html)
       now restates most of these on a total-length basis, which
       recovered 15 codes including swordfish, the tunas, the marlins and
       the trevallies. The five left are `KAK`, `LHV`, `RMB`, `RTY` and

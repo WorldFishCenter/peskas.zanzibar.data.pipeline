@@ -77,8 +77,6 @@ reshaping, and trip processing.
 - [`calculate_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_catch.md)
   : Calculate Catch Weight from Length-Weight Relationships or Bucket
   Measurements
-- [`convert_lw_to_tl()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/convert_lw_to_tl.md)
-  : Restate a length-weight pair on a total-length basis
 - [`form_id_pattern()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/form_id_pattern.md)
   : Build a Form-ID Match Pattern for Airtable Asset Tables
 - [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md)
@@ -87,8 +85,6 @@ reshaping, and trip processing.
   : Get Airtable Form ID from KoBoToolbox Asset ID
 - [`get_fao_groups()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_fao_groups.md)
   : Extract and Format FAO Taxonomic Groups
-- [`get_length_conversions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_conversions.md)
-  : Length-type conversion ratios from FishBase POPLL
 - [`get_length_weight_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_weight_batch.md)
   : Get Length-Weight and Morphological Parameters for Species (Batch
   Version)
@@ -134,16 +130,12 @@ datasets for analysis.
 - [`calculate_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/calculate_catch.md)
   : Calculate Catch Weight from Length-Weight Relationships or Bucket
   Measurements
-- [`convert_lw_to_tl()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/convert_lw_to_tl.md)
-  : Restate a length-weight pair on a total-length basis
 - [`expand_taxa()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/expand_taxa.md)
   : Expand Taxonomic Vectors into a Data Frame
 - [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md)
   : Get Length-Weight Coefficients and Morphological Data for Species
 - [`get_fao_groups()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_fao_groups.md)
   : Extract and Format FAO Taxonomic Groups
-- [`get_length_conversions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_conversions.md)
-  : Length-type conversion ratios from FishBase POPLL
 - [`get_length_weight_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_weight_batch.md)
   : Get Length-Weight and Morphological Parameters for Species (Batch
   Version)
