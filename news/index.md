@@ -6,48 +6,82 @@ Fixes from a cross-country audit of the validated `landings` parquet
 every country publishes to `gs://peskas-api-prod`. The invariant under
 audit — `tot_catch_kg == sum(catch_kg)` within `trip_id` at the moment
 of export — held at 0% failure before these changes and still holds at
-0% after.
+0% after, in both exports. Measured against
+`wf-surveys-validated__20260913024858_f4f1dd9__.parquet` (16,711 rows,
+10,862 trips) and
+`wf-surveys-preprocessed__20260913024052_f4f1dd9__.parquet` (24,036
+rows, 13,857 trips): the validated export goes to 16,710 rows / 10,861
+trips with the total catch unchanged at 879,764.6 kg, and the raw export
+keeps its row and trip counts.
 
 ### Bug Fixes
 
-- **`n_fishers` can no longer be published as `0`**
+- **`n_fishers = 0` now raises alert 13 instead of being published**
   ([`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md)):
-  the API schema declares `n_fishers` with a minimum of 1, and every
-  per-fisher rate (`cpue`, `rpue`) divides by it, so a zero yields `Inf`
-  rather than `NA` and propagates as a number rather than a gap. The
-  three crew components are now nulled when they total zero, so
-  `format_api_wf()` sums them to `NA`. **Data impact**: one published
-  row, `TRIP_646533624` (2025-02-24, Hand Line, catch 0 kg), moves from
-  `n_fishers = 0` to `n_fishers = NA`. Nulls go from 84 to 85 rows, the
-  published minimum from 0 to 1. No catch value changes, and no row
-  enters or leaves the dataset.
+  the API schema declares `n_fishers` with a minimum of 1, but a trip
+  whose three fisher counts were all zero was published as `0`, and
+  every per-fisher metric divided by it into `Inf` or `NaN`. Zero
+  fishers is not a count — the trip happened and the crew was simply
+  never entered. The WF validator had no check for it at all:
+  [`validate_wcs_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wcs_surveys.md)
+  in the same file already flags `n_fishers <= 0` as alert 13 and
+  infinite effort indicators as alert 12, and
+  [`validate_ba_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_ba_surveys.md)
+  flags a zero crew as its alert 2, but the WF branch carried neither.
+  Zero-crew trips were therefore excluded only by accident, when
+  `cpue`/`rpue` divided into `Inf` and tripped the outlier alerts 9 and
+  10 — which catches a zero crew that landed a catch and misses one that
+  did not, because `0 / 0` is `NaN`, not `Inf`.
 
-  The null-out deliberately runs on `clean_data`, *after* the composite
-  flags are computed, not before. Three further submissions
+  [`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md)
+  now mirrors the WCS branch exactly: alerts 9 and 10 are guarded with
+  `!is.infinite()`, alert 12 fires on an infinite effort indicator, and
+  alert 13 fires on `n_fishers <= 0`. Alert 13 is deliberately not
+  narrowed by `catch_outcome` — that narrowing is what let the same
+  defect through on no-catch trips. (Mozambique’s
+  `validate_surveys_adnap()` carries the identical fix as its alert 11;
+  the code number differs because Zanzibar already uses 11 for the
+  landing-date check and 13 for this condition in its WCS branch.)
+
+  **Data impact**: one submission leaves the validated set — `646533624`
+  (2025-02-24, Hand Line), caught by alert 13 alone, since its
+  `catch_outcome` is `"0"` and `0 / 0` gives `NaN` rather than `Inf`.
+  Published rows go 16,711 → 16,710 and trips 10,862 → 10,861, removing
+  the only `n_fishers = 0` row; the published minimum goes from 0 to 1.
+  **No catch is lost** — the submission records `catch_kg = 0` — and the
+  total stays 879,764.6 kg. The three other zero-crew submissions
   (`695437720`, `725342728`, `763307846`, reporting 2, 77 and 375 kg)
-  also carry a zero crew, and they are currently excluded from the
-  published data only as a side effect of arithmetic: a zero crew makes
-  `cpue`/`rpue` evaluate to `Inf`, which exceeds the thresholds and
-  raises alert 9/10. Nulling before that point would turn those `Inf`
-  values into `NA`, raise no alert, and silently promote three
-  physically impossible trips into the published dataset. Worth noting
-  that this exclusion is incidental rather than intentional — a zero
-  crew has no explicit logical check in
-  [`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md),
-  unlike
-  [`validate_ba_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_ba_surveys.md),
-  which flags it directly as alert code 2. Making it explicit is a
-  separate change.
+  were already excluded and remain so, now attributed to alerts 12 and
+  13 rather than misreported as CPUE/RPUE outliers. The `!is.infinite()`
+  guards cannot readmit anything: every infinite indicator in the
+  current data comes from a zero crew, no submission has
+  `trip_duration = 0`, and alert 12 re-catches any that alerts 9/10 no
+  longer raise. None of these submissions is discarded — they surface in
+  the validation flags collection for the enumerator to correct at
+  source.
+
+  **The raw export is deliberately not covered.**
+  [`export_api_raw()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_raw.md)
+  reads the preprocessed parquet, which validation never rewrites, so it
+  still publishes all four zero-crew submissions — 5 rows across 4
+  trips, carrying 0, 2, 77 and 375 kg. That is the two-stage export
+  working as designed: the raw stage is pre-validation by definition,
+  and Mozambique’s fix scopes to the validated set the same way. Flagged
+  rather than fixed, because suppressing rows there would make the raw
+  export no longer raw; if the API schema’s `minimum: 1` is meant to
+  bind the raw feed too, that is a separate decision.
 
 - **`catch_habitat` now reads `"Open sea"`, not `"Open Sea"`**
   ([`preprocess_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_surveys.md)):
   Kenya and Mozambique both write `"Open sea"` for the same concept, so
   Zanzibar’s casing split the category into two groups in every
   cross-country `GROUP BY`. Zanzibar was the odd one out, so Zanzibar
-  changed. **Data impact**: 3,169 of 16,711 published rows (19%) change
-  the string in that one column; the rest of the habitat vocabulary is
-  untouched. Takes effect on the next preprocessing run, since the
-  mapping lives upstream of the validated parquet.
+  changed. **Data impact**: validated export, 3,169 of 16,710 rows
+  (19%); raw export, 4,441 of 24,036 rows (18%). Only that one column
+  changes, the rest of the habitat vocabulary is untouched, and `NA`
+  still passes through as `NA`. Both exports are affected because the
+  mapping lives upstream of the validated parquet, in preprocessing — so
+  this takes effect on the next preprocessing run, not retroactively.
 
 ### Robustness
 
@@ -58,9 +92,11 @@ of export — held at 0% failure before these changes and still holds at
   the total and then dropped from the output — silently breaking
   `tot_catch_kg == sum(catch_kg)` for that trip. Moving `distinct()`
   ahead of the grouped sum ties the total to the rows actually
-  published. **Data impact on current data: none** — Zanzibar carries no
-  duplicates at that point, row and trip counts are unchanged at 16,711
-  and 10,862, and the output is
+  published. Applied to both `format_api_wf()` and `format_api_wcs()`,
+  and to both the raw and validated exports through them. **Data impact
+  on current data: none** — Zanzibar carries no duplicates at that
+  point, row and trip counts are unchanged by this change in isolation,
+  and the output is
   [`all.equal()`](https://rdrr.io/r/base/all.equal.html)-identical. This
   is preventative: it is the same ordering that produced a 24.4%
   invariant failure rate in the Kenya pipeline. Injecting 138 duplicate

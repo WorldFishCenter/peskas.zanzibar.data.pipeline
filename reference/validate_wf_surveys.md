@@ -51,6 +51,11 @@ Alert codes:
 
 - 9: Incomplete catch information
 
+- 12: Effort indicator is infinite (`n_fishers` or `trip_duration` is
+  zero)
+
+- 13: Fisher count is zero or negative
+
 ## Note
 
 - Requires configuration parameters to be set up in config file
