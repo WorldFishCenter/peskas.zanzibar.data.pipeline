@@ -13,15 +13,24 @@ export_api_validated(log_threshold = logger::DEBUG)
 NULL invisibly. Side effect: uploads merged parquet to cloud storage.
 }
 \description{
-Downloads validated WF and WCS survey data, transforms both into the
-canonical API schema, merges them, and uploads a single parquet file to
-cloud storage. This is the \strong{validated} stage of the two-stage API export
-pipeline.
+Downloads validated WF survey data, transforms it into the canonical API
+schema, and uploads a single parquet file to cloud storage. This is the
+\strong{validated} stage of the two-stage API export pipeline.
 }
 \details{
 See \code{\link[=export_api_raw]{export_api_raw()}} for the full output schema. This function reads from
 the validated cloud paths and writes to
 \code{conf$api$trips$validated$cloud_path}.
+
+\strong{Why WCS is held back}: the export is gated on \code{api$include_wcs}, which is
+\code{FALSE}. The WF/WCS audit in issue #4 concluded that the difference between
+the two programmes is real rather than a processing artefact — they sample
+different vessel platforms in different proportions — but it left two
+preconditions for publishing them together: every row needs a source label,
+and \code{catch_price} means different things in each programme (WCS derives it
+from market medians, WF reads a trip-level field). Until those are settled,
+\code{format_api_wcs()} stays in place and unreferenced at runtime rather than
+being deleted. Flip the flag to publish both.
 }
 \seealso{
 \itemize{

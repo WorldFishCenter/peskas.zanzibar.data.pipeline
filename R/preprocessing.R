@@ -537,7 +537,7 @@ preprocess_wf_surveys <- function(
       habitat = dplyr::case_when(
         .data$habitat == "1" ~ "Reef",
         .data$habitat == "2" ~ "FAD",
-        .data$habitat == "3" ~ "Open Sea",
+        .data$habitat == "3" ~ "Open sea",
         .data$habitat == "4" ~ "Shore",
         .data$habitat == "6" ~ "Mangrove",
         .data$habitat == "7" ~ "Seagrass"

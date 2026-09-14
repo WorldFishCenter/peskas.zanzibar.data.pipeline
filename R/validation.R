@@ -876,7 +876,26 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   clean_data <-
     validated_data |>
-    dplyr::filter(!.data$submission_id %in% flags_ids$submission_id)
+    dplyr::filter(!.data$submission_id %in% flags_ids$submission_id) |>
+    # A crew of zero cannot land a trip, and the API schema declares n_fishers
+    # with a minimum of 1. Every per-fisher rate divides by this field, so a
+    # zero yields Inf rather than NA. Null the components so the total is NA.
+    # This runs after flagging on purpose: the composite cpue/rpue alerts above
+    # rely on the Inf a zero crew produces to exclude zero-crew trips that do
+    # report a catch, and nulling earlier would silently readmit them.
+    dplyr::mutate(
+      dplyr::across(
+        c("no_men_fishers", "no_women_fishers", "no_child_fishers"),
+        ~ dplyr::if_else(
+          .data$no_men_fishers +
+            .data$no_women_fishers +
+            .data$no_child_fishers ==
+            0,
+          NA_real_,
+          .x
+        )
+      )
+    )
 
   coasts::upload_parquet_to_cloud(
     data = clean_data,

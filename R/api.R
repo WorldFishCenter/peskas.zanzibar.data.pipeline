@@ -46,6 +46,10 @@ format_api_wf <- function(surveys_df, conf) {
       "catch_kg",
       tot_catch_price = "catch_price"
     ) |>
+    # distinct() must run before the grouped sum: summing first would derive
+    # tot_catch_kg from rows that are then dropped, breaking the invariant
+    # tot_catch_kg == sum(catch_kg) within trip_id.
+    dplyr::distinct() |>
     dplyr::group_by(.data$trip_id) |>
     dplyr::mutate(
       catch_price = NA_real_,
@@ -55,8 +59,7 @@ format_api_wf <- function(surveys_df, conf) {
     dplyr::relocate(
       c("catch_price", "tot_catch_kg", "tot_catch_price"),
       .after = "catch_kg"
-    ) |>
-    dplyr::distinct()
+    )
 }
 
 
@@ -98,6 +101,8 @@ format_api_wcs <- function(surveys_df, conf) {
       "catch_kg",
       "catch_price"
     ) |>
+    # same ordering requirement as format_api_wf(): deduplicate before summing.
+    dplyr::distinct() |>
     dplyr::group_by(.data$trip_id) |>
     dplyr::mutate(
       tot_catch_kg = sum(.data$catch_kg),
@@ -107,8 +112,7 @@ format_api_wcs <- function(surveys_df, conf) {
     dplyr::relocate(
       c("catch_price", "tot_catch_kg", "tot_catch_price"),
       .after = "catch_kg"
-    ) |>
-    dplyr::distinct()
+    )
 }
 
 
@@ -147,10 +151,12 @@ upload_api_parquet <- function(data, file_prefix, cloud_path, conf) {
 #' Export Raw API-Ready Trip Data
 #'
 #' @description
-#' Downloads preprocessed WF and WCS survey data, transforms both into the
-#' canonical API schema, merges them, and uploads a single parquet file to
-#' cloud storage. This is the **raw/preprocessed** stage of the two-stage API
-#' export pipeline.
+#' Downloads preprocessed WF survey data, transforms it into the canonical API
+#' schema, and uploads a single parquet file to cloud storage. This is the
+#' **raw/preprocessed** stage of the two-stage API export pipeline.
+#'
+#' WCS is included only when `api$include_wcs` is `TRUE` in the configuration.
+#' It is currently `FALSE`: see [export_api_validated()] for why.
 #'
 #' @details
 #' **Output Schema**:
@@ -198,19 +204,25 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
     options = conf$storage$google$options
   )
 
-  logger::log_info("Downloading WCS preprocessed survey data...")
-  wcs_preprocessed <- coasts::download_parquet_from_cloud(
-    prefix = conf$surveys$wcs$preprocessed$file_prefix,
-    provider = conf$storage$google$key,
-    options = conf$storage$google$options
-  )
-
   logger::log_info("Transforming surveys to API format...")
-  api_data <- dplyr::bind_rows(
-    format_api_wf(wf_preprocessed, conf),
-    format_api_wcs(wcs_preprocessed, conf)
-  ) |>
-    dplyr::filter(!.data$survey_id == conf$ingestion$wcs$asset_id)
+  api_data <- format_api_wf(wf_preprocessed, conf)
+
+  if (isTRUE(conf$api$include_wcs)) {
+    logger::log_info("Downloading WCS preprocessed survey data...")
+    wcs_preprocessed <- coasts::download_parquet_from_cloud(
+      prefix = conf$surveys$wcs$preprocessed$file_prefix,
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options
+    )
+    api_data <- dplyr::bind_rows(
+      api_data,
+      format_api_wcs(wcs_preprocessed, conf)
+    )
+  } else {
+    logger::log_info(
+      "Skipping WCS: api$include_wcs is FALSE (held pending issue #4)"
+    )
+  }
 
   logger::log_info(
     "Processed {nrow(api_data)} records from {length(unique(api_data$trip_id))} unique trips"
@@ -231,15 +243,24 @@ export_api_raw <- function(log_threshold = logger::DEBUG) {
 #' Export Validated API-Ready Trip Data
 #'
 #' @description
-#' Downloads validated WF and WCS survey data, transforms both into the
-#' canonical API schema, merges them, and uploads a single parquet file to
-#' cloud storage. This is the **validated** stage of the two-stage API export
-#' pipeline.
+#' Downloads validated WF survey data, transforms it into the canonical API
+#' schema, and uploads a single parquet file to cloud storage. This is the
+#' **validated** stage of the two-stage API export pipeline.
 #'
 #' @details
 #' See [export_api_raw()] for the full output schema. This function reads from
 #' the validated cloud paths and writes to
 #' `conf$api$trips$validated$cloud_path`.
+#'
+#' **Why WCS is held back**: the export is gated on `api$include_wcs`, which is
+#' `FALSE`. The WF/WCS audit in issue #4 concluded that the difference between
+#' the two programmes is real rather than a processing artefact — they sample
+#' different vessel platforms in different proportions — but it left two
+#' preconditions for publishing them together: every row needs a source label,
+#' and `catch_price` means different things in each programme (WCS derives it
+#' from market medians, WF reads a trip-level field). Until those are settled,
+#' `format_api_wcs()` stays in place and unreferenced at runtime rather than
+#' being deleted. Flip the flag to publish both.
 #'
 #' @param log_threshold Logging level (default `logger::DEBUG`).
 #' @return NULL invisibly. Side effect: uploads merged parquet to cloud storage.
@@ -261,19 +282,25 @@ export_api_validated <- function(log_threshold = logger::DEBUG) {
     options = conf$storage$google$options
   )
 
-  logger::log_info("Downloading WCS validated survey data...")
-  wcs_validated <- coasts::download_parquet_from_cloud(
-    prefix = conf$surveys$wcs$validated$file_prefix,
-    provider = conf$storage$google$key,
-    options = conf$storage$google$options
-  )
-
   logger::log_info("Transforming surveys to API format...")
-  api_data <- dplyr::bind_rows(
-    format_api_wf(wf_validated, conf),
-    format_api_wcs(wcs_validated, conf)
-  ) |>
-    dplyr::filter(!.data$survey_id == conf$ingestion$wcs$asset_id)
+  api_data <- format_api_wf(wf_validated, conf)
+
+  if (isTRUE(conf$api$include_wcs)) {
+    logger::log_info("Downloading WCS validated survey data...")
+    wcs_validated <- coasts::download_parquet_from_cloud(
+      prefix = conf$surveys$wcs$validated$file_prefix,
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options
+    )
+    api_data <- dplyr::bind_rows(
+      api_data,
+      format_api_wcs(wcs_validated, conf)
+    )
+  } else {
+    logger::log_info(
+      "Skipping WCS: api$include_wcs is FALSE (held pending issue #4)"
+    )
+  }
 
   logger::log_info(
     "Processed {nrow(api_data)} records from {length(unique(api_data$trip_id))} unique trips"

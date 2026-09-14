@@ -13,10 +13,12 @@ export_api_raw(log_threshold = logger::DEBUG)
 NULL invisibly. Side effect: uploads merged parquet to cloud storage.
 }
 \description{
-Downloads preprocessed WF and WCS survey data, transforms both into the
-canonical API schema, merges them, and uploads a single parquet file to
-cloud storage. This is the \strong{raw/preprocessed} stage of the two-stage API
-export pipeline.
+Downloads preprocessed WF survey data, transforms it into the canonical API
+schema, and uploads a single parquet file to cloud storage. This is the
+\strong{raw/preprocessed} stage of the two-stage API export pipeline.
+
+WCS is included only when \code{api$include_wcs} is \code{TRUE} in the configuration.
+It is currently \code{FALSE}: see \code{\link[=export_api_validated]{export_api_validated()}} for why.
 }
 \details{
 \strong{Output Schema}:

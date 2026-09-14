@@ -119,6 +119,9 @@ default:
       file_prefix: pds-tracks
       version: latest
   api:
+    # WCS is held out of the API export pending issue #4. Set to true to
+    # publish WCS alongside WF once the blockers recorded there are resolved.
+    include_wcs: false
     trips:
       raw:
         file_prefix: trips-raw
