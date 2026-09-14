@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.9.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.10.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,32 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.10.0" id="peskaszanzibardatapipeline-4100">peskas.zanzibar.data.pipeline 4.10.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4100"></a></h2>
+<p>Fixes from a cross-country audit of the validated <code>landings</code> parquet every country publishes to <code>gs://peskas-api-prod</code>. The invariant under audit — <code>tot_catch_kg == sum(catch_kg)</code> within <code>trip_id</code> at the moment of export — held at 0% failure before these changes and still holds at 0% after.</p>
+<div class="section level3">
+<h3 id="bug-fixes-4-10-0">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-4-10-0"></a></h3>
+<ul><li>
+<p><strong><code>n_fishers</code> can no longer be published as <code>0</code></strong> (<code><a href="../reference/validate_wf_surveys.html">validate_wf_surveys()</a></code>): the API schema declares <code>n_fishers</code> with a minimum of 1, and every per-fisher rate (<code>cpue</code>, <code>rpue</code>) divides by it, so a zero yields <code>Inf</code> rather than <code>NA</code> and propagates as a number rather than a gap. The three crew components are now nulled when they total zero, so <code>format_api_wf()</code> sums them to <code>NA</code>. <strong>Data impact</strong>: one published row, <code>TRIP_646533624</code> (2025-02-24, Hand Line, catch 0 kg), moves from <code>n_fishers = 0</code> to <code>n_fishers = NA</code>. Nulls go from 84 to 85 rows, the published minimum from 0 to 1. No catch value changes, and no row enters or leaves the dataset.</p>
+<p>The null-out deliberately runs on <code>clean_data</code>, <em>after</em> the composite flags are computed, not before. Three further submissions (<code>695437720</code>, <code>725342728</code>, <code>763307846</code>, reporting 2, 77 and 375 kg) also carry a zero crew, and they are currently excluded from the published data only as a side effect of arithmetic: a zero crew makes <code>cpue</code>/<code>rpue</code> evaluate to <code>Inf</code>, which exceeds the thresholds and raises alert 9/10. Nulling before that point would turn those <code>Inf</code> values into <code>NA</code>, raise no alert, and silently promote three physically impossible trips into the published dataset. Worth noting that this exclusion is incidental rather than intentional — a zero crew has no explicit logical check in <code><a href="../reference/validate_wf_surveys.html">validate_wf_surveys()</a></code>, unlike <code><a href="../reference/validate_ba_surveys.html">validate_ba_surveys()</a></code>, which flags it directly as alert code 2. Making it explicit is a separate change.</p>
+</li>
+<li><p><strong><code>catch_habitat</code> now reads <code>"Open sea"</code>, not <code>"Open Sea"</code></strong> (<code><a href="../reference/preprocess_wf_surveys.html">preprocess_wf_surveys()</a></code>): Kenya and Mozambique both write <code>"Open sea"</code> for the same concept, so Zanzibar’s casing split the category into two groups in every cross-country <code>GROUP BY</code>. Zanzibar was the odd one out, so Zanzibar changed. <strong>Data impact</strong>: 3,169 of 16,711 published rows (19%) change the string in that one column; the rest of the habitat vocabulary is untouched. Takes effect on the next preprocessing run, since the mapping lives upstream of the validated parquet.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="robustness-4-10-0">Robustness<a class="anchor" aria-label="anchor" href="#robustness-4-10-0"></a></h3>
+<ul><li>
+<strong><code>tot_catch_kg</code> is now derived after deduplication, not before</strong> (<code>format_api_wf()</code>, <code>format_api_wcs()</code>): <code>sum(catch_kg)</code> was computed inside <code>group_by(trip_id)</code> while <code>distinct()</code> ran at the end of the pipeline, so any duplicate row reaching that point would be counted in the total and then dropped from the output — silently breaking <code>tot_catch_kg == sum(catch_kg)</code> for that trip. Moving <code>distinct()</code> ahead of the grouped sum ties the total to the rows actually published. <strong>Data impact on current data: none</strong> — Zanzibar carries no duplicates at that point, row and trip counts are unchanged at 16,711 and 10,862, and the output is <code><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal()</a></code>-identical. This is preventative: it is the same ordering that produced a 24.4% invariant failure rate in the Kenya pipeline. Injecting 138 duplicate rows across 100 trips breaks 98 trips (0.90%) under the old ordering with exactly doubled totals, and 0 under the new one.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="refactor-4-10-0">Refactor<a class="anchor" aria-label="anchor" href="#refactor-4-10-0"></a></h3>
+<ul><li>
+<p><strong>WCS is now excluded from the API export by configuration rather than by a silent filter</strong> (<code><a href="../reference/export_api_raw.html">export_api_raw()</a></code>, <code><a href="../reference/export_api_validated.html">export_api_validated()</a></code>): both functions downloaded the WCS survey data, ran the whole <code>format_api_wcs()</code> transform over it, bound the result, and then dropped every one of those rows again with <code>dplyr::filter(!survey_id == conf$ingestion$wcs$asset_id)</code>. The published dataset never contained a WCS row, so this cost a cloud download and a full transform per run for nothing, and the reason was recorded nowhere in the code.</p>
+<p>The exclusion is <strong>temporary, not permanent</strong>, and the filter has been replaced with an <code>api$include_wcs</code> flag (default <code>false</code>) rather than deleted. WCS is not a retired programme: it is still ingested, preprocessed and validated on every scheduled run, and its validated file currently holds 51,296 rows across 27,472 submissions running to the present day — three times the WF volume. The filter was introduced in the same commit as <code>format_api_wcs()</code> itself (3260cb6, “Feat wcs”), on the same day issue #4 — <em>“Investigate systematic differences in catch and price values between WCS and WF surveys <strong>before joint production use</strong>”</em> — was opened. It was the hold put in place while that investigation ran.</p>
+<p>That audit concluded the WF/WCS gap is real rather than an artefact — both programmes sample valid operations, but in different proportions and from different vessel platforms — and left two unmet preconditions for publishing them together: every row needs a source label, and <code>catch_price</code> denotes different quantities in each programme (WCS derives it from market medians, WF reads a trip-level field). Those are unresolved, so the hold stands, stated in <code>inst/config.yml</code>, in both functions’ documentation, and in a log line on every run. <code>format_api_wcs()</code> is retained and reachable: flipping the flag restores the merged export.</p>
+<p>This is also why Zanzibar’s <code>catch_price</code> is 100% null in production — only the WF branch survives, and it sets <code>catch_price = NA_real_</code> while mapping the form’s trip-level price to <code>tot_catch_price</code>. Resolving that is the <code>catch_price</code> semantics question issue #4 left open, not a casualty of this change.</p>
+</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.9.1" id="peskaszanzibardatapipeline-491">peskas.zanzibar.data.pipeline 4.9.1<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-491"></a></h2>
 <div class="section level3">

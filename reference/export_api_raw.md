@@ -1,9 +1,13 @@
 # Export Raw API-Ready Trip Data
 
-Downloads preprocessed WF and WCS survey data, transforms both into the
-canonical API schema, merges them, and uploads a single parquet file to
-cloud storage. This is the **raw/preprocessed** stage of the two-stage
-API export pipeline.
+Downloads preprocessed WF survey data, transforms it into the canonical
+API schema, and uploads a single parquet file to cloud storage. This is
+the **raw/preprocessed** stage of the two-stage API export pipeline.
+
+WCS is included only when `api$include_wcs` is `TRUE` in the
+configuration. It is currently `FALSE`: see
+[`export_api_validated()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_validated.md)
+for why.
 
 ## Usage
 

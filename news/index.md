@@ -1,5 +1,115 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.10.0
+
+Fixes from a cross-country audit of the validated `landings` parquet
+every country publishes to `gs://peskas-api-prod`. The invariant under
+audit — `tot_catch_kg == sum(catch_kg)` within `trip_id` at the moment
+of export — held at 0% failure before these changes and still holds at
+0% after.
+
+### Bug Fixes
+
+- **`n_fishers` can no longer be published as `0`**
+  ([`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md)):
+  the API schema declares `n_fishers` with a minimum of 1, and every
+  per-fisher rate (`cpue`, `rpue`) divides by it, so a zero yields `Inf`
+  rather than `NA` and propagates as a number rather than a gap. The
+  three crew components are now nulled when they total zero, so
+  `format_api_wf()` sums them to `NA`. **Data impact**: one published
+  row, `TRIP_646533624` (2025-02-24, Hand Line, catch 0 kg), moves from
+  `n_fishers = 0` to `n_fishers = NA`. Nulls go from 84 to 85 rows, the
+  published minimum from 0 to 1. No catch value changes, and no row
+  enters or leaves the dataset.
+
+  The null-out deliberately runs on `clean_data`, *after* the composite
+  flags are computed, not before. Three further submissions
+  (`695437720`, `725342728`, `763307846`, reporting 2, 77 and 375 kg)
+  also carry a zero crew, and they are currently excluded from the
+  published data only as a side effect of arithmetic: a zero crew makes
+  `cpue`/`rpue` evaluate to `Inf`, which exceeds the thresholds and
+  raises alert 9/10. Nulling before that point would turn those `Inf`
+  values into `NA`, raise no alert, and silently promote three
+  physically impossible trips into the published dataset. Worth noting
+  that this exclusion is incidental rather than intentional — a zero
+  crew has no explicit logical check in
+  [`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md),
+  unlike
+  [`validate_ba_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_ba_surveys.md),
+  which flags it directly as alert code 2. Making it explicit is a
+  separate change.
+
+- **`catch_habitat` now reads `"Open sea"`, not `"Open Sea"`**
+  ([`preprocess_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/preprocess_wf_surveys.md)):
+  Kenya and Mozambique both write `"Open sea"` for the same concept, so
+  Zanzibar’s casing split the category into two groups in every
+  cross-country `GROUP BY`. Zanzibar was the odd one out, so Zanzibar
+  changed. **Data impact**: 3,169 of 16,711 published rows (19%) change
+  the string in that one column; the rest of the habitat vocabulary is
+  untouched. Takes effect on the next preprocessing run, since the
+  mapping lives upstream of the validated parquet.
+
+### Robustness
+
+- **`tot_catch_kg` is now derived after deduplication, not before**
+  (`format_api_wf()`, `format_api_wcs()`): `sum(catch_kg)` was computed
+  inside `group_by(trip_id)` while `distinct()` ran at the end of the
+  pipeline, so any duplicate row reaching that point would be counted in
+  the total and then dropped from the output — silently breaking
+  `tot_catch_kg == sum(catch_kg)` for that trip. Moving `distinct()`
+  ahead of the grouped sum ties the total to the rows actually
+  published. **Data impact on current data: none** — Zanzibar carries no
+  duplicates at that point, row and trip counts are unchanged at 16,711
+  and 10,862, and the output is
+  [`all.equal()`](https://rdrr.io/r/base/all.equal.html)-identical. This
+  is preventative: it is the same ordering that produced a 24.4%
+  invariant failure rate in the Kenya pipeline. Injecting 138 duplicate
+  rows across 100 trips breaks 98 trips (0.90%) under the old ordering
+  with exactly doubled totals, and 0 under the new one.
+
+### Refactor
+
+- **WCS is now excluded from the API export by configuration rather than
+  by a silent filter**
+  ([`export_api_raw()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_raw.md),
+  [`export_api_validated()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_api_validated.md)):
+  both functions downloaded the WCS survey data, ran the whole
+  `format_api_wcs()` transform over it, bound the result, and then
+  dropped every one of those rows again with
+  `dplyr::filter(!survey_id == conf$ingestion$wcs$asset_id)`. The
+  published dataset never contained a WCS row, so this cost a cloud
+  download and a full transform per run for nothing, and the reason was
+  recorded nowhere in the code.
+
+  The exclusion is **temporary, not permanent**, and the filter has been
+  replaced with an `api$include_wcs` flag (default `false`) rather than
+  deleted. WCS is not a retired programme: it is still ingested,
+  preprocessed and validated on every scheduled run, and its validated
+  file currently holds 51,296 rows across 27,472 submissions running to
+  the present day — three times the WF volume. The filter was introduced
+  in the same commit as `format_api_wcs()` itself (3260cb6, “Feat wcs”),
+  on the same day issue \#4 — *“Investigate systematic differences in
+  catch and price values between WCS and WF surveys **before joint
+  production use**”* — was opened. It was the hold put in place while
+  that investigation ran.
+
+  That audit concluded the WF/WCS gap is real rather than an artefact —
+  both programmes sample valid operations, but in different proportions
+  and from different vessel platforms — and left two unmet preconditions
+  for publishing them together: every row needs a source label, and
+  `catch_price` denotes different quantities in each programme (WCS
+  derives it from market medians, WF reads a trip-level field). Those
+  are unresolved, so the hold stands, stated in `inst/config.yml`, in
+  both functions’ documentation, and in a log line on every run.
+  `format_api_wcs()` is retained and reachable: flipping the flag
+  restores the merged export.
+
+  This is also why Zanzibar’s `catch_price` is 100% null in production —
+  only the WF branch survives, and it sets `catch_price = NA_real_`
+  while mapping the form’s trip-level price to `tot_catch_price`.
+  Resolving that is the `catch_price` semantics question issue \#4 left
+  open, not a casualty of this change.
+
 ## peskas.zanzibar.data.pipeline 4.9.1
 
 ### Refactor
