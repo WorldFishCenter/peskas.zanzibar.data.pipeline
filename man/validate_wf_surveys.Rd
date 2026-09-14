@@ -38,6 +38,8 @@ Alert codes:
 \item 7: Number of individuals exceeds maximum
 \item 8: Incomplete catch form
 \item 9: Incomplete catch information
+\item 12: Effort indicator is infinite (\code{n_fishers} or \code{trip_duration} is zero)
+\item 13: Fisher count is zero or negative
 }
 }
 \note{

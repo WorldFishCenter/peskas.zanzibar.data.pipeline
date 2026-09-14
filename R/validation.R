@@ -432,6 +432,8 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #' - 7: Number of individuals exceeds maximum
 #' - 8: Incomplete catch form
 #' - 9: Incomplete catch information
+#' - 12: Effort indicator is infinite (`n_fishers` or `trip_duration` is zero)
+#' - 13: Fisher count is zero or negative
 #'
 #' @param log_threshold The logging level threshold for the logger package (e.g., DEBUG, INFO)
 #' @return
@@ -798,6 +800,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::transmute(
       submission_id = .data$submission_id,
       catch_outcome = .data$catch_outcome,
+      n_fishers = .data$n_fishers,
       price_kg = .data$catch_price / .data$catch_kg,
       price_kg_USD = .data$price_kg * 0.00037,
       cpue = .data$catch_kg / .data$n_fishers / .data$trip_duration,
@@ -813,11 +816,26 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         TRUE ~ NA_character_
       ),
       alert_cpue = dplyr::case_when(
-        .data$cpue > cpue_max ~ "9",
+        !is.infinite(.data$cpue) & .data$cpue > cpue_max ~ "9",
         TRUE ~ NA_character_
       ),
       alert_rpue = dplyr::case_when(
-        .data$rpue > rpue_max ~ "10",
+        !is.infinite(.data$rpue) & .data$rpue > rpue_max ~ "10",
+        TRUE ~ NA_character_
+      ),
+      # NEW: Inf indicators signal n_fishers = 0 or trip_duration = 0
+      alert_inf_indicators = dplyr::case_when(
+        is.infinite(.data$cpue) | is.infinite(.data$rpue) ~ "12",
+        TRUE ~ NA_character_
+      ),
+      # NEW: zero or negative fisher count makes all effort-based indicators
+      # invalid. A trip with nobody on it did not happen: the zero is the
+      # enumerator's untouched default, not a count. This is deliberately not
+      # narrowed by catch_outcome — that narrowing is what let the same defect
+      # through on no-catch trips and published n_fishers = 0 against a schema
+      # whose minimum is 1, with every per-fisher metric dividing into Inf.
+      alert_zero_fishers = dplyr::case_when(
+        !is.na(.data$n_fishers) & .data$n_fishers <= 0 ~ "13",
         TRUE ~ NA_character_
       )
     ) |>
@@ -826,6 +844,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         .data$alert_price_kg,
         .data$alert_cpue,
         .data$alert_rpue,
+        .data$alert_inf_indicators,
+        .data$alert_zero_fishers,
         sep = ","
       ) |>
         stringr::str_remove_all("NA,") |>
@@ -876,26 +896,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
 
   clean_data <-
     validated_data |>
-    dplyr::filter(!.data$submission_id %in% flags_ids$submission_id) |>
-    # A crew of zero cannot land a trip, and the API schema declares n_fishers
-    # with a minimum of 1. Every per-fisher rate divides by this field, so a
-    # zero yields Inf rather than NA. Null the components so the total is NA.
-    # This runs after flagging on purpose: the composite cpue/rpue alerts above
-    # rely on the Inf a zero crew produces to exclude zero-crew trips that do
-    # report a catch, and nulling earlier would silently readmit them.
-    dplyr::mutate(
-      dplyr::across(
-        c("no_men_fishers", "no_women_fishers", "no_child_fishers"),
-        ~ dplyr::if_else(
-          .data$no_men_fishers +
-            .data$no_women_fishers +
-            .data$no_child_fishers ==
-            0,
-          NA_real_,
-          .x
-        )
-      )
-    )
+    dplyr::filter(!.data$submission_id %in% flags_ids$submission_id)
 
   coasts::upload_parquet_to_cloud(
     data = clean_data,
