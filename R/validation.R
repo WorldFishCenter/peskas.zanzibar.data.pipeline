@@ -598,13 +598,6 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       "n_buckets",
       "weight_bucket",
       "catch_kg"
-    ) |>
-    dplyr::mutate(
-      catch_taxon = dplyr::case_when(
-        .data$fish_group == "UNK" ~
-          "UNKN",
-        TRUE ~ .data$catch_taxon
-      )
     )
 
   # dplyr::mutate(n_fishers = rowSums(across(c("no_men_fishers", "no_women_fishers", "no_child_fishers")),
