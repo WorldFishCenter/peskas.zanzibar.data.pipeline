@@ -751,6 +751,11 @@ preprocess_catch <- function(data = NULL, version = NULL) {
           # weight is computed against MAC and lost.
           .data$fish_group == "SR" & .data$catch_taxon == "MAC" ~ "AQX",
           is.na(.data$catch_taxon) & .data$fish_group == "MZZ" ~ "MZZ",
+          # "Unknown" is a second unidentified bucket alongside "MZZ", and it
+          # carried no code at all, so the catch fell through to a NULL taxon
+          # and its weight became unattributable. MZZ is the ASFIS code for
+          # unidentified marine fishes.
+          is.na(.data$catch_taxon) & .data$fish_group == "UNK" ~ "MZZ",
           TRUE ~ .data$catch_taxon
         )
       )
