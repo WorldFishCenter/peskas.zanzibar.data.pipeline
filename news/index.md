@@ -1,5 +1,15 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.11.0
+
+### Unidentified catch gets the ASFIS code for unidentified catch
+
+The WF form offers two “not identified to species” buckets, `MZZ`
+(miscellaneous) and `UNK` (unknown). Only the first was mapped. A catch
+recorded under `UNK` carried no species code, so `alpha3_code` stayed
+`NULL` all the way to the API, and its weight could not be attributed to
+anything.
+
 ## peskas.zanzibar.data.pipeline 4.10.0
 
 Fixes from a cross-country audit of the validated `landings` parquet

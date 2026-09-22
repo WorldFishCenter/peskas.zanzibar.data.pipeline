@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.10.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.11.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,13 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.11.0" id="peskaszanzibardatapipeline-4110">peskas.zanzibar.data.pipeline 4.11.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4110"></a></h2>
+<div class="section level3">
+<h3 id="unidentified-catch-gets-the-asfis-code-for-unidentified-catch-4-11-0">Unidentified catch gets the ASFIS code for unidentified catch<a class="anchor" aria-label="anchor" href="#unidentified-catch-gets-the-asfis-code-for-unidentified-catch-4-11-0"></a></h3>
+<p>The WF form offers two “not identified to species” buckets, <code>MZZ</code> (miscellaneous) and <code>UNK</code> (unknown). Only the first was mapped. A catch recorded under <code>UNK</code> carried no species code, so <code>alpha3_code</code> stayed <code>NULL</code> all the way to the API, and its weight could not be attributed to anything.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.10.0" id="peskaszanzibardatapipeline-4100">peskas.zanzibar.data.pipeline 4.10.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4100"></a></h2>
 <p>Fixes from a cross-country audit of the validated <code>landings</code> parquet every country publishes to <code>gs://peskas-api-prod</code>. The invariant under audit — <code>tot_catch_kg == sum(catch_kg)</code> within <code>trip_id</code> at the moment of export — held at 0% failure before these changes and still holds at 0% after, in both exports. Measured against <code>wf-surveys-validated__20260913024858_f4f1dd9__.parquet</code> (16,711 rows, 10,862 trips) and <code>wf-surveys-preprocessed__20260913024052_f4f1dd9__.parquet</code> (24,036 rows, 13,857 trips): the validated export goes to 16,710 rows / 10,861 trips with the total catch unchanged at 879,764.6 kg, and the raw export keeps its row and trip counts.</p>
