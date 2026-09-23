@@ -573,6 +573,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   price_kg_max <- 81420 # 30 eur
   cpue_max <- 30
   rpue_max <- 81420
+  max_length_cm <- 500
 
   catch_df <-
     preprocessed_surveys |>
@@ -625,6 +626,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       ),
       alert_max_length = dplyr::case_when(
         .data$length > .data$max_length_75 ~ "4",
+        .data$length > max_length_cm ~ "4",
         TRUE ~ NA_character_
       ),
       alert_bucket_weight = dplyr::case_when(

@@ -20,11 +20,13 @@ format_api_wf <- function(surveys_df, conf) {
     dplyr::ungroup() |>
     dplyr::mutate(
       n_catch = as.integer(.data$n_catch),
+      survey_organization = "ZAFIRI",
       n_fishers = .data$no_men_fishers +
         .data$no_women_fishers +
         .data$no_child_fishers
     ) |>
     dplyr::select(
+      "survey_organization",
       "survey_id",
       "trip_id",
       "landing_date",

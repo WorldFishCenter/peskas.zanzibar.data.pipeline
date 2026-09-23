@@ -1,3 +1,25 @@
+# peskas.zanzibar.data.pipeline 4.13.0
+
+## Records say which organization collected them
+
+* **NEW**
+
+`survey_organization` names the organization behind each record, as the first
+column — `"WF"` here. `survey_id` identifies the form, not the organization,
+and a country can run more than one programme at once, as Kenya does.
+
+# peskas.zanzibar.data.pipeline 4.12.0
+
+## A length with no species bound is now bounded anyway
+
+* **FIXED**
+
+Alert 4 compares a catch length against a per-taxon bound from FishBase, and a
+taxon FishBase cannot resolve had no bound at all — so a missing bound passed
+silently. That covered 21.6% of rows carrying a length, including every `MZZ`
+row, and is how a 130,000 cm fish reached the API. An absolute 500 cm ceiling
+now backs the per-taxon rule up.
+
 # peskas.zanzibar.data.pipeline 4.11.0
 
 ## Unidentified catch gets the ASFIS code for unidentified catch
