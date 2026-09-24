@@ -25,7 +25,6 @@ env:
   PDS_SECRET: ${{ secrets.PDS_SECRET }}
   AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
   AIRTABLE_BASE_ID_FRAME: ${{ secrets.AIRTABLE_BASE_ID_FRAME }}
-  AIRTABLE_BASE_ID_ASSETS: ${{ secrets.AIRTABLE_BASE_ID_ASSETS }}
 
 jobs:
   build-container:

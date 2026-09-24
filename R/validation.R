@@ -1517,9 +1517,9 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 #'
 #' @param conf Configuration object from `read_config()` containing MongoDB connection
 #'   parameters and survey-specific settings
-#' @param asset_id Character string specifying which survey to process. Must be one of
-#'   "adnap" or "lurio". Determines which configuration to use from
-#'   `conf$ingestion$kobo-{asset_id}`. Default is "adnap".
+#' @param asset_id Character string specifying which WF survey version to process.
+#'   Must be one of "v1", "v2" or "v3". Determines which configuration to use from
+#'   `conf$ingestion$wf_{asset_id}`. Default is "v1".
 #' @param all_flags Data frame containing all validation flags with columns:
 #'   `submission_id`, `submitted_by`, `submission_date`, `alert_flag`
 #' @param validation_statuses Data frame from `get_validation_status()` with columns:
@@ -1528,29 +1528,30 @@ sync_validation_submissions <- function(log_threshold = logger::DEBUG) {
 #' @return Invisible NULL. The function pushes data to MongoDB as a side effect.
 #'
 #' @section MongoDB Collections:
-#' The function pushes to two MongoDB collections:
+#' The function pushes to two MongoDB collections, named with the survey's KoBo
+#' asset id:
 #' \describe{
-#'   \item{flags-{asset_id}}{Wide format with one row per submission including
+#'   \item{surveys_flags-{asset_id}}{Wide format with one row per submission including
 #'     validation status and flags}
 #'   \item{enumerators_stats-{asset_id}}{Long format with one row per flag per
 #'     submission for enumerator statistics}
 #' }
 #'
 #' @note
-#' This function is called internally by `validate_surveys_adnap()` and should not
+#' This function is called internally by `validate_wf_surveys()` and should not
 #' typically be called directly. It requires:
 #' \itemize{
 #'   \item Valid configuration with MongoDB connection string
-#'   \item Survey-specific configuration under `conf$ingestion$kobo-{asset_id}`
+#'   \item Survey-specific configuration under `conf$ingestion$wf_{asset_id}`
 #'   \item System username configured to identify automated vs. manual validations
 #' }
 #'
 #' @examples
 #' \dontrun{
-#' # Called internally by validate_surveys_adnap()
+#' # Called internally by validate_wf_surveys()
 #' export_validation_flags(
 #'   conf = conf,
-#'   asset_id = "surveys_v1",
+#'   asset_id = "v1",
 #'   all_flags = flags_combined,
 #'   validation_statuses = validation_statuses
 #' )

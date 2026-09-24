@@ -372,15 +372,22 @@ assert_taxa_coverage <- function(
   lw,
   exempt = c(
     # not a taxon
-    "MZZ", "UNK", "UNKN",
+    "MZZ",
+    "UNK",
+    "UNKN",
     # wrong reference name for the animal landed here
-    "MAE", "TAG",
+    "MAE",
+    "TAG",
     # in FAO 51, but FishBase carries no published length-weight pair at all
     "GQT",
     # infraorder Brachyura, a rank the backbone omits
     "CRA",
     # non-TL coefficients with no length-length fit to convert through
-    "KAK", "LHV", "RMB", "RTY", "SSP"
+    "KAK",
+    "LHV",
+    "RMB",
+    "RTY",
+    "SSP"
   )
 ) {
   requested <- setdiff(unique(stats::na.omit(taxa_list)), exempt)
@@ -395,7 +402,7 @@ assert_taxa_coverage <- function(
       "release can empty a family without removing its name, which is how ",
       "Caesionidae and Scaridae broke in 26.06. The release is pinned in ",
       "inst/config.yml under metadata:fishbase, and rfishbase is pinned to ",
-      "5.0.1 in both Dockerfiles for the same reason.",
+      "5.0.1 in Dockerfile.prod for the same reason.",
       call. = FALSE
     )
   }
@@ -607,29 +614,29 @@ process_species_list <- function(fao_codes, asfis_list) {
 #' @export
 taxa_search_aliases <- function() {
   dplyr::tribble(
-    ~a3_code,
-    ~scientific_name,
-    ~rank,
-    "CLP",
-    "Dorosomatidae",
-    "Family",
-    "ESR",
-    "Stolephorus commersonnii",
-    "Species",
-    "RPO",
-    "Parupeneus macronemus",
-    "Species",
-    "LZV",
-    "Ellochelon vaigiensis",
-    "Species",
-    "OQC",
-    "Octopus cyanea",
-    "Species",
-    "VMX",
-    "Osteomugil",
-    "Genus",
-    "VMX",
-    "Moolgarda",
+    ~a3_code                   ,
+    ~scientific_name           ,
+    ~rank                      ,
+    "CLP"                      ,
+    "Dorosomatidae"            ,
+    "Family"                   ,
+    "ESR"                      ,
+    "Stolephorus commersonnii" ,
+    "Species"                  ,
+    "RPO"                      ,
+    "Parupeneus macronemus"    ,
+    "Species"                  ,
+    "LZV"                      ,
+    "Ellochelon vaigiensis"    ,
+    "Species"                  ,
+    "OQC"                      ,
+    "Octopus cyanea"           ,
+    "Species"                  ,
+    "VMX"                      ,
+    "Osteomugil"               ,
+    "Genus"                    ,
+    "VMX"                      ,
+    "Moolgarda"                ,
     "Genus"
   )
 }

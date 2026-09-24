@@ -2,7 +2,6 @@
 auth/*
 data/
 .env*
-.claude
 
 ## R & Rstudio
 .Rhistory
@@ -50,4 +49,5 @@ docs
 *.geojson
 
 ## Other
-CLAUDE.md
+.claude/settings.local.json
+CLAUDE.local.md

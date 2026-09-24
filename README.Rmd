@@ -4,99 +4,121 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "man/figures/README-",
-  out.width = "100%"
-)
+# Peskas Zanzibar data pipeline
+
+[![R-CMD-check](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml) [![pkgdown](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/pkgdown.yaml)
+
+The code that turns fish landing surveys and boat GPS tracks from Zanzibar into checked data for Peskas.
+
+**See the results:** [Peskas Zanzibar](https://zanzibar.peskas.org), [Peskas Management Platform](https://validation.peskas.org), [Peskas Fishery Data API](https://api.peskas.org/docs) and [Peskas Coasts](https://coasts.peskas.org).
+
+## What it is
+
+This pipeline serves fisheries managers, survey teams and researchers working on small-scale fisheries in Zanzibar, Tanzania. It processes four survey programmes: WorldFish (WF) landing surveys, Wildlife Conservation Society (WCS) landing surveys, Blue Alliance (BA) surveys and gleaning surveys. It links surveys to trips recorded by GPS trackers on boats, checks every record for likely errors, and publishes the results.
+
+## What it produces
+
+- Prepares monthly summaries of catch, effort, revenue and price by district, species and fishing gear for Peskas Zanzibar.
+- Flags likely errors in each WorldFish survey so survey teams can review and correct them in the Peskas Management Platform.
+- Publishes WorldFish landing records, before and after checks, through the Peskas Fishery Data API.
+- Estimates the weight of the catch from measured fish lengths, using reference data from FishBase and SeaLifeBase.
+- Links surveys to GPS-tracked trips and supplies Zanzibar's figures to the Peskas Coasts regional comparison.
+
+## Where the data comes from
+
+- **WorldFish (WF) surveys.** Enumerators (trained data collectors) from the Zanzibar Fisheries and Marine Resources Research Institute (ZAFIRI) record landings on KoboToolbox, the free mobile survey app. A landing is a boat's return to shore with its catch.
+- **WCS surveys.** WCS landing surveys, also recorded on KoboToolbox.
+- **Blue Alliance (BA) surveys.** Loaded into the pipeline's storage as a file. The pipeline does not download them itself.
+- **Gleaning surveys.** Gleaning is collecting seafood on foot along the shore at low tide. These surveys use their own KoboToolbox form.
+- **GPS trackers (Pelagic Data Systems).** Small solar-powered devices on boats record where they travel. A trip is one fishing outing, from leaving shore to landing.
+- **Reference data.** Boat and tracker records kept in Airtable, reference tables kept in Google Sheets, and species data from FishBase and SeaLifeBase.
+
+The data is updated every four days.
+
+Known limits:
+
+- Peskas Zanzibar and the Peskas Fishery Data API use the WorldFish surveys only. WCS, Blue Alliance and gleaning surveys are processed and checked but not yet published there.
+- Blue Alliance data changes only when someone adds a new file to storage.
+- Catch weights worked out from fish lengths are estimates.
+
+## Who runs it
+
+WorldFish runs this pipeline with the Zanzibar Fisheries and Marine Resources Research Institute (ZAFIRI), which collects the WorldFish surveys. For questions, write to <peskas.platform@gmail.com>.
+
+## Part of Peskas
+
+Peskas is WorldFish's open-source platform for monitoring small-scale fisheries (https://peskas.org).
+
+- [Peskas Zanzibar](https://zanzibar.peskas.org), [Peskas Kenya](https://peskas-dashboard-kenya.vercel.app/en), [Peskas Mozambique](https://peskas-dashboard-mozambique.vercel.app): country dashboards
+- [Peskas Timor-Leste](https://timor.peskas.org): Timor-Leste portal
+- [Peskas Coasts](https://coasts.peskas.org): regional comparison across countries
+- [Peskas Tracks](https://tracks.peskas.org): app for fishers to see their trips and log catches
+- [Peskas Kenya BMU dashboard](https://digitalfisheries.kenya.peskas.org): dashboard for Beach Management Units in Kenya
+- [Peskas Management Platform](https://validation.peskas.org): data review and download for survey teams
+- [Peskas Fishery Data API](https://api.peskas.org/docs): programmatic access to landing data
+- Data pipelines: [Kenya](https://github.com/WorldFishCenter/peskas.kenya.data.pipeline), [Mozambique](https://github.com/WorldFishCenter/peskas.mozambique.data.pipeline), [Timor-Leste](https://github.com/WorldFishCenter/peskas.timor.data.pipeline), [Coasts](https://github.com/WorldFishCenter/peskas.coasts)
+
+## For developers
+
+The code is an R package called `peskas.zanzibar.data.pipeline`. It relies on the shared [`coasts`](https://github.com/WorldFishCenter/peskas.coasts) package for storage, KoboToolbox, GPS tracks and dashboard data. Function reference: <https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/>.
+
+### Requirements
+
+- R 4.5 with the GDAL, GEOS and PROJ spatial libraries. Production uses the `rocker/geospatial:4.5` image.
+- The `coasts` package, installed from GitHub by `devtools::install_deps()`.
+
+### Setup
+
+```r
+devtools::install_deps()
+devtools::load_all()
 ```
 
-# peskas.zanzibar.data.pipeline
+Credentials come from environment variables. Create a `.env` file in the repository root (it is git-ignored). `read_config()` loads it and reads [`inst/config.yml`](inst/config.yml), which expects:
 
-<!-- badges: start -->
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
-[![CRAN status](https://www.r-pkg.org/badges/version/peskas.zanzibar.data.pipeline)](https://CRAN.R-project.org/package=peskas.zanzibar.data.pipeline)
-[![Codecov test coverage](https://codecov.io/gh/WorldFishCenter/peskas.zanzibar.data.pipeline/branch/master/graph/badge.svg)](https://codecov.io/gh/WorldFishCenter/peskas.zanzibar.data.pipeline?branch=master)
-[![R build status](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/workflows/R-CMD-check/badge.svg)](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions)
-[![R-CMD-check](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml)
-[![Project Status: Active – The project has reached a stable, usable
-state and is being actively
-developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-<!-- badges: end -->
+- KoboToolbox: `WF_SURVEYS_ID`, `WF_SURVEYS_ID_V2`, `WF_SURVEYS_ID_V3`, `WF_SURVEYS_UNAME`, `WF_SURVEYS_PSSW`, `WF_SURVEYS_TOKEN`, `WF_GLEANING_ID`, `WCS_SURVEYS_ID`, `WCS_SURVEYS_UNAME`, `WCS_SURVEYS_PSSW`
+- Google Cloud: `GCP_SA_KEY` (the service account JSON on a single line)
+- MongoDB: `MONGODB_CONNECTION_STRING`, `MONGODB_CONNECTION_STRING_VALIDATION`
+- Pelagic Data Systems: `PDS_TOKEN`, `PDS_SECRET`
+- Metadata: `GOOGLE_SHEET_ID`, `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID_FRAME`
 
-The goal of peskas.zanzibar.data.pipeline is to implement, deploy, and execute the data and modelling pipelines that underpin Zanzibar, the small-scale fisheries analytics in Zanzibar. 
+The `default` profile uses the development buckets and databases. The `production` profile is switched on only by CI on `main`.
 
-## The pipeline is an R package
+### Main commands
 
-peskas.zanzibar.data.pipeline is structured as an R package because it makes it easier to write production-grade software. Specifically, structuring the code as an R package allows us to:
+```r
+devtools::document()  # after editing roxygen comments; man/ is committed
+devtools::check()
+```
 
-- better handle system and package dependencies,
-- forces us to split the code into functions,
-- makes it easier to document the code, and 
-- makes it easier to test the code 
+Each pipeline step is one exported function, for example `validate_wf_surveys()`. The main workflow runs them in this order, with the GPS steps running alongside the survey steps:
 
-We make heavy use of [tidyverse style conventions](https://engineering-shiny.org) and the [usethis](https://usethis.r-lib.org) package to automate tasks during project setup and deployment.
+1. Build the Docker image.
+2. Download WCS and WorldFish surveys from KoboToolbox, then clean the BA, WCS and WorldFish surveys.
+3. Download and process GPS trips and tracks (with `coasts`).
+4. Check the WCS, BA and WorldFish surveys for likely errors.
+5. Match surveys to GPS trips.
+6. Export raw and checked landing records for the Peskas Fishery Data API.
+7. Summarise the checked data and estimate fleet activity, then export the dashboard data (with `coasts`).
 
-For more information about the rationale of structuring the pipeline as a package check [Chapter 3](https://engineering-shiny.org/structuring-project.html#structuring-your-app_) in [*Engineering Production-Grade Shiny Apps*](https://engineering-shiny.org). The book is focused on Shiny applications but the rationale also applies to data pipelines and production-ready code in general. The best place to learn more about package development is probably the [*R packages*](https://r-pkgs.org) book by Hadley Wickham and Jenny Brian.
+Gleaning surveys run as a separate chain: download, clean, then check.
 
-## The pipeline runs on Github Actions
+### How it runs in production
 
-While each step in the pipeline are defined as a function in the package, these functions are deployed and integrated using [GitHub Actions](https://docs.github.com/en/actions/learn-github-actions). 
-This allow us to take advantages of best practices in continous development and integration (CD/CI) and automatically link the code to execution.
-However, these workflow functions work almost as scripts because they don't take parameters and are used for their side effects. 
+[`data-pipeline.yaml`](.github/workflows/data-pipeline.yaml) runs at 00:00 UTC every fourth day of the month (1st, 5th, 9th, ...) and on every push. Its first job builds the Docker image from `Dockerfile.prod` with the latest `coasts` release; every other job runs inside it. Runs on `main` use the `production` profile; runs on any other branch use `default`.
 
-Each job in the pipeline is defined in the workflow file:  [`.github/workflows/data-pipeline.yaml`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/.github/workflows/data-pipeline.yaml) and can be seen in the figure below. Note that additional workflows exist to test the package in multiple environments and build the documentation website. 
+### Releases
 
-![](man/figures/pipeline.png)
+Bump `Version:` in `DESCRIPTION` and add a block at the top of [`NEWS.md`](NEWS.md) headed `# peskas.zanzibar.data.pipeline X.Y.Z`, written for non-technical readers. On push to `main`, `release.yml` turns that block into a GitHub release if the version is new.
 
-The figure above illustrate the jobs that are part of the pipeline workflow. Note that not all of them are implemented yet. 
+### Tests
 
-Generally, artifacts produced by each job are stored in a cloud storage container and retrieved from the cloud storage by the next job in the pipeline. 
-When storing a job's artifacts are versioned using the function `add_version()`, which generally includes a timestamp and the commit sha. This approach allow us to trace each artifact to a unique run of the pipeline. 
-When retrieving jobs can call `coasts::cloud_object_name()` to obtain the latest or an specific version of an artifact. 
+There are no automated tests yet. `R-CMD-check.yaml` checks that the package builds and its documentation is consistent. Check a change by running the affected function against the `default` profile.
 
-## Environment parameters are specified in the config file
+### Contributing
 
-The parameters that determine how the pipeline is run are specified in [`inst/config.yml`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/inst/config.yml). 
-This file can be accessed using `system.file("config.yml",package="peskas.zanzibar.data.pipeline")`.
-Using this file, as opposed to, for example, including them in the code, allows us to easily switch parameters depending on the environment. 
-We use the [config](https://github.com/rstudio/config) package to read the configuration file.
-We use three different environments (see below). 
-To determine which environment to use, the config package checks the environment variable `R_CONFIG_ACTIVE`.
+Read [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md). Code follows the [tidyverse style guide](https://style.tidyverse.org); comment `/style` on a pull request to apply it. New to R packages? See [*R Packages*](https://r-pkgs.org) by Hadley Wickham and Jenny Bryan. For AI-assisted work, see [`CLAUDE.md`](CLAUDE.md).
 
-- Remote development environment (default):
-The development environment is the "default" configuration. 
-This environment should be used when the code is running in the cloud 
-One characteristic of this environment is that it uses cloud storage buckets that differ to those that the real application uses.
-This makes it ideal to test the code and the pipeline before it's deployed into production. 
-Because this environment is designed to run in the cloud, it indicates that API tokens and authentication files should be read from environment variables.
-This works well when the code runs in GitHub Actions, because the workflow has instructions to read authentication details from [GitHub secrets](https://docs.github.com/en/actions/reference/encrypted-secrets) and passes it to R as environment variables. 
+## Licence
 
-- Local development environment:
-The "local" environment is similar to the default environment in that is used for development and therefore uses resources ideal for testing the code. 
-The main difference is that the authentication information is not read from environment variables but from local files. 
-Specifically authentication files should live in a directory called `auth` which should never be committed to git. 
-It is possible to run `Sys.setenv(R_CONFIG_ACTIVE="local")` in the R console to ensure the local environment is activated the next time `config.yml` is read.
-An even easier alternative is to add the key-value pair `R_CONFIG_ACTIVE=local` to the `.Renviron` file in the project directory. 
-
-- Production environment: 
-The production environment is similar to the default environment in that it's designed to run in the cloud and read authentication details from the cloud. 
-It differs in that it uses cloud resources that should be used exclusively in production once things have been tested out. 
-This environment is active when `R_CONFIG_ACTIVE=production`; this environment variable is passed by pipeline workflow file when the code executes from the "main" git branch.
-
-## We use docker containers 
-
-We use docker containers to make it easier to run and develop code. 
-
-- Development: We use the main [`Dockerfile`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/Dockerfile) for development. It's based on the rocker/geospatial image and spins up an RStudio server instance with quite a large number of packages. To start an instance of this container you can simply go to the project's directory and run `docker-compose up -d --build` from the terminal console.
-
-- Production: We use [`Dockerfile.prod`](https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/Dockerfile.prod) to run the code in production. 
-This image is based in a more lightweight version of R and only installs the required packages. 
-The first job in the pipeline builds this container and other steps use it to run the code. 
-This allow us to run the code under the same environment regardless of the cloud computing infrastructure that runs it. 
-
-## Logging
-
-We use the [logger](https://daroczig.github.io/logger/) package to log events in production. 
+GPL-3. See [`LICENSE.md`](LICENSE.md).

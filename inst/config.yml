@@ -25,10 +25,6 @@ default:
       username: !expr Sys.getenv('WF_SURVEYS_UNAME')
       password: !expr Sys.getenv('WF_SURVEYS_PSSW')
       token: !expr Sys.getenv('WF_SURVEYS_TOKEN')
-    ba:
-      asset_id: !expr Sys.getenv('BA_SURVEYS_ID')
-      username: !expr Sys.getenv('BA_SURVEYS_UNAME')
-      password: !expr Sys.getenv('BA_SURVEYS_PSSW')
   surveys:
     summaries:
       file_prefix: zanzibar-summaries

@@ -315,34 +315,6 @@ aggregate_survey_data <- function(catch_price_table, trips_info) {
     dplyr::select(-c("boats_landed", "trip_length_days")) |>
     dplyr::relocate("catch_taxa", .after = "cpue")
 }
-#' Validate market prices
-#'
-#' Processes and validates market price data, filtering for reasonable price ranges
-#' and calculating median prices by species group and family.
-#'
-#' @param preprocessed_data Preprocessed survey data containing market information
-#' @return A dataframe with validated market prices
-#' @keywords validation
-#' @export
-validate_prices <- function(preprocessed_data) {
-  preprocessed_data |>
-    dplyr::filter(.data$survey_type == "market") |>
-    dplyr::select("survey_id", "market") |>
-    tidyr::unnest(.data$market, keep_empty = T) |>
-    dplyr::mutate(
-      catch_price_kg = .data$catch_price / .data$catch_kg_market
-    ) |>
-    dplyr::filter(.data$catch_price_kg > 777 & .data$catch_price_kg < 51800) |>
-    dplyr::rename(species_catch = "species_market") |>
-    expand_taxa() |>
-    dplyr::group_by(.data$group_market, .data$family) |>
-    dplyr::summarise(
-      catch_price_kg = stats::median(.data$catch_price_kg)
-    ) |>
-    dplyr::ungroup() |>
-    dplyr::rename(group_catch = "group_market")
-}
-
 
 #' Get catch bounds for survey data
 #'

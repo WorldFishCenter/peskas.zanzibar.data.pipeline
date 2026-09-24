@@ -8,7 +8,7 @@ Authors@R: c(
     person("WorldFish", role = "cph")
   )
 Description: Implements the data processing and modelling pipelines
-    underpining the Peskas system.
+    underpinning the Peskas system.
 License: GPL-3
 URL: https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/
 Imports:

@@ -15,9 +15,9 @@ export_validation_flags(
 \item{conf}{Configuration object from \code{read_config()} containing MongoDB connection
 parameters and survey-specific settings}
 
-\item{asset_id}{Character string specifying which survey to process. Must be one of
-"adnap" or "lurio". Determines which configuration to use from
-\code{conf$ingestion$kobo-{asset_id}}. Default is "adnap".}
+\item{asset_id}{Character string specifying which WF survey version to process.
+Must be one of "v1", "v2" or "v3". Determines which configuration to use from
+\verb{conf$ingestion$wf_\{asset_id\}}. Default is "v1".}
 
 \item{all_flags}{Data frame containing all validation flags with columns:
 \code{submission_id}, \code{submitted_by}, \code{submission_date}, \code{alert_flag}}
@@ -61,19 +61,20 @@ The function performs the following steps:
 }
 }
 \note{
-This function is called internally by \code{validate_surveys_adnap()} and should not
+This function is called internally by \code{validate_wf_surveys()} and should not
 typically be called directly. It requires:
 \itemize{
 \item Valid configuration with MongoDB connection string
-\item Survey-specific configuration under \code{conf$ingestion$kobo-{asset_id}}
+\item Survey-specific configuration under \verb{conf$ingestion$wf_\{asset_id\}}
 \item System username configured to identify automated vs. manual validations
 }
 }
 \section{MongoDB Collections}{
 
-The function pushes to two MongoDB collections:
+The function pushes to two MongoDB collections, named with the survey's KoBo
+asset id:
 \describe{
-\item{flags-{asset_id}}{Wide format with one row per submission including
+\item{surveys_flags-{asset_id}}{Wide format with one row per submission including
 validation status and flags}
 \item{enumerators_stats-{asset_id}}{Long format with one row per flag per
 submission for enumerator statistics}
@@ -82,10 +83,10 @@ submission for enumerator statistics}
 
 \examples{
 \dontrun{
-# Called internally by validate_surveys_adnap()
+# Called internally by validate_wf_surveys()
 export_validation_flags(
   conf = conf,
-  asset_id = "surveys_v1",
+  asset_id = "v1",
   all_flags = flags_combined,
   validation_statuses = validation_statuses
 )
