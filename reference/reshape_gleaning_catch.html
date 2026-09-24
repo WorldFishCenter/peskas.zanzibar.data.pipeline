@@ -3,17 +3,7 @@
 KoboToolbox survey into a tidy long format. Unlike the boat-fishery surveys
 (see reshape_catch_data_v2()), group_catch is a single (non-repeated)
 group per submission, so there is no n_catch index. The wide-to-long work
-instead unpacks three layered structures:
-Reshapes the group_catch section of the Zanzibar/Pemba intertidal gleaning
-KoboToolbox survey into a tidy long format. Unlike the boat-fishery surveys
-(see reshape_catch_data_v2()), group_catch is a single (non-repeated)
-group per submission, so there is no n_catch index. The wide-to-long work
 instead unpacks three layered structures:"><meta property="og:description" content="Reshapes the group_catch section of the Zanzibar/Pemba intertidal gleaning
-KoboToolbox survey into a tidy long format. Unlike the boat-fishery surveys
-(see reshape_catch_data_v2()), group_catch is a single (non-repeated)
-group per submission, so there is no n_catch index. The wide-to-long work
-instead unpacks three layered structures:
-Reshapes the group_catch section of the Zanzibar/Pemba intertidal gleaning
 KoboToolbox survey into a tidy long format. Unlike the boat-fishery surveys
 (see reshape_catch_data_v2()), group_catch is a single (non-repeated)
 group per submission, so there is no n_catch index. The wide-to-long work
@@ -56,18 +46,11 @@ KoboToolbox survey into a tidy long format. Unlike the boat-fishery surveys
 (see <code><a href="reshape_catch_data_v2.html">reshape_catch_data_v2()</a></code>), <code>group_catch</code> is a <em>single</em> (non-repeated)
 group per submission, so there is no <code>n_catch</code> index. The wide-to-long work
 instead unpacks three layered structures:</p>
-<p>Reshapes the <code>group_catch</code> section of the Zanzibar/Pemba intertidal gleaning
-KoboToolbox survey into a tidy long format. Unlike the boat-fishery surveys
-(see <code><a href="reshape_catch_data_v2.html">reshape_catch_data_v2()</a></code>), <code>group_catch</code> is a <em>single</em> (non-repeated)
-group per submission, so there is no <code>n_catch</code> index. The wide-to-long work
-instead unpacks three layered structures:</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">reshape_gleaning_catch</span><span class="op">(</span>data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">reshape_gleaning_catch</span><span class="op">(</span>data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">reshape_gleaning_catch</span><span class="op">(</span>data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -84,8 +67,6 @@ nested <code>group_catch/group_length_gastropods/...</code> /
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A long data frame with one row per submission x shell group x size
-class (plus a single context row for submissions without shell detail).</p>
-<p>A long data frame with one row per submission x shell group x size
 class (plus a single context row for submissions without shell detail).</p>
     </div>
     <div class="section level2">
@@ -112,42 +93,11 @@ as a single context row with <code>group</code>/<code>size_class</code>/<code>n_
 submission is silently dropped. All three size classes are retained per
 present group (NA = not recorded, 0 = a recorded zero) so the size-frequency
 distribution stays explicit and complete.</p>
-<ol><li><p><strong>Counting method.</strong> <code>counting_method</code> (<code>backet</code> / <code>plastic_bag</code>)
-populates two mutually exclusive sets of columns (<code>bucket_*</code> vs
-<code>plastic_*</code>). These are coalesced into one unified container block:
-<code>container_type</code>, <code>container_size</code>, <code>container_size_kg</code>,
-<code>catch_fraction</code>, <code>unit_weight_kg</code>, <code>n_containers</code>.</p></li>
-<li><p><strong>Shell group + species.</strong> <code>shell_group</code>
-(<code>bivalves</code> / <code>gastropod</code> / <code>both</code> / <code>others</code>) drives which species
-multi-selects (<code>Group_Bivalves</code>, <code>Group_Gastropod</code>) and which length
-block apply. Species stay as a space-separated code list per group
-(no per-species quantities exist in the instrument), with a derived
-<code>n_species</code> token count.</p></li>
-<li><p><strong>Length frequency.</strong> Individual counts by size class
-(<code>&lt;5</code>, <code>5-15</code>, <code>&gt;15</code> cm) are recorded once per shell GROUP, not per
-species. Each present group emits one row per size class.</p></li>
-</ol><p>Output grain: one row per <code>submission_id</code> x <code>group</code> x <code>size_class</code>. A
-submission recorded under <code>bivalves</code> or <code>gastropod</code> yields 3 rows; <code>both</code>
-yields 6; <code>others</code> or a missing <code>shell_group</code> (no shell detail) is preserved
-as a single context row with <code>group</code>/<code>size_class</code>/<code>n_individuals</code> = NA so no
-submission is silently dropped. All three size classes are retained per
-present group (NA = not recorded, 0 = a recorded zero) so the size-frequency
-distribution stays explicit and complete.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">gleaning_long</span> <span class="op">&lt;-</span> <span class="fu">reshape_gleaning_catch</span><span class="op">(</span><span class="va">gleaning</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Size-frequency by shell group across all submissions</span></span></span>
-<span class="r-in"><span><span class="va">gleaning_long</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">n_individuals</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">group</span>, <span class="va">size_class</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>total <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">n_individuals</span><span class="op">)</span>, .groups <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="va">gleaning_long</span> <span class="op">&lt;-</span> <span class="fu">reshape_gleaning_catch</span><span class="op">(</span><span class="va">gleaning</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Size-frequency by shell group across all submissions</span></span></span>

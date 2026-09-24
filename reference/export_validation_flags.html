@@ -65,9 +65,9 @@ parameters and survey-specific settings</p></dd>
 
 
 <dt id="arg-asset-id">asset_id<a class="anchor" aria-label="anchor" href="#arg-asset-id"></a></dt>
-<dd><p>Character string specifying which survey to process. Must be one of
-"adnap" or "lurio". Determines which configuration to use from
-<code>conf$ingestion$kobo-{asset_id}</code>. Default is "adnap".</p></dd>
+<dd><p>Character string specifying which WF survey version to process.
+Must be one of "v1", "v2" or "v3". Determines which configuration to use from
+<code>conf$ingestion$wf_{asset_id}</code>. Default is "v1".</p></dd>
 
 
 <dt id="arg-all-flags">all_flags<a class="anchor" aria-label="anchor" href="#arg-all-flags"></a></dt>
@@ -102,16 +102,17 @@ parameters and survey-specific settings</p></dd>
 </ul></div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
-    <p>This function is called internally by <code>validate_surveys_adnap()</code> and should not
+    <p>This function is called internally by <code><a href="validate_wf_surveys.html">validate_wf_surveys()</a></code> and should not
 typically be called directly. It requires:</p><ul><li><p>Valid configuration with MongoDB connection string</p></li>
-<li><p>Survey-specific configuration under <code>conf$ingestion$kobo-{asset_id}</code></p></li>
+<li><p>Survey-specific configuration under <code>conf$ingestion$wf_{asset_id}</code></p></li>
 <li><p>System username configured to identify automated vs. manual validations</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="mongodb-collections">MongoDB Collections<a class="anchor" aria-label="anchor" href="#mongodb-collections"></a></h2>
 
 
-<p>The function pushes to two MongoDB collections:</p><dl><dt>flags-asset_id</dt>
+<p>The function pushes to two MongoDB collections, named with the survey's KoBo
+asset id:</p><dl><dt>surveys_flags-asset_id</dt>
 <dd><p>Wide format with one row per submission including
 validation status and flags</p></dd>
 
@@ -125,10 +126,10 @@ submission for enumerator statistics</p></dd>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Called internally by validate_surveys_adnap()</span></span></span>
+<span class="r-in"><span><span class="co"># Called internally by validate_wf_surveys()</span></span></span>
 <span class="r-in"><span><span class="fu">export_validation_flags</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  conf <span class="op">=</span> <span class="va">conf</span>,</span></span>
-<span class="r-in"><span>  asset_id <span class="op">=</span> <span class="st">"surveys_v1"</span>,</span></span>
+<span class="r-in"><span>  asset_id <span class="op">=</span> <span class="st">"v1"</span>,</span></span>
 <span class="r-in"><span>  all_flags <span class="op">=</span> <span class="va">flags_combined</span>,</span></span>
 <span class="r-in"><span>  validation_statuses <span class="op">=</span> <span class="va">validation_statuses</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>

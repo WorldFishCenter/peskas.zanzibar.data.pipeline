@@ -28,9 +28,9 @@ export_validation_flags(
 
 - asset_id:
 
-  Character string specifying which survey to process. Must be one of
-  "adnap" or "lurio". Determines which configuration to use from
-  `conf$ingestion$kobo-{asset_id}`. Default is "adnap".
+  Character string specifying which WF survey version to process. Must
+  be one of "v1", "v2" or "v3". Determines which configuration to use
+  from `conf$ingestion$wf_{asset_id}`. Default is "v1".
 
 - all_flags:
 
@@ -91,21 +91,23 @@ The function performs the following steps:
 
 ## Note
 
-This function is called internally by `validate_surveys_adnap()` and
-should not typically be called directly. It requires:
+This function is called internally by
+[`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md)
+and should not typically be called directly. It requires:
 
 - Valid configuration with MongoDB connection string
 
-- Survey-specific configuration under `conf$ingestion$kobo-{asset_id}`
+- Survey-specific configuration under `conf$ingestion$wf_{asset_id}`
 
 - System username configured to identify automated vs. manual
   validations
 
 ## MongoDB Collections
 
-The function pushes to two MongoDB collections:
+The function pushes to two MongoDB collections, named with the survey's
+KoBo asset id:
 
-- flags-asset_id:
+- surveys_flags-asset_id:
 
   Wide format with one row per submission including validation status
   and flags
@@ -119,10 +121,10 @@ The function pushes to two MongoDB collections:
 
 ``` r
 if (FALSE) { # \dontrun{
-# Called internally by validate_surveys_adnap()
+# Called internally by validate_wf_surveys()
 export_validation_flags(
   conf = conf,
-  asset_id = "surveys_v1",
+  asset_id = "v1",
   all_flags = flags_combined,
   validation_statuses = validation_statuses
 )

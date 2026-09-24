@@ -14,8 +14,8 @@
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Functions to Implement the Zanzibar Small Scale Fisheries Data Pipeline">
-<meta name="description" content="Implements the data processing and modelling pipelines underpining the Peskas system.">
-<meta property="og:description" content="Implements the data processing and modelling pipelines underpining the Peskas system.">
+<meta name="description" content="Implements the data processing and modelling pipelines underpinning the Peskas system.">
+<meta property="og:description" content="Implements the data processing and modelling pipelines underpinning the Peskas system.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -49,57 +49,155 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="peskaszanzibardatapipeline">peskas.zanzibar.data.pipeline<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline"></a>
+<div class="page-header"><h1 id="peskas-zanzibar-data-pipeline">Peskas Zanzibar data pipeline<a class="anchor" aria-label="anchor" href="#peskas-zanzibar-data-pipeline"></a>
 </h1></div>
-<!-- badges: start -->
-
-<!-- badges: end -->
-<p>The goal of peskas.zanzibar.data.pipeline is to implement, deploy, and execute the data and modelling pipelines that underpin Zanzibar, the small-scale fisheries analytics in Zanzibar.</p>
+<p><a href="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></p>
+<p>The code that turns fish landing surveys and boat GPS tracks from Zanzibar into checked data for Peskas.</p>
+<p><strong>See the results:</strong> <a href="https://zanzibar.peskas.org" class="external-link">Peskas Zanzibar</a>, <a href="https://validation.peskas.org" class="external-link">Peskas Management Platform</a>, <a href="https://api.peskas.org/docs" class="external-link">Peskas Fishery Data API</a> and <a href="https://coasts.peskas.org" class="external-link">Peskas Coasts</a>.</p>
 <div class="section level2">
-<h2 id="the-pipeline-is-an-r-package">The pipeline is an R package<a class="anchor" aria-label="anchor" href="#the-pipeline-is-an-r-package"></a>
+<h2 id="what-it-is">What it is<a class="anchor" aria-label="anchor" href="#what-it-is"></a>
 </h2>
-<p>peskas.zanzibar.data.pipeline is structured as an R package because it makes it easier to write production-grade software. Specifically, structuring the code as an R package allows us to:</p>
-<ul>
-<li>better handle system and package dependencies,</li>
-<li>forces us to split the code into functions,</li>
-<li>makes it easier to document the code, and</li>
-<li>makes it easier to test the code</li>
-</ul>
-<p>We make heavy use of <a href="https://engineering-shiny.org" class="external-link">tidyverse style conventions</a> and the <a href="https://usethis.r-lib.org" class="external-link">usethis</a> package to automate tasks during project setup and deployment.</p>
-<p>For more information about the rationale of structuring the pipeline as a package check <a href="https://engineering-shiny.org/structuring-project.html#structuring-your-app_" class="external-link">Chapter 3</a> in <a href="https://engineering-shiny.org" class="external-link"><em>Engineering Production-Grade Shiny Apps</em></a>. The book is focused on Shiny applications but the rationale also applies to data pipelines and production-ready code in general. The best place to learn more about package development is probably the <a href="https://r-pkgs.org" class="external-link"><em>R packages</em></a> book by Hadley Wickham and Jenny Brian.</p>
+<p>This pipeline serves fisheries managers, survey teams and researchers working on small-scale fisheries in Zanzibar, Tanzania. It processes four survey programmes: WorldFish (WF) landing surveys, Wildlife Conservation Society (WCS) landing surveys, Blue Alliance (BA) surveys and gleaning surveys. It links surveys to trips recorded by GPS trackers on boats, checks every record for likely errors, and publishes the results.</p>
 </div>
 <div class="section level2">
-<h2 id="the-pipeline-runs-on-github-actions">The pipeline runs on Github Actions<a class="anchor" aria-label="anchor" href="#the-pipeline-runs-on-github-actions"></a>
+<h2 id="what-it-produces">What it produces<a class="anchor" aria-label="anchor" href="#what-it-produces"></a>
 </h2>
-<p>While each step in the pipeline are defined as a function in the package, these functions are deployed and integrated using <a href="https://docs.github.com/en/actions/learn-github-actions" class="external-link">GitHub Actions</a>. This allow us to take advantages of best practices in continous development and integration (CD/CI) and automatically link the code to execution. However, these workflow functions work almost as scripts because they don’t take parameters and are used for their side effects.</p>
-<p>Each job in the pipeline is defined in the workflow file: <a href="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/.github/workflows/data-pipeline.yaml" class="external-link"><code>.github/workflows/data-pipeline.yaml</code></a> and can be seen in the figure below. Note that additional workflows exist to test the package in multiple environments and build the documentation website.</p>
-<p><img src="reference/figures/pipeline.png"></p>
-<p>The figure above illustrate the jobs that are part of the pipeline workflow. Note that not all of them are implemented yet.</p>
-<p>Generally, artifacts produced by each job are stored in a cloud storage container and retrieved from the cloud storage by the next job in the pipeline. When storing a job’s artifacts are versioned using the function <code><a href="reference/add_version.html">add_version()</a></code>, which generally includes a timestamp and the commit sha. This approach allow us to trace each artifact to a unique run of the pipeline. When retrieving jobs can call <code><a href="https://rdrr.io/pkg/coasts/man/cloud_object_name.html" class="external-link">coasts::cloud_object_name()</a></code> to obtain the latest or an specific version of an artifact.</p>
-</div>
-<div class="section level2">
-<h2 id="environment-parameters-are-specified-in-the-config-file">Environment parameters are specified in the config file<a class="anchor" aria-label="anchor" href="#environment-parameters-are-specified-in-the-config-file"></a>
-</h2>
-<p>The parameters that determine how the pipeline is run are specified in <a href="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/inst/conf.yml" class="external-link"><code>inst/conf.yml</code></a>. This file can be accessed using <code>system.file("conf.yml",package="peskas.zanzibar.data.pipeline")</code>. Using this file, as opposed to, for example, including them in the code, allows us to easily switch parameters depending on the environment. We use the <a href="https://github.com/rstudio/config" class="external-link">config</a> package to read the configuration file. We use three different environments (see below). To determine which environment to use, the config package checks the environment variable <code>R_CONFIG_ACTIVE</code>.</p>
 <ul>
-<li><p>Remote development environment (default): The development environment is the “default” configuration. This environment should be used when the code is running in the cloud One characteristic of this environment is that it uses cloud storage buckets that differ to those that the real application uses. This makes it ideal to test the code and the pipeline before it’s deployed into production. Because this environment is designed to run in the cloud, it indicates that API tokens and authentication files should be read from environment variables. This works well when the code runs in GitHub Actions, because the workflow has instructions to read authentication details from <a href="https://docs.github.com/en/actions/reference/encrypted-secrets" class="external-link">GitHub secrets</a> and passes it to R as environment variables.</p></li>
-<li><p>Local development environment: The “local” environment is similar to the default environment in that is used for development and therefore uses resources ideal for testing the code. The main difference is that the authentication information is not read from environment variables but from local files. Specifically authentication files should live in a directory called <code>auth</code> which should never be committed to git. It is possible to run <code>Sys.setenv(R_CONFIG_ACTIVE="local")</code> in the R console to ensure the local environment is activated the next time <code>conf.yml</code> is read. An even easier alternative is to add the key-value pair <code>R_CONFIG_ACTIVE=local</code> to the <code>.Renviron</code> file in the project directory.</p></li>
-<li><p>Production environment: The production environment is similar to the default environment in that it’s designed to run in the cloud and read authentication details from the cloud. It differs in that it uses cloud resources that should be used exclusively in production once things have been tested out. This environment is active when <code>R_CONFIG_ACTIVE=production</code>; this environment variable is passed by pipeline workflow file when the code executes from the “main” git branch.</p></li>
+<li>Prepares monthly summaries of catch, effort, revenue and price by district, species and fishing gear for Peskas Zanzibar.</li>
+<li>Flags likely errors in each WorldFish survey so survey teams can review and correct them in the Peskas Management Platform.</li>
+<li>Publishes WorldFish landing records, before and after checks, through the Peskas Fishery Data API.</li>
+<li>Estimates the weight of the catch from measured fish lengths, using reference data from FishBase and SeaLifeBase.</li>
+<li>Links surveys to GPS-tracked trips and supplies Zanzibar’s figures to the Peskas Coasts regional comparison.</li>
 </ul>
 </div>
 <div class="section level2">
-<h2 id="we-use-docker-containers">We use docker containers<a class="anchor" aria-label="anchor" href="#we-use-docker-containers"></a>
+<h2 id="where-the-data-comes-from">Where the data comes from<a class="anchor" aria-label="anchor" href="#where-the-data-comes-from"></a>
 </h2>
-<p>We use docker containers to make it easier to run and develop code.</p>
 <ul>
-<li><p>Development: We use the main <a href="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/Dockerfile" class="external-link"><code>Dockerfile</code></a> for development. It’s based on the rocker/geospatial image and spins up an RStudio server instance with quite a large number of packages. To start an instance of this container you can simply go to the project’s directory and run <code>docker-compose up -d --build</code> from the terminal console.</p></li>
-<li><p>Production: We use <a href="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/blob/main/Dockerfile.prod" class="external-link"><code>Dockerfile.prod</code></a> to run the code in production. This image is based in a more lightweight version of R and only installs the required packages. The first job in the pipeline builds this container and other steps use it to run the code. This allow us to run the code under the same environment regardless of the cloud computing infrastructure that runs it.</p></li>
+<li>
+<strong>WorldFish (WF) surveys.</strong> Enumerators (trained data collectors) from the Zanzibar Fisheries and Marine Resources Research Institute (ZAFIRI) record landings on KoboToolbox, the free mobile survey app. A landing is a boat’s return to shore with its catch.</li>
+<li>
+<strong>WCS surveys.</strong> WCS landing surveys, also recorded on KoboToolbox.</li>
+<li>
+<strong>Blue Alliance (BA) surveys.</strong> Loaded into the pipeline’s storage as a file. The pipeline does not download them itself.</li>
+<li>
+<strong>Gleaning surveys.</strong> Gleaning is collecting seafood on foot along the shore at low tide. These surveys use their own KoboToolbox form.</li>
+<li>
+<strong>GPS trackers (Pelagic Data Systems).</strong> Small solar-powered devices on boats record where they travel. A trip is one fishing outing, from leaving shore to landing.</li>
+<li>
+<strong>Reference data.</strong> Boat and tracker records kept in Airtable, reference tables kept in Google Sheets, and species data from FishBase and SeaLifeBase.</li>
+</ul>
+<p>The data is updated every four days.</p>
+<p>Known limits:</p>
+<ul>
+<li>Peskas Zanzibar and the Peskas Fishery Data API use the WorldFish surveys only. WCS, Blue Alliance and gleaning surveys are processed and checked but not yet published there.</li>
+<li>Blue Alliance data changes only when someone adds a new file to storage.</li>
+<li>Catch weights worked out from fish lengths are estimates.</li>
 </ul>
 </div>
 <div class="section level2">
-<h2 id="logging">Logging<a class="anchor" aria-label="anchor" href="#logging"></a>
+<h2 id="who-runs-it">Who runs it<a class="anchor" aria-label="anchor" href="#who-runs-it"></a>
 </h2>
-<p>We use the <a href="https://daroczig.github.io/logger/" class="external-link">logger</a> package to log events in production.</p>
+<p>WorldFish runs this pipeline with the Zanzibar Fisheries and Marine Resources Research Institute (ZAFIRI), which collects the WorldFish surveys. For questions, write to <a href="mailto:peskas.platform@gmail.com" class="email">peskas.platform@gmail.com</a>.</p>
+</div>
+<div class="section level2">
+<h2 id="part-of-peskas">Part of Peskas<a class="anchor" aria-label="anchor" href="#part-of-peskas"></a>
+</h2>
+<p>Peskas is WorldFish’s open-source platform for monitoring small-scale fisheries (<a href="https://peskas.org" class="external-link uri">https://peskas.org</a>).</p>
+<ul>
+<li>
+<a href="https://zanzibar.peskas.org" class="external-link">Peskas Zanzibar</a>, <a href="https://peskas-dashboard-kenya.vercel.app/en" class="external-link">Peskas Kenya</a>, <a href="https://peskas-dashboard-mozambique.vercel.app" class="external-link">Peskas Mozambique</a>: country dashboards</li>
+<li>
+<a href="https://timor.peskas.org" class="external-link">Peskas Timor-Leste</a>: Timor-Leste portal</li>
+<li>
+<a href="https://coasts.peskas.org" class="external-link">Peskas Coasts</a>: regional comparison across countries</li>
+<li>
+<a href="https://tracks.peskas.org" class="external-link">Peskas Tracks</a>: app for fishers to see their trips and log catches</li>
+<li>
+<a href="https://digitalfisheries.kenya.peskas.org" class="external-link">Peskas Kenya BMU dashboard</a>: dashboard for Beach Management Units in Kenya</li>
+<li>
+<a href="https://validation.peskas.org" class="external-link">Peskas Management Platform</a>: data review and download for survey teams</li>
+<li>
+<a href="https://api.peskas.org/docs" class="external-link">Peskas Fishery Data API</a>: programmatic access to landing data</li>
+<li>Data pipelines: <a href="https://github.com/WorldFishCenter/peskas.kenya.data.pipeline" class="external-link">Kenya</a>, <a href="https://github.com/WorldFishCenter/peskas.mozambique.data.pipeline" class="external-link">Mozambique</a>, <a href="https://github.com/WorldFishCenter/peskas.timor.data.pipeline" class="external-link">Timor-Leste</a>, <a href="https://github.com/WorldFishCenter/peskas.coasts" class="external-link">Coasts</a>
+</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="for-developers">For developers<a class="anchor" aria-label="anchor" href="#for-developers"></a>
+</h2>
+<p>The code is an R package called <code>peskas.zanzibar.data.pipeline</code>. It relies on the shared <a href="https://github.com/WorldFishCenter/peskas.coasts" class="external-link"><code>coasts</code></a> package for storage, KoboToolbox, GPS tracks and dashboard data. Function reference: <a href="https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/" class="uri">https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/</a>.</p>
+<div class="section level3">
+<h3 id="requirements">Requirements<a class="anchor" aria-label="anchor" href="#requirements"></a>
+</h3>
+<ul>
+<li>R 4.5 with the GDAL, GEOS and PROJ spatial libraries. Production uses the <code>rocker/geospatial:4.5</code> image.</li>
+<li>The <code>coasts</code> package, installed from GitHub by <code>devtools::install_deps()</code>.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
+</h3>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_deps</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">load_all</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>Credentials come from environment variables. Create a <code>.env</code> file in the repository root (it is git-ignored). <code><a href="reference/read_config.html">read_config()</a></code> loads it and reads <a href="inst/config.yml"><code>inst/config.yml</code></a>, which expects:</p>
+<ul>
+<li>KoboToolbox: <code>WF_SURVEYS_ID</code>, <code>WF_SURVEYS_ID_V2</code>, <code>WF_SURVEYS_ID_V3</code>, <code>WF_SURVEYS_UNAME</code>, <code>WF_SURVEYS_PSSW</code>, <code>WF_SURVEYS_TOKEN</code>, <code>WF_GLEANING_ID</code>, <code>WCS_SURVEYS_ID</code>, <code>WCS_SURVEYS_UNAME</code>, <code>WCS_SURVEYS_PSSW</code>
+</li>
+<li>Google Cloud: <code>GCP_SA_KEY</code> (the service account JSON on a single line)</li>
+<li>MongoDB: <code>MONGODB_CONNECTION_STRING</code>, <code>MONGODB_CONNECTION_STRING_VALIDATION</code>
+</li>
+<li>Pelagic Data Systems: <code>PDS_TOKEN</code>, <code>PDS_SECRET</code>
+</li>
+<li>Metadata: <code>GOOGLE_SHEET_ID</code>, <code>AIRTABLE_TOKEN</code>, <code>AIRTABLE_BASE_ID_FRAME</code>
+</li>
+</ul>
+<p>The <code>default</code> profile uses the development buckets and databases. The <code>production</code> profile is switched on only by CI on <code>main</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="main-commands">Main commands<a class="anchor" aria-label="anchor" href="#main-commands"></a>
+</h3>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">document</span><span class="op">(</span><span class="op">)</span>  <span class="co"># after editing roxygen comments; man/ is committed</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">check</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>Each pipeline step is one exported function, for example <code><a href="reference/validate_wf_surveys.html">validate_wf_surveys()</a></code>. The main workflow runs them in this order, with the GPS steps running alongside the survey steps:</p>
+<ol style="list-style-type: decimal">
+<li>Build the Docker image.</li>
+<li>Download WCS and WorldFish surveys from KoboToolbox, then clean the BA, WCS and WorldFish surveys.</li>
+<li>Download and process GPS trips and tracks (with <code>coasts</code>).</li>
+<li>Check the WCS, BA and WorldFish surveys for likely errors.</li>
+<li>Match surveys to GPS trips.</li>
+<li>Export raw and checked landing records for the Peskas Fishery Data API.</li>
+<li>Summarise the checked data and estimate fleet activity, then export the dashboard data (with <code>coasts</code>).</li>
+</ol>
+<p>Gleaning surveys run as a separate chain: download, clean, then check.</p>
+</div>
+<div class="section level3">
+<h3 id="how-it-runs-in-production">How it runs in production<a class="anchor" aria-label="anchor" href="#how-it-runs-in-production"></a>
+</h3>
+<p><a href=".github/workflows/data-pipeline.yaml"><code>data-pipeline.yaml</code></a> runs at 00:00 UTC every fourth day of the month (1st, 5th, 9th, …) and on every push. Its first job builds the Docker image from <code>Dockerfile.prod</code> with the latest <code>coasts</code> release; every other job runs inside it. Runs on <code>main</code> use the <code>production</code> profile; runs on any other branch use <code>default</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="releases">Releases<a class="anchor" aria-label="anchor" href="#releases"></a>
+</h3>
+<p>Bump <code>Version:</code> in <code>DESCRIPTION</code> and add a block at the top of <a href="NEWS.html"><code>NEWS.md</code></a> headed <code># peskas.zanzibar.data.pipeline X.Y.Z</code>, written for non-technical readers. On push to <code>main</code>, <code>release.yml</code> turns that block into a GitHub release if the version is new.</p>
+</div>
+<div class="section level3">
+<h3 id="tests">Tests<a class="anchor" aria-label="anchor" href="#tests"></a>
+</h3>
+<p>There are no automated tests yet. <code>R-CMD-check.yaml</code> checks that the package builds and its documentation is consistent. Check a change by running the affected function against the <code>default</code> profile.</p>
+</div>
+<div class="section level3">
+<h3 id="contributing">Contributing<a class="anchor" aria-label="anchor" href="#contributing"></a>
+</h3>
+<p>Read <a href="CONTRIBUTING.html"><code>.github/CONTRIBUTING.md</code></a>. Code follows the <a href="https://style.tidyverse.org" class="external-link">tidyverse style guide</a>; comment <code>/style</code> on a pull request to apply it. New to R packages? See <a href="https://r-pkgs.org" class="external-link"><em>R Packages</em></a> by Hadley Wickham and Jenny Bryan. For AI-assisted work, see <a href="CLAUDE.html"><code>CLAUDE.md</code></a>.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="licence">Licence<a class="anchor" aria-label="anchor" href="#licence"></a>
+</h2>
+<p>GPL-3. See <a href="LICENSE.html"><code>LICENSE.md</code></a>.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="license">
@@ -134,17 +232,7 @@
 </ul>
 </div>
 
-<div class="dev-status">
-<h2 data-toc-skip>Dev status</h2>
-<ul class="list-unstyled">
-<li><a href="https://www.tidyverse.org/lifecycle/#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
-<li><a href="https://CRAN.R-project.org/package=peskas.zanzibar.data.pipeline" class="external-link"><img src="https://www.r-pkg.org/badges/version/peskas.zanzibar.data.pipeline" alt="CRAN status"></a></li>
-<li><a href="https://codecov.io/gh/WorldFishCenter/peskas.zanzibar.data.pipeline?branch=master" class="external-link"><img src="https://codecov.io/gh/WorldFishCenter/peskas.zanzibar.data.pipeline/branch/master/graph/badge.svg" alt="Codecov test coverage"></a></li>
-<li><a href="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions" class="external-link"><img src="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/workflows/R-CMD-check/badge.svg" alt="R build status"></a></li>
-<li><a href="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/WorldFishCenter/peskas.zanzibar.data.pipeline/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://www.repostatus.org/#active" class="external-link"><img src="https://www.repostatus.org/badges/latest/active.svg" alt="Project Status: Active – The project has reached a stable, usable state and is being actively developed."></a></li>
-</ul>
-</div>
+
 
   </aside>
 </div>
