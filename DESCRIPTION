@@ -13,7 +13,7 @@ License: GPL-3
 URL: https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/
 Imports:
     arrow,
-    coasts (>= 4.13.0),
+    coasts (>= 4.15.0),
     config,
     digest,
     dotenv,
