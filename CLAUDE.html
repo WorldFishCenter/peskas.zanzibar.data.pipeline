@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.13.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.13.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,15 +62,13 @@
 <h2 id="rules">Rules<a class="anchor" aria-label="anchor" href="#rules"></a></h2>
 <ul><li>Tune validation through config, not code: <code>surveys.&lt;source&gt;.validation.K_*</code> (MAD multipliers for counts, weight, length, price) and <code>validation.k_MAD_catch</code>. Gleaning thresholds live in <code><a href="reference/gleaning_validation_thresholds.html">gleaning_validation_thresholds()</a></code> and can be overridden through its arguments.</li>
 <li>Keep flag numbers stable when editing validation (see PESKAS.md, validation flags contract).</li>
-<li>Prefer <code>coasts::</code> over the local copies of Airtable helpers in <code>R/airtable-helpers.R</code> and <code>get_validation_status</code> / <code>update_validation_status</code> in <code>R/validation-functions.R</code>; flag the duplicate when you touch one.</li>
+<li>Prefer <code>coasts::</code> over the local copies of Airtable helpers in <code>R/airtable-helpers.R</code>; flag the duplicate when you touch one.</li>
 <li>
 <code><a href="reference/merge_trips.html">merge_trips()</a></code> takes <code>site</code>; most other workflow functions take only <code>log_threshold</code>.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="gotchas">Gotchas<a class="anchor" aria-label="anchor" href="#gotchas"></a></h2>
 <ul><li>Nothing in this package ingests BA raw data: <code>preprocess_ba_surveys</code> reads the latest <code>ba-surveys-raw</code> object that already exists in the bucket.</li>
-<li>
-<code><a href="reference/sync_validation_submissions.html">sync_validation_submissions()</a></code> is commented out in the main survey job; KoBo validation status for WCS/WF/BA is not synced by the scheduled run.</li>
 <li>Duplicate definitions (the later file in collation order wins): <code>validate_prices</code> twice in <code>R/validation-functions.R</code>; <code>sanitize_gleaning_inputs</code> and <code>reshape_gleaning_catch</code> in both <code>R/process-catch-gleaning.R</code> and <code>R/survey-reshaping.R</code>. Edit both copies or delete one.</li>
 </ul></div>
 </div>

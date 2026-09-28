@@ -1,5 +1,14 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.13.1
+
+### Reviewers’ decisions are kept between runs
+
+- **FIXED** Surveys a reviewer approves in the Peskas Management
+  Platform stay in the data (5 on 2026-09-28), those a reviewer rejects
+  leave it, and reviewers’ decisions are no longer undone by the next
+  run.
+
 ## peskas.zanzibar.data.pipeline 4.13.0
 
 ### Records say which organization collected them
@@ -612,9 +621,8 @@ a release move fails the check.
     function exports validation flags directly to MongoDB
   - Validation status queries now only identify manually edited
     submissions, not update them
-  - Disabled
-    [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
-    workflow steps in GitHub Actions
+  - Disabled `sync_validation_submissions()` workflow steps in GitHub
+    Actions
   - Significantly reduced pipeline execution time by avoiding slow
     KoboToolbox API calls
 
@@ -649,9 +657,8 @@ a release move fails the check.
     survey form versions
   - Enhanced
     [`validate_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_wf_surveys.md)
-    and
-    [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
-    to handle submissions from multiple KoBoToolbox assets
+    and `sync_validation_submissions()` to handle submissions from
+    multiple KoBoToolbox assets
   - Ensured manually approved submissions from either form version are
     protected from automated flagging
 - **Configuration Updates:**
@@ -797,12 +804,10 @@ a release move fails the check.
 #### Major Changes
 
 - Enhanced validation workflow with KoboToolbox integration:
-  - Added
-    [`update_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/update_validation_status.md)
-    function to update submission status via API
-  - Added
-    [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
-    for parallel processing of validation flags
+  - Added `update_validation_status()` function to update submission
+    status via API
+  - Added `sync_validation_submissions()` for parallel processing of
+    validation flags
   - Updated Kobo URL endpoint from kf.kobotoolbox.org to
     eu.kobotoolbox.org
 
@@ -872,8 +877,8 @@ a release move fails the check.
 #### New Features
 
 - New KoboToolbox interaction functions:
-  - [`get_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_validation_status.md):
-    Retrieves submission validation status from KoboToolbox API
+  - `get_validation_status()`: Retrieves submission validation status
+    from KoboToolbox API
 
 #### Improvements
 

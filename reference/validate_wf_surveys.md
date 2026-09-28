@@ -62,17 +62,20 @@ Alert codes:
 
 - Automatically downloads preprocessed survey data from cloud storage
 
-- Removes submissions that fail validation checks
+- Removes submissions that fail validation checks, unless a reviewer
+  approved them (read with
+  [`coasts::review_decisions()`](https://rdrr.io/pkg/coasts/man/review_decisions.html))
 
 - Sets catch_kg to 0 when catch_outcome is 0
 
 ## Data Processing Steps
 
-1.  Downloads preprocessed survey data
+1.  Downloads preprocessed survey data and reads reviewers' decisions
 
 2.  Applies validation checks and generates alert flags
 
-3.  Filters out submissions with validation alerts
+3.  Filters out submissions with validation alerts, except those a
+    reviewer approved
 
 4.  Processes catch data and adjusts catch weights
 

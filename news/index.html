@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.13.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.13.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,14 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.13.1" id="peskaszanzibardatapipeline-4131">peskas.zanzibar.data.pipeline 4.13.1<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4131"></a></h2>
+<div class="section level3">
+<h3 id="reviewers-decisions-are-kept-between-runs-4-13-1">Reviewers’ decisions are kept between runs<a class="anchor" aria-label="anchor" href="#reviewers-decisions-are-kept-between-runs-4-13-1"></a></h3>
+<ul><li>
+<strong>FIXED</strong> Surveys a reviewer approves in the Peskas Management Platform stay in the data (5 on 2026-09-28), those a reviewer rejects leave it, and reviewers’ decisions are no longer undone by the next run.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.13.0" id="peskaszanzibardatapipeline-4130">peskas.zanzibar.data.pipeline 4.13.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4130"></a></h2>
 <div class="section level3">
@@ -315,7 +323,7 @@
 <strong>Streamlined Validation Workflow</strong>: Replaced KoboToolbox API updates with direct MongoDB storage to improve performance.
 <ul><li>New <code><a href="../reference/export_validation_flags.html">export_validation_flags()</a></code> function exports validation flags directly to MongoDB</li>
 <li>Validation status queries now only identify manually edited submissions, not update them</li>
-<li>Disabled <code><a href="../reference/sync_validation_submissions.html">sync_validation_submissions()</a></code> workflow steps in GitHub Actions</li>
+<li>Disabled <code>sync_validation_submissions()</code> workflow steps in GitHub Actions</li>
 <li>Significantly reduced pipeline execution time by avoiding slow KoboToolbox API calls</li>
 </ul></li>
 </ul></div>
@@ -344,7 +352,7 @@
 <ul><li>
 <strong>Multi-Asset Validation Support:</strong>
 <ul><li>Updated validation system to query approval statuses from both survey form versions</li>
-<li>Enhanced <code><a href="../reference/validate_wf_surveys.html">validate_wf_surveys()</a></code> and <code><a href="../reference/sync_validation_submissions.html">sync_validation_submissions()</a></code> to handle submissions from multiple KoBoToolbox assets</li>
+<li>Enhanced <code><a href="../reference/validate_wf_surveys.html">validate_wf_surveys()</a></code> and <code>sync_validation_submissions()</code> to handle submissions from multiple KoBoToolbox assets</li>
 <li>Ensured manually approved submissions from either form version are protected from automated flagging</li>
 </ul></li>
 <li>
@@ -477,8 +485,8 @@
 <div class="section level4">
 <h4 id="major-changes-2-5-0">Major Changes<a class="anchor" aria-label="anchor" href="#major-changes-2-5-0"></a></h4>
 <ul><li>Enhanced validation workflow with KoboToolbox integration:
-<ul><li>Added <code><a href="../reference/update_validation_status.html">update_validation_status()</a></code> function to update submission status via API</li>
-<li>Added <code><a href="../reference/sync_validation_submissions.html">sync_validation_submissions()</a></code> for parallel processing of validation flags</li>
+<ul><li>Added <code>update_validation_status()</code> function to update submission status via API</li>
+<li>Added <code>sync_validation_submissions()</code> for parallel processing of validation flags</li>
 <li>Updated Kobo URL endpoint from kf.kobotoolbox.org to eu.kobotoolbox.org</li>
 </ul></li>
 </ul></div>
@@ -544,7 +552,7 @@
 <h4 id="new-features-2-3-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-2-3-0"></a></h4>
 <ul><li>New KoboToolbox interaction functions:
 <ul><li>
-<code><a href="../reference/get_validation_status.html">get_validation_status()</a></code>: Retrieves submission validation status from KoboToolbox API</li>
+<code>get_validation_status()</code>: Retrieves submission validation status from KoboToolbox API</li>
 </ul></li>
 </ul></div>
 <div class="section level4">

@@ -14,8 +14,6 @@ storage.
   : Export Validation Flags to MongoDB
 - [`export_wf_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/export_wf_data.md)
   : Export WorldFish Summary Data to MongoDB
-- [`get_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_validation_status.md)
-  : Get Validation Status from KoboToolbox
 - [`ingest_wcs_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/ingest_wcs_surveys.md)
   : Ingest WCS Catch Survey Data
 - [`ingest_wf_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/ingest_wf_surveys.md)
@@ -34,10 +32,6 @@ storage.
   : Pre-process and Combine WorldFish Surveys - Both Versions
 - [`reshape_gleaning_catch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_gleaning_catch.md)
   : Reshape Gleaning Catch Data from Wide to Long Format
-- [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
-  : Synchronize Validation Statuses with KoboToolbox
-- [`update_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/update_validation_status.md)
-  : Update Validation Status in KoboToolbox
 - [`validate_ba_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_ba_surveys.md)
   : Validate Blue Alliance (BA) Surveys Data
 - [`validate_gleaning_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_gleaning_surveys.md)
@@ -176,16 +170,10 @@ rules.
   : Get catch bounds for survey data
 - [`get_length_bounds()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_bounds.md)
   : Get length bounds for survey data
-- [`get_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_validation_status.md)
-  : Get Validation Status from KoboToolbox
 - [`gleaning_validation_thresholds()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/gleaning_validation_thresholds.md)
   : Default Thresholds for Gleaning Survey Validation
 - [`process_catch_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/process_catch_data.md)
   : Process catch data from surveys
-- [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
-  : Synchronize Validation Statuses with KoboToolbox
-- [`update_validation_status()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/update_validation_status.md)
-  : Update Validation Status in KoboToolbox
 - [`validate_ba_surveys()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_ba_surveys.md)
   : Validate Blue Alliance (BA) Surveys Data
 - [`validate_catches()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/validate_catches.md)

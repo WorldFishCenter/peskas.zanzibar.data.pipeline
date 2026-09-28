@@ -62,9 +62,7 @@ devtools::check()
 - Keep flag numbers stable when editing validation (see PESKAS.md,
   validation flags contract).
 - Prefer `coasts::` over the local copies of Airtable helpers in
-  `R/airtable-helpers.R` and `get_validation_status` /
-  `update_validation_status` in `R/validation-functions.R`; flag the
-  duplicate when you touch one.
+  `R/airtable-helpers.R`; flag the duplicate when you touch one.
 - [`merge_trips()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/merge_trips.md)
   takes `site`; most other workflow functions take only `log_threshold`.
 
@@ -73,9 +71,6 @@ devtools::check()
 - Nothing in this package ingests BA raw data: `preprocess_ba_surveys`
   reads the latest `ba-surveys-raw` object that already exists in the
   bucket.
-- [`sync_validation_submissions()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/sync_validation_submissions.md)
-  is commented out in the main survey job; KoBo validation status for
-  WCS/WF/BA is not synced by the scheduled run.
 - Duplicate definitions (the later file in collation order wins):
   `validate_prices` twice in `R/validation-functions.R`;
   `sanitize_gleaning_inputs` and `reshape_gleaning_catch` in both
