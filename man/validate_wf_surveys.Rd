@@ -46,16 +46,18 @@ Alert codes:
 \itemize{
 \item Requires configuration parameters to be set up in config file
 \item Automatically downloads preprocessed survey data from cloud storage
-\item Removes submissions that fail validation checks
+\item Removes submissions that fail validation checks, unless a reviewer approved
+them (read with \code{\link[coasts:review_decisions]{coasts::review_decisions()}})
 \item Sets catch_kg to 0 when catch_outcome is 0
 }
 }
 \section{Data Processing Steps}{
 
 \enumerate{
-\item Downloads preprocessed survey data
+\item Downloads preprocessed survey data and reads reviewers' decisions
 \item Applies validation checks and generates alert flags
-\item Filters out submissions with validation alerts
+\item Filters out submissions with validation alerts, except those a reviewer
+approved
 \item Processes catch data and adjusts catch weights
 \item Uploads validation flags and validated data to cloud storage
 }

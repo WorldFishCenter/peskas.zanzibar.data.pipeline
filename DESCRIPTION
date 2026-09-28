@@ -1,7 +1,7 @@
 Package: peskas.zanzibar.data.pipeline
 Title: Functions to Implement the Zanzibar Small Scale Fisheries Data
     Pipeline
-Version: 4.13.0
+Version: 4.13.1
 Authors@R: c(
     person("Lorenzo", "Longobardi", , "l.longobardi@cgiar.org", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-3126-7341")),
@@ -13,13 +13,11 @@ License: GPL-3
 URL: https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/
 Imports:
     arrow,
-    coasts (>= 4.15.0),
+    coasts (>= 4.17.0),
     config,
     digest,
     dotenv,
     dplyr,
-    furrr,
-    future,
     git2r,
     glue,
     httr2,
@@ -27,7 +25,6 @@ Imports:
     logger,
     lubridate,
     magrittr,
-    progressr,
     purrr,
     readr,
     rlang,
