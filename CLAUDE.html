@@ -33,7 +33,7 @@
 
 <div id="peskaszanzibardatapipeline" class="section level1">
 
-<p>R package for the Zanzibar node of Peskas: ingests, preprocesses and validates WCS, WorldFish (WF v1-v3), Blue Alliance (BA) and WF gleaning surveys, matches surveys to PDS trips, and feeds the peskas-api bucket, Mongo <code>validation-*</code> and the coasts portal. Ecosystem context (other repos, data flow, cross-repo contracts): see PESKAS.md, loaded via CLAUDE.local.md.</p>
+<p>R package for the Zanzibar node of Peskas: ingests, preprocesses and validates WCS, WorldFish (WF v1-v3), Blue Alliance (BA) and WF gleaning surveys, matches surveys to PDS trips, and feeds the peskas-api bucket, Mongo <code>validation-*</code> and the coasts portal. Ecosystem context (other repos, data flow, cross-repo contracts): loaded by the <code>peskas</code> Claude Code plugin (repo <code>peskas-context</code>).</p>
 <div class="section level2">
 <h2 id="commands">Commands<a class="anchor" aria-label="anchor" href="#commands"></a></h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
@@ -61,7 +61,7 @@
 <div class="section level2">
 <h2 id="rules">Rules<a class="anchor" aria-label="anchor" href="#rules"></a></h2>
 <ul><li>Tune validation through config, not code: <code>surveys.&lt;source&gt;.validation.K_*</code> (MAD multipliers for counts, weight, length, price) and <code>validation.k_MAD_catch</code>. Gleaning thresholds live in <code><a href="reference/gleaning_validation_thresholds.html">gleaning_validation_thresholds()</a></code> and can be overridden through its arguments.</li>
-<li>Keep flag numbers stable when editing validation (see PESKAS.md, validation flags contract).</li>
+<li>Keep flag numbers stable when editing validation (see the Peskas context, validation flags contract).</li>
 <li>Prefer <code>coasts::</code> over the local copies of Airtable helpers in <code>R/airtable-helpers.R</code>; flag the duplicate when you touch one.</li>
 <li>
 <code><a href="reference/merge_trips.html">merge_trips()</a></code> takes <code>site</code>; most other workflow functions take only <code>log_threshold</code>.</li>

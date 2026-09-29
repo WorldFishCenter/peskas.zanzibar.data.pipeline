@@ -4,8 +4,8 @@ R package for the Zanzibar node of Peskas: ingests, preprocesses and
 validates WCS, WorldFish (WF v1-v3), Blue Alliance (BA) and WF gleaning
 surveys, matches surveys to PDS trips, and feeds the peskas-api bucket,
 Mongo `validation-*` and the coasts portal. Ecosystem context (other
-repos, data flow, cross-repo contracts): see PESKAS.md, loaded via
-CLAUDE.local.md.
+repos, data flow, cross-repo contracts): loaded by the `peskas` Claude
+Code plugin (repo `peskas-context`).
 
 ## Commands
 
@@ -59,8 +59,8 @@ devtools::check()
   in
   [`gleaning_validation_thresholds()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/gleaning_validation_thresholds.md)
   and can be overridden through its arguments.
-- Keep flag numbers stable when editing validation (see PESKAS.md,
-  validation flags contract).
+- Keep flag numbers stable when editing validation (see the Peskas
+  context, validation flags contract).
 - Prefer `coasts::` over the local copies of Airtable helpers in
   `R/airtable-helpers.R`; flag the duplicate when you touch one.
 - [`merge_trips()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/merge_trips.md)
