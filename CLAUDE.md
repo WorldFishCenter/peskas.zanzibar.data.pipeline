@@ -28,15 +28,18 @@ devtools::check()
   `survey_id`.
 - **Joint steps**: `merge_trips(site = "zanzibar")`, `export_api_raw/validated`, then
   `coasts::summarize_data`, `coasts::generate_fleet_analysis` and `coasts::export_portal` with
-  `package = "peskas.zanzibar.data.pipeline"`. PDS ingestion is `coasts::ingest_pds_*` with the
-  same `package` argument; this repo has no storage or PDS code of its own.
+  `package = "peskas.zanzibar.data.pipeline"`. PDS ingestion is `coasts::ingest_pds_*` and
+  `coasts::describe_pds_tracks` with the same `package` argument; this repo has no storage or
+  PDS code of its own. The fleet estimate places each tracker by where its trips land
+  (`pds.fleet_location: landing`), not by the Airtable `gaul 2` link.
 - **Taxa and weights** (`R/model-taxa.R`): FishBase/SeaLifeBase versions are pinned separately in
   `inst/config.yml` (`metadata.fishbase`); read the comment there before bumping either.
 - `export_wf_data` (`R/export.R`) exists but is not called from any workflow.
 
 ## Rules
-- Tune validation through config, not code: `surveys.<source>.validation.K_*` (MAD multipliers
-  for counts, weight, length, price) and `validation.k_MAD_catch`. Gleaning thresholds live in
+- Tune validation in `inst/config.yml` under `validation.<survey>` (`wcs`, `wf`: bucket weight
+  and count, individuals, price, CPUE, RPUE, length; `ba`: the MAD multipliers), not in code.
+  Gleaning thresholds live in
   `gleaning_validation_thresholds()` and can be overridden through its arguments.
 - Keep flag numbers stable when editing validation (see the Peskas context, validation flags contract).
 - Prefer `coasts::` over the local copies of Airtable helpers in `R/airtable-helpers.R`; flag
@@ -46,6 +49,3 @@ devtools::check()
 ## Gotchas
 - Nothing in this package ingests BA raw data: `preprocess_ba_surveys` reads the latest
   `ba-surveys-raw` object that already exists in the bucket.
-- Duplicate definitions (the later file in collation order wins): `validate_prices` twice in
-  `R/validation-functions.R`; `sanitize_gleaning_inputs` and `reshape_gleaning_catch` in both
-  `R/process-catch-gleaning.R` and `R/survey-reshaping.R`. Edit both copies or delete one.

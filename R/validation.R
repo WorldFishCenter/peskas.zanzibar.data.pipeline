@@ -30,12 +30,13 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     ) |>
     dplyr::filter(.data$submission_date > "2020-01-01")
 
-  max_bucket_weight_kg <- 50
-  max_n_buckets <- 300
-  max_n_individuals <- 200
-  price_kg_max <- 78225 # Tanzanian Shilling -> 30 eur
-  cpue_max <- 30
-  rpue_max <- 78225
+  limits <- conf$validation$wcs
+  max_bucket_weight_kg <- limits$max_bucket_weight_kg
+  max_n_buckets <- limits$max_n_buckets
+  max_n_individuals <- limits$max_n_individuals
+  price_kg_max <- limits$price_kg_max
+  cpue_max <- limits$cpue_max
+  rpue_max <- limits$rpue_max
 
   catch_df <-
     preprocessed_surveys |>
@@ -469,13 +470,14 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     decisions$validation_status == "validation_status_not_approved"
   ]
 
-  max_bucket_weight_kg <- 50
-  max_n_buckets <- 250
-  max_n_individuals <- 500
-  price_kg_max <- 81420 # 30 eur
-  cpue_max <- 30
-  rpue_max <- 81420
-  max_length_cm <- 500
+  limits <- conf$validation$wf
+  max_bucket_weight_kg <- limits$max_bucket_weight_kg
+  max_n_buckets <- limits$max_n_buckets
+  max_n_individuals <- limits$max_n_individuals
+  price_kg_max <- limits$price_kg_max
+  cpue_max <- limits$cpue_max
+  rpue_max <- limits$rpue_max
+  max_length_cm <- limits$max_length_cm
 
   catch_df <-
     preprocessed_surveys |>
@@ -893,8 +895,8 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::left_join(logical_check_flags, by = "survey_id") |>
     dplyr::filter(is.na(.data$alert_flag))
 
-  catch_bounds <- get_catch_bounds(data = clean_logic, k_param = 5)
-  length_bounds <- get_length_bounds(data = clean_logic, k_param = 5)
+  catch_bounds <- get_catch_bounds(data = clean_logic, k_param = conf$validation$ba$k_catch)
+  length_bounds <- get_length_bounds(data = clean_logic, k_param = conf$validation$ba$k_length)
 
   bounds <- dplyr::full_join(
     catch_bounds,

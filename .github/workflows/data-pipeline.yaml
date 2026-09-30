@@ -121,11 +121,13 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_pds_trips()
-        run: Rscript -e 'coasts::ingest_pds_trips(package = "peskas.zanzibar.data.pipeline")'
+        run: Rscript -e 'coasts::ingest_pds_trips(log_threshold = logger::INFO, package = "peskas.zanzibar.data.pipeline")'
       - name: Call ingest_pds_tracks()
-        run: Rscript -e 'coasts::ingest_pds_tracks(package = "peskas.zanzibar.data.pipeline")'
+        run: Rscript -e 'coasts::ingest_pds_tracks(log_threshold = logger::INFO, package = "peskas.zanzibar.data.pipeline")'
+      - name: Call describe_pds_tracks()
+        run: Rscript -e 'coasts::describe_pds_tracks(log_threshold = logger::INFO, package = "peskas.zanzibar.data.pipeline")'
       - name: Call preprocess_pds_tracks()
-        run: Rscript -e 'coasts::preprocess_pds_tracks(package = "peskas.zanzibar.data.pipeline")'
+        run: Rscript -e 'coasts::preprocess_pds_tracks(log_threshold = logger::INFO, package = "peskas.zanzibar.data.pipeline")'
 
   validate-sync-surveys:
     name: Validate and sync Kobo submissions
@@ -195,9 +197,9 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call summarize_data()
-        run: Rscript -e 'coasts::summarize_data(package = "peskas.zanzibar.data.pipeline")'
+        run: Rscript -e 'coasts::summarize_data(log_threshold = logger::INFO, package = "peskas.zanzibar.data.pipeline")'
       - name: Call generate_fleet_analysis()
-        run: Rscript -e 'coasts::generate_fleet_analysis(package = "peskas.zanzibar.data.pipeline")'
+        run: Rscript -e 'coasts::generate_fleet_analysis(log_threshold = logger::INFO, package = "peskas.zanzibar.data.pipeline")'
 
   export-wf-surveys:
     name: Export aggregated data
@@ -213,7 +215,7 @@ jobs:
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call export_portal()
-        run: Rscript -e 'coasts::export_portal(package = "peskas.zanzibar.data.pipeline")'
+        run: Rscript -e 'coasts::export_portal(log_threshold = logger::INFO, package = "peskas.zanzibar.data.pipeline")'
         
   # ============================================================================
   # WF gleaning

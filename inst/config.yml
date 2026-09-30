@@ -42,11 +42,6 @@ default:
       validated:
         file_prefix: wcs-surveys-validated
         version: latest
-      validation:
-        K_nb_elements_max: 2
-        K_weight_max: 2
-        K_length_max: 2
-        K_price_max: 2
     wf_v1:
       raw:
         file_prefix: wf-surveys-raw
@@ -93,11 +88,6 @@ default:
       validated:
         file_prefix: ba-surveys-validated
         version: latest
-      validation:
-        K_nb_elements_max: 2
-        K_weight_max: 2
-        K_length_max: 2
-        K_price_max: 2
   pds:
     # Keep trips that happened at these customers' communities, rather than
     # trips whose device is under them today. A retired or reassigned tracker
@@ -106,6 +96,9 @@ default:
     customers:
       - "WorldFish - Tanzania AP"
       - "WorldFish - Zanzibar"
+    # Place each tracker by where its trips land rather than by a district
+    # linked by hand. See `?coasts::generate_fleet_analysis`.
+    fleet_location: landing
     token: !expr Sys.getenv('PDS_TOKEN')
     secret: !expr Sys.getenv('PDS_SECRET')
     pds_trips:
@@ -114,6 +107,9 @@ default:
     pds_tracks:
       file_prefix: pds-tracks
       version: latest
+      # Where each trip's track starts and ends, from `coasts::describe_pds_tracks()`.
+      descriptors:
+        file_prefix: pds-tracks-descriptors
   api:
     # WCS is held out of the API export pending issue #4. Set to true to
     # publish WCS alongside WF once the blockers recorded there are resolved.
@@ -211,8 +207,29 @@ default:
       # coasts::summarize_data() turns into the dashboard's taxa traits.
       taxa_enriched:
         file_prefix: taxa-fishbase-enriched
+  # Validation thresholds per survey, read by validate_wcs_surveys(),
+  # validate_wf_surveys() and validate_ba_surveys(). Prices are in TZS; 78225 and
+  # 81420 are about 30 EUR.
   validation:
-    k_MAD_catch: 7
+    wcs:
+      max_bucket_weight_kg: 50
+      max_n_buckets: 300
+      max_n_individuals: 200
+      price_kg_max: 78225
+      cpue_max: 30
+      rpue_max: 78225
+    wf:
+      max_bucket_weight_kg: 50
+      max_n_buckets: 250
+      max_n_individuals: 500
+      price_kg_max: 81420
+      cpue_max: 30
+      rpue_max: 81420
+      max_length_cm: 500
+    ba:
+      # MAD multipliers for the catch and length bounds.
+      k_catch: 5
+      k_length: 5
 
 production:
   storage:
