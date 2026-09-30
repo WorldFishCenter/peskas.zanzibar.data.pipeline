@@ -1,5 +1,15 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.14.0
+
+### Boats are placed by where they land
+
+- **NEW** Fleet activity estimates place each tracked boat in the
+  district where its trips land, read from its GPS track, so new and
+  moved trackers count without being linked to a district by hand.
+- **NEW** Fishing trips longer than two days now count in the fleet
+  activity estimates.
+
 ## peskas.zanzibar.data.pipeline 4.13.1
 
 ### Reviewers’ decisions are kept between runs
@@ -16,7 +26,7 @@
 - **NEW**
 
 `survey_organization` names the organization behind each record, as the
-first column — `"WF"` here. `survey_id` identifies the form, not the
+first column — `"ZAFIRI"` here. `survey_id` identifies the form, not the
 organization, and a country can run more than one programme at once, as
 Kenya does.
 

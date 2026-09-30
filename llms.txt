@@ -48,9 +48,8 @@ results.
 - **GPS trackers (Pelagic Data Systems).** Small solar-powered devices
   on boats record where they travel. A trip is one fishing outing, from
   leaving shore to landing.
-- **Reference data.** Boat and tracker records kept in Airtable,
-  reference tables kept in Google Sheets, and species data from FishBase
-  and SeaLifeBase.
+- **Reference data.** Boat and tracker records kept in Airtable, and
+  species data from FishBase and SeaLifeBase.
 
 The data is updated every four days.
 
@@ -134,8 +133,7 @@ which expects:
 - MongoDB: `MONGODB_CONNECTION_STRING`,
   `MONGODB_CONNECTION_STRING_VALIDATION`
 - Pelagic Data Systems: `PDS_TOKEN`, `PDS_SECRET`
-- Metadata: `GOOGLE_SHEET_ID`, `AIRTABLE_TOKEN`,
-  `AIRTABLE_BASE_ID_FRAME`
+- Metadata: `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID_FRAME`
 
 The `default` profile uses the development buckets and databases. The
 `production` profile is switched on only by CI on `main`.

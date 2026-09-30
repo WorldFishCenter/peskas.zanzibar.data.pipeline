@@ -43,8 +43,12 @@ devtools::check()
   and
   [`coasts::export_portal`](https://rdrr.io/pkg/coasts/man/export_portal.html)
   with `package = "peskas.zanzibar.data.pipeline"`. PDS ingestion is
-  `coasts::ingest_pds_*` with the same `package` argument; this repo has
-  no storage or PDS code of its own.
+  `coasts::ingest_pds_*` and
+  [`coasts::describe_pds_tracks`](https://rdrr.io/pkg/coasts/man/describe_pds_tracks.html)
+  with the same `package` argument; this repo has no storage or PDS code
+  of its own. The fleet estimate places each tracker by where its trips
+  land (`pds.fleet_location: landing`), not by the Airtable `gaul 2`
+  link.
 - **Taxa and weights** (`R/model-taxa.R`): FishBase/SeaLifeBase versions
   are pinned separately in `inst/config.yml` (`metadata.fishbase`); read
   the comment there before bumping either.
@@ -53,10 +57,10 @@ devtools::check()
 
 ## Rules
 
-- Tune validation through config, not code:
-  `surveys.<source>.validation.K_*` (MAD multipliers for counts, weight,
-  length, price) and `validation.k_MAD_catch`. Gleaning thresholds live
-  in
+- Tune validation in `inst/config.yml` under `validation.<survey>`
+  (`wcs`, `wf`: bucket weight and count, individuals, price, CPUE, RPUE,
+  length; `ba`: the MAD multipliers), not in code. Gleaning thresholds
+  live in
   [`gleaning_validation_thresholds()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/gleaning_validation_thresholds.md)
   and can be overridden through its arguments.
 - Keep flag numbers stable when editing validation (see the Peskas
@@ -71,8 +75,3 @@ devtools::check()
 - Nothing in this package ingests BA raw data: `preprocess_ba_surveys`
   reads the latest `ba-surveys-raw` object that already exists in the
   bucket.
-- Duplicate definitions (the later file in collation order wins):
-  `validate_prices` twice in `R/validation-functions.R`;
-  `sanitize_gleaning_inputs` and `reshape_gleaning_catch` in both
-  `R/process-catch-gleaning.R` and `R/survey-reshaping.R`. Edit both
-  copies or delete one.
