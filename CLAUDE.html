@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.14.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.15.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +52,7 @@
 <li>
 <strong>WCS nesting</strong> (<code>R/wcs-nesting.R</code>): <code>pt_nest_trip</code>, <code>pt_nest_catch</code>, <code>pt_nest_length</code>, <code>pt_nest_market</code>, <code>pt_nest_attachments</code> turn the wide WCS form into nested tables joined by <code>survey_id</code>.</li>
 <li>
-<strong>Joint steps</strong>: <code>merge_trips(site = "zanzibar")</code>, <code>export_api_raw/validated</code>, then <code><a href="https://rdrr.io/pkg/coasts/man/summarize_data.html" class="external-link">coasts::summarize_data</a></code>, <code><a href="https://rdrr.io/pkg/coasts/man/generate_fleet_analysis.html" class="external-link">coasts::generate_fleet_analysis</a></code> and <code><a href="https://rdrr.io/pkg/coasts/man/export_portal.html" class="external-link">coasts::export_portal</a></code> with <code>package = "peskas.zanzibar.data.pipeline"</code>. PDS ingestion is <code>coasts::ingest_pds_*</code> and <code><a href="https://rdrr.io/pkg/coasts/man/describe_pds_tracks.html" class="external-link">coasts::describe_pds_tracks</a></code> with the same <code>package</code> argument; this repo has no storage or PDS code of its own. The fleet estimate places each tracker by where its trips land (<code>pds.fleet_location: landing</code>), not by the Airtable <code>gaul 2</code> link.</li>
+<strong>Joint steps</strong>: <code>merge_trips(site = "zanzibar")</code>, <code>export_api_raw/validated</code>, then <code><a href="https://rdrr.io/pkg/coasts/man/summarize_data.html" class="external-link">coasts::summarize_data</a></code>, <code><a href="https://rdrr.io/pkg/coasts/man/generate_fleet_analysis.html" class="external-link">coasts::generate_fleet_analysis</a></code> and <code><a href="https://rdrr.io/pkg/coasts/man/export_portal.html" class="external-link">coasts::export_portal</a></code> with <code>package = "peskas.zanzibar.data.pipeline"</code>. PDS ingestion is <code>coasts::ingest_pds_*</code> and <code><a href="https://rdrr.io/pkg/coasts/man/describe_pds_tracks.html" class="external-link">coasts::describe_pds_tracks</a></code> with the same <code>package</code> argument; this repo has no storage or PDS code of its own. The fleet estimate places each tracker by where its trips land (<code>pds.fleet_location: landing</code>), not by the Airtable <code>gaul 2</code> link. With <code>fao.surveys</code> set to the WF validated file, it also raises catch and revenue with the FAO ARTFISH method (coasts &gt;= 4.19.0).</li>
 <li>
 <strong>Taxa and weights</strong> (<code>R/model-taxa.R</code>): FishBase/SeaLifeBase versions are pinned separately in <code>inst/config.yml</code> (<code>metadata.fishbase</code>); read the comment there before bumping either.</li>
 <li>

@@ -48,7 +48,8 @@ devtools::check()
   with the same `package` argument; this repo has no storage or PDS code
   of its own. The fleet estimate places each tracker by where its trips
   land (`pds.fleet_location: landing`), not by the Airtable `gaul 2`
-  link.
+  link. With `fao.surveys` set to the WF validated file, it also raises
+  catch and revenue with the FAO ARTFISH method (coasts \>= 4.19.0).
 - **Taxa and weights** (`R/model-taxa.R`): FishBase/SeaLifeBase versions
   are pinned separately in `inst/config.yml` (`metadata.fishbase`); read
   the comment there before bumping either.
