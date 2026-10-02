@@ -31,7 +31,8 @@ devtools::check()
   `package = "peskas.zanzibar.data.pipeline"`. PDS ingestion is `coasts::ingest_pds_*` and
   `coasts::describe_pds_tracks` with the same `package` argument; this repo has no storage or
   PDS code of its own. The fleet estimate places each tracker by where its trips land
-  (`pds.fleet_location: landing`), not by the Airtable `gaul 2` link.
+  (`pds.fleet_location: landing`), not by the Airtable `gaul 2` link. With `fao.surveys` set to
+  the WF validated file, it also raises catch and revenue with the FAO ARTFISH method (coasts >= 4.19.0).
 - **Taxa and weights** (`R/model-taxa.R`): FishBase/SeaLifeBase versions are pinned separately in
   `inst/config.yml` (`metadata.fishbase`); read the comment there before bumping either.
 - `export_wf_data` (`R/export.R`) exists but is not called from any workflow.

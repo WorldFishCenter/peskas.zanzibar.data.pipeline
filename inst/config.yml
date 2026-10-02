@@ -110,6 +110,9 @@ default:
       # Where each trip's track starts and ends, from `coasts::describe_pds_tracks()`.
       descriptors:
         file_prefix: pds-tracks-descriptors
+  fao:
+    # Validated survey file carrying the "days fished last week" answer.
+    surveys: wf-surveys-validated
   api:
     # WCS is held out of the API export pending issue #4. Set to true to
     # publish WCS alongside WF once the blockers recorded there are resolved.
