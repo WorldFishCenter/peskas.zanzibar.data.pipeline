@@ -5,6 +5,7 @@ on:
   schedule:
     # every 4 days at 00:00 UTC
     - cron: '0 0 */4 * *'
+  workflow_dispatch: 
 
 env:
   WCS_SURVEYS_ID: ${{ secrets.WCS_SURVEYS_ID }}
