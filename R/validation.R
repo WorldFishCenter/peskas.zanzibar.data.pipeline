@@ -511,8 +511,23 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   # dplyr::select(-c("no_men_fishers", "no_women_fishers", "no_child_fishers")) |>
   # dplyr::relocate("n_fishers", .after = "has_boat")
 
+  # Crew and trip length belong to the trip, not to a catch row. Joined here
+  # rather than selected into catch_df, which is later joined back on every
+  # column it shares with the surveys.
+  trips <-
+    preprocessed_surveys |>
+    dplyr::group_by(.data$submission_id) |>
+    dplyr::summarise(
+      n_fishers = dplyr::first(
+        .data$no_men_fishers + .data$no_women_fishers + .data$no_child_fishers
+      ),
+      trip_duration = dplyr::first(.data$trip_duration),
+      .groups = "drop"
+    )
+
   catch_flags <-
     catch_df |>
+    dplyr::left_join(trips, by = "submission_id") |>
     dplyr::mutate(
       alert_form_incomplete = dplyr::case_when(
         .data$catch_outcome == "1" & is.na(.data$catch_taxon) ~ "1",
@@ -551,6 +566,22 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       alert_n_date = dplyr::case_when(
         .data$landing_date > .data$submission_date ~ "11",
         TRUE ~ NA_character_
+      ),
+      # A trip of no length: per-fisher indicators would divide by zero. Used
+      # to be read off an infinite CPUE, which also fired on every zero-crew
+      # trip and so duplicated 13.
+      alert_trip_duration = dplyr::case_when(
+        !is.na(.data$trip_duration) & .data$trip_duration <= 0 ~ "12",
+        TRUE ~ NA_character_
+      ),
+      # A trip with nobody on it did not happen: the zero is the enumerator's
+      # untouched default, not a count. Deliberately not narrowed by
+      # catch_outcome, which let the defect through on no-catch trips. Checked
+      # here rather than with the composite indicators, so it shows even when
+      # another alert stops those.
+      alert_zero_fishers = dplyr::case_when(
+        !is.na(.data$n_fishers) & .data$n_fishers <= 0 ~ "13",
+        TRUE ~ NA_character_
       )
     )
 
@@ -572,6 +603,8 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         .data$alert_form_incomplete,
         .data$alert_catch_info_incomplete,
         .data$alert_n_date,
+        .data$alert_trip_duration,
+        .data$alert_zero_fishers,
         sep = ","
       ) |>
         stringr::str_remove_all("NA,") |>
@@ -722,21 +755,6 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
       alert_rpue = dplyr::case_when(
         !is.infinite(.data$rpue) & .data$rpue > rpue_max ~ "10",
         TRUE ~ NA_character_
-      ),
-      # NEW: Inf indicators signal n_fishers = 0 or trip_duration = 0
-      alert_inf_indicators = dplyr::case_when(
-        is.infinite(.data$cpue) | is.infinite(.data$rpue) ~ "12",
-        TRUE ~ NA_character_
-      ),
-      # NEW: zero or negative fisher count makes all effort-based indicators
-      # invalid. A trip with nobody on it did not happen: the zero is the
-      # enumerator's untouched default, not a count. This is deliberately not
-      # narrowed by catch_outcome — that narrowing is what let the same defect
-      # through on no-catch trips and published n_fishers = 0 against a schema
-      # whose minimum is 1, with every per-fisher metric dividing into Inf.
-      alert_zero_fishers = dplyr::case_when(
-        !is.na(.data$n_fishers) & .data$n_fishers <= 0 ~ "13",
-        TRUE ~ NA_character_
       )
     ) |>
     dplyr::mutate(
@@ -744,8 +762,6 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         .data$alert_price_kg,
         .data$alert_cpue,
         .data$alert_rpue,
-        .data$alert_inf_indicators,
-        .data$alert_zero_fishers,
         sep = ","
       ) |>
         stringr::str_remove_all("NA,") |>
