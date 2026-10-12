@@ -1,5 +1,13 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.15.1
+
+### Each alert shows once
+
+- **FIXED** A submission lists each alert code once. An alert used to
+  repeat once per species recorded (“3, 3”), and each repeat counted as
+  one more flagged submission in the enumerator statistics.
+
 ## peskas.zanzibar.data.pipeline 4.15.0
 
 ### A second estimate of total catch and revenue, by FAO’s ARTFISH method
