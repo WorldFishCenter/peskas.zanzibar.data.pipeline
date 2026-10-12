@@ -796,6 +796,19 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     # Remove the now redundant alert_flag_composite column
     dplyr::select(-"alert_flag_composite") |>
     dplyr::mutate(alert_flag = unique_alert_codes(.data$alert_flag)) |>
+    # Where each catch alert was raised; the trip checks (11-13) belong to no
+    # catch. Zanzibar numbers its catches from 1, as the form does.
+    dplyr::left_join(
+      catch_alert_locations(
+        dplyr::select(
+          catch_flags,
+          -c("alert_n_date", "alert_trip_duration", "alert_zero_fishers")
+        ),
+        preprocessed_surveys,
+        first_catch = 1
+      ),
+      by = "submission_id"
+    ) |>
     dplyr::left_join(
       validated_data |>
         dplyr::select("submission_id", "submitted_by") |>
@@ -1019,6 +1032,48 @@ unique_alert_codes <- function(alert_flag) {
   out
 }
 
+# Where each catch alert was raised, so a reviewer can go straight to it: the
+# catch's number in the form (1 for the first species entered), its species
+# and the value recorded. `first_catch` is the n_catch the form's first catch
+# has in `checks`, which must hold only catch-level alert_* columns. One nested
+# table per submission, for the `alert_catches` field of the flags collection.
+catch_alert_locations <- function(checks, surveys, first_catch) {
+  species <-
+    surveys |>
+    dplyr::select("submission_id", "n_catch", species = "scientific_name") |>
+    dplyr::distinct()
+
+  checks |>
+    dplyr::filter(!is.na(.data$n_catch)) |>
+    tidyr::pivot_longer(
+      dplyr::starts_with("alert_"),
+      values_to = "code",
+      values_drop_na = TRUE
+    ) |>
+    dplyr::left_join(species, by = c("submission_id", "n_catch")) |>
+    dplyr::mutate(
+      catch_number = as.integer(.data$n_catch) - as.integer(first_catch) + 1L,
+      value = dplyr::case_when(
+        .data$code %in% c("3", "4") ~ paste(.data$length, "cm"),
+        .data$code == "5" ~ paste(.data$weight_bucket, "kg"),
+        .data$code == "6" ~ as.character(.data$n_buckets),
+        .data$code == "7" ~ as.character(.data$individuals),
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::group_by(.data$submission_id, .data$catch_number, .data$code) |>
+    dplyr::summarise(
+      species = dplyr::first(.data$species),
+      # A catch spans one row per length class, so a check can fire on several.
+      value = dplyr::na_if(
+        paste(unique(stats::na.omit(.data$value)), collapse = ", "),
+        ""
+      ),
+      .groups = "drop"
+    ) |>
+    tidyr::nest(alert_catches = -"submission_id")
+}
+
 #' Export Validation Flags to MongoDB
 #'
 #' @description
@@ -1121,12 +1176,17 @@ export_validation_flags <- function(
         TRUE ~ .data$validation_status
       )
     ) |>
-    dplyr::filter(!is.na(.data$submitted_by))
+    dplyr::filter(!is.na(.data$submitted_by)) |>
+    # Stored as [] when no catch was flagged; a missing one would be {}.
+    dplyr::mutate(dplyr::across(
+      dplyr::any_of("alert_catches"),
+      ~ lapply(.x, function(x) if (is.null(x)) list() else x)
+    ))
 
   validation_flags_long <- validation_flags_with_kobo_status |>
     dplyr::mutate(alert_flag = as.character(.data$alert_flag)) %>%
     tidyr::separate_rows("alert_flag", sep = ",\\s*") |>
-    dplyr::select(-c(dplyr::starts_with("valid")))
+    dplyr::select(-c(dplyr::starts_with("valid"), dplyr::any_of("alert_catches")))
 
   asset_id <- survey_conf$asset_id
 
