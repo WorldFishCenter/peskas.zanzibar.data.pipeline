@@ -1,5 +1,16 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.16.0
+
+### Alerts point to the catch that raised them
+
+- **NEW** An alert raised by one catch, such as a length outside the
+  species’ range, records which catch it is about (numbered as in the
+  form), its species and the value recorded. The Management Platform
+  shows them, so a reviewer goes straight to the catch instead of
+  checking each one. It covers the three WorldFish forms: 2,164
+  submissions now say which catch. No alert or decision changes.
+
 ## peskas.zanzibar.data.pipeline 4.15.2
 
 ### One alert per problem on a trip with no crew
