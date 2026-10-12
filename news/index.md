@@ -1,5 +1,18 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.15.2
+
+### One alert per problem on a trip with no crew
+
+- **FIXED** A trip with no fishers recorded is flagged once, as
+  alert 13. Alert 12 was read off an infinite catch per fisher, so it
+  fired on the same trips and said the same thing. It now flags only a
+  trip duration of 0 hours or less, the half of it that 13 does not
+  cover; no trip in the data has one. Both are checked with the other
+  trip and catch checks, so they show even when another alert is raised.
+  In the data, 3 trips go from “12, 13” to “13”; no other alert or
+  decision changes.
+
 ## peskas.zanzibar.data.pipeline 4.15.1
 
 ### Each alert shows once

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.15.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.15.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -30,6 +30,14 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.15.2" id="peskaszanzibardatapipeline-4152">peskas.zanzibar.data.pipeline 4.15.2<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4152"></a></h2>
+<div class="section level3">
+<h3 id="one-alert-per-problem-on-a-trip-with-no-crew-4-15-2">One alert per problem on a trip with no crew<a class="anchor" aria-label="anchor" href="#one-alert-per-problem-on-a-trip-with-no-crew-4-15-2"></a></h3>
+<ul><li>
+<strong>FIXED</strong> A trip with no fishers recorded is flagged once, as alert 13. Alert 12 was read off an infinite catch per fisher, so it fired on the same trips and said the same thing. It now flags only a trip duration of 0 hours or less, the half of it that 13 does not cover; no trip in the data has one. Both are checked with the other trip and catch checks, so they show even when another alert is raised. In the data, 3 trips go from “12, 13” to “13”; no other alert or decision changes.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.15.1" id="peskaszanzibardatapipeline-4151">peskas.zanzibar.data.pipeline 4.15.1<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4151"></a></h2>
 <div class="section level3">
