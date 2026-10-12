@@ -338,6 +338,7 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
     ) |>
     # Remove the now redundant alert_flag_composite column
     dplyr::select(-"alert_flag_composite") |>
+    dplyr::mutate(alert_flag = unique_alert_codes(.data$alert_flag)) |>
     dplyr::left_join(
       surveys_basic_validated |>
         dplyr::select("submission_id", "submitted_by") |>
@@ -778,6 +779,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     ) |>
     # Remove the now redundant alert_flag_composite column
     dplyr::select(-"alert_flag_composite") |>
+    dplyr::mutate(alert_flag = unique_alert_codes(.data$alert_flag)) |>
     dplyr::left_join(
       validated_data |>
         dplyr::select("submission_id", "submitted_by") |>
@@ -990,6 +992,15 @@ validate_ba_surveys <- function(log_threshold = logger::DEBUG) {
     provider = conf$storage$google$key,
     options = conf$storage$google$options
   )
+}
+
+# Each alert code once per submission. Checks run on every catch row, so an
+# alert repeats once per species ("11, 11") unless removed here.
+unique_alert_codes <- function(alert_flag) {
+  codes <- lapply(strsplit(alert_flag, ",\\s*"), unique)
+  out <- vapply(codes, paste, character(1), collapse = ", ")
+  out[is.na(alert_flag)] <- NA_character_
+  out
 }
 
 #' Export Validation Flags to MongoDB
