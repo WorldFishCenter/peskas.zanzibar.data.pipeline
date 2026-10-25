@@ -127,6 +127,15 @@ format_api_wcs <- function(surveys_df, conf) {
 #' @return NULL invisibly.
 #' @noRd
 upload_api_parquet <- function(data, file_prefix, cloud_path, conf) {
+  # A catch with a species name but no ASFIS code has lost a value the row
+  # still holds. Warn rather than stop: the file is still usable.
+  nameless <- sum(is.na(data$catch_taxon) & !is.na(data$scientific_name))
+  if (nameless > 0) {
+    logger::log_warn(
+      "{nameless} row(s) carry a scientific_name with no catch_taxon"
+    )
+  }
+
   filename <- add_version(file_prefix, extension = "parquet")
   logger::log_info("Writing parquet file locally: {filename}")
   arrow::write_parquet(
