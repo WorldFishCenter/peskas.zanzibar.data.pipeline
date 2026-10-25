@@ -1,5 +1,16 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.16.1
+
+### The export says so when a catch has a name but no species code
+
+- **NEW**
+
+A catch that goes out with a species name and no ASFIS code has lost
+something the row still holds, and nothing used to say so. The export
+now warns. Zanzibar’s own figures are unaffected — the warning does not
+fire on its data.
+
 ## peskas.zanzibar.data.pipeline 4.16.0
 
 ### Alerts point to the catch that raised them
