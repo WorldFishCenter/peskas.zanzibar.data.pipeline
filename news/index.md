@@ -1,5 +1,12 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.16.2
+
+### Catch outcome goes out as a number
+
+- **FIXED** Whether a trip caught anything is published as a number, as
+  the API describes it, instead of text.
+
 ## peskas.zanzibar.data.pipeline 4.16.1
 
 ### The export says so when a catch has a name but no species code
