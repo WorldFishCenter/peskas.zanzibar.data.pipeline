@@ -20,6 +20,7 @@ format_api_wf <- function(surveys_df, conf) {
     dplyr::ungroup() |>
     dplyr::mutate(
       n_catch = as.integer(.data$n_catch),
+      catch_outcome = as.integer(.data$catch_outcome),
       survey_organization = "ZAFIRI",
       n_fishers = .data$no_men_fishers +
         .data$no_women_fishers +
