@@ -11,7 +11,7 @@ meet validation criteria and processes catch data."><meta property="og:image" co
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.16.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.17.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,14 +66,20 @@ meet validation criteria and processes catch data.</p>
 <li><p>Number of individuals validation (max 100 individuals)</p></li>
 <li><p>Form completeness check for catch details</p></li>
 <li><p>Catch information completeness check</p></li>
-</ol><p>Alert codes:</p><ul><li><p>5: Bucket weight exceeds maximum</p></li>
+</ol><p>Alert codes:</p><ul><li><p>1: A catch was reported with no taxon</p></li>
+<li><p>2: A taxon with neither a number of fish nor a weight</p></li>
+<li><p>3, 4: Length below the taxon's minimum, or above its maximum</p></li>
+<li><p>5: Bucket weight exceeds maximum</p></li>
 <li><p>6: Number of buckets exceeds maximum</p></li>
 <li><p>7: Number of individuals exceeds maximum</p></li>
-<li><p>8: Incomplete catch form</p></li>
-<li><p>9: Incomplete catch information</p></li>
-<li><p>12: Effort indicator is infinite (<code>n_fishers</code> or <code>trip_duration</code> is zero)</p></li>
+<li><p>8: Price per kg exceeds maximum (<code>price_kg_max</code>)</p></li>
+<li><p>9, 10: CPUE or RPUE exceeds maximum</p></li>
+<li><p>11: Landing date is after the submission date</p></li>
+<li><p>12: Trip duration is zero or negative</p></li>
 <li><p>13: Fisher count is zero or negative</p></li>
-</ul></div>
+<li><p>14: Price per kg is below minimum (<code>price_kg_min</code>)</p></li>
+</ul><p>8 to 10 and 14 are checked only on submissions with none of the others.</p>
+    </div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
 

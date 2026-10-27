@@ -1,5 +1,21 @@
 # Changelog
 
+## peskas.zanzibar.data.pipeline 4.17.0
+
+### A price too low to be real is flagged, and a missing weight no longer skips the price checks
+
+- **NEW** Alert 14 flags a trip sold for less than 400 TZS per kg (about
+  0.15 USD), the low end of alert 8. Only a price too high was checked,
+  so revenue typed in thousands (15 for 15,000 TZS) or one bucket’s
+  price given for the whole catch went out as validated. On the data of
+  27 October 2026 it flags 385 submissions of the three WorldFish forms
+  for review.
+- **FIXED** A trip with one catch without a weight (mostly MZZ) had no
+  total weight, so alerts 8 to 10 never ran on it. They now run on the
+  catches that have one: 55 published trips get alert 8, one of them at
+  57 million TZS per kg, and one gets alert 9. A trip with no weight at
+  all is still not checked.
+
 ## peskas.zanzibar.data.pipeline 4.16.2
 
 ### Catch outcome goes out as a number

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">peskas.zanzibar.data.pipeline</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.16.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.17.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -30,6 +30,16 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.17.0" id="peskaszanzibardatapipeline-4170">peskas.zanzibar.data.pipeline 4.17.0<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4170"></a></h2>
+<div class="section level3">
+<h3 id="a-price-too-low-to-be-real-is-flagged-and-a-missing-weight-no-longer-skips-the-price-checks-4-17-0">A price too low to be real is flagged, and a missing weight no longer skips the price checks<a class="anchor" aria-label="anchor" href="#a-price-too-low-to-be-real-is-flagged-and-a-missing-weight-no-longer-skips-the-price-checks-4-17-0"></a></h3>
+<ul><li>
+<strong>NEW</strong> Alert 14 flags a trip sold for less than 400 TZS per kg (about 0.15 USD), the low end of alert 8. Only a price too high was checked, so revenue typed in thousands (15 for 15,000 TZS) or one bucket’s price given for the whole catch went out as validated. On the data of 27 October 2026 it flags 385 submissions of the three WorldFish forms for review.</li>
+<li>
+<strong>FIXED</strong> A trip with one catch without a weight (mostly MZZ) had no total weight, so alerts 8 to 10 never ran on it. They now run on the catches that have one: 55 published trips get alert 8, one of them at 57 million TZS per kg, and one gets alert 9. A trip with no weight at all is still not checked.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.16.2" id="peskaszanzibardatapipeline-4162">peskas.zanzibar.data.pipeline 4.16.2<a class="anchor" aria-label="anchor" href="#peskaszanzibardatapipeline-4162"></a></h2>
 <div class="section level3">

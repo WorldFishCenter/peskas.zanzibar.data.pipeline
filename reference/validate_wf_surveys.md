@@ -41,20 +41,31 @@ The function applies the following validation checks:
 
 Alert codes:
 
+- 1: A catch was reported with no taxon
+
+- 2: A taxon with neither a number of fish nor a weight
+
+- 3, 4: Length below the taxon's minimum, or above its maximum
+
 - 5: Bucket weight exceeds maximum
 
 - 6: Number of buckets exceeds maximum
 
 - 7: Number of individuals exceeds maximum
 
-- 8: Incomplete catch form
+- 8: Price per kg exceeds maximum (`price_kg_max`)
 
-- 9: Incomplete catch information
+- 9, 10: CPUE or RPUE exceeds maximum
 
-- 12: Effort indicator is infinite (`n_fishers` or `trip_duration` is
-  zero)
+- 11: Landing date is after the submission date
+
+- 12: Trip duration is zero or negative
 
 - 13: Fisher count is zero or negative
+
+- 14: Price per kg is below minimum (`price_kg_min`)
+
+8 to 10 and 14 are checked only on submissions with none of the others.
 
 ## Note
 
