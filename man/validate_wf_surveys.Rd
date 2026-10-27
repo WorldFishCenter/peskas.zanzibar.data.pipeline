@@ -33,14 +33,21 @@ The function applies the following validation checks:
 
 Alert codes:
 \itemize{
+\item 1: A catch was reported with no taxon
+\item 2: A taxon with neither a number of fish nor a weight
+\item 3, 4: Length below the taxon's minimum, or above its maximum
 \item 5: Bucket weight exceeds maximum
 \item 6: Number of buckets exceeds maximum
 \item 7: Number of individuals exceeds maximum
-\item 8: Incomplete catch form
-\item 9: Incomplete catch information
-\item 12: Effort indicator is infinite (\code{n_fishers} or \code{trip_duration} is zero)
+\item 8: Price per kg exceeds maximum (\code{price_kg_max})
+\item 9, 10: CPUE or RPUE exceeds maximum
+\item 11: Landing date is after the submission date
+\item 12: Trip duration is zero or negative
 \item 13: Fisher count is zero or negative
+\item 14: Price per kg is below minimum (\code{price_kg_min})
 }
+
+8 to 10 and 14 are checked only on submissions with none of the others.
 }
 \note{
 \itemize{

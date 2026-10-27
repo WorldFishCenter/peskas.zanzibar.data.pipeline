@@ -391,13 +391,20 @@ validate_wcs_surveys <- function(log_threshold = logger::DEBUG) {
 #' 5. Catch information completeness check
 #'
 #' Alert codes:
+#' - 1: A catch was reported with no taxon
+#' - 2: A taxon with neither a number of fish nor a weight
+#' - 3, 4: Length below the taxon's minimum, or above its maximum
 #' - 5: Bucket weight exceeds maximum
 #' - 6: Number of buckets exceeds maximum
 #' - 7: Number of individuals exceeds maximum
-#' - 8: Incomplete catch form
-#' - 9: Incomplete catch information
-#' - 12: Effort indicator is infinite (`n_fishers` or `trip_duration` is zero)
+#' - 8: Price per kg exceeds maximum (`price_kg_max`)
+#' - 9, 10: CPUE or RPUE exceeds maximum
+#' - 11: Landing date is after the submission date
+#' - 12: Trip duration is zero or negative
 #' - 13: Fisher count is zero or negative
+#' - 14: Price per kg is below minimum (`price_kg_min`)
+#'
+#' 8 to 10 and 14 are checked only on submissions with none of the others.
 #'
 #' @param log_threshold The logging level threshold for the logger package (e.g., DEBUG, INFO)
 #' @return
@@ -476,6 +483,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
   max_n_buckets <- limits$max_n_buckets
   max_n_individuals <- limits$max_n_individuals
   price_kg_max <- limits$price_kg_max
+  price_kg_min <- limits$price_kg_min
   cpue_max <- limits$cpue_max
   rpue_max <- limits$rpue_max
   max_length_cm <- limits$max_length_cm
@@ -728,7 +736,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
         ),
         ~ dplyr::first(.x)
       ),
-      catch_kg = sum(.data$catch_kg)
+      catch_kg = dplyr::na_if(sum(.data$catch_kg, na.rm = TRUE), 0)
     ) |>
     dplyr::transmute(
       submission_id = .data$submission_id,
@@ -746,6 +754,7 @@ validate_wf_surveys <- function(log_threshold = logger::DEBUG) {
     dplyr::mutate(
       alert_price_kg = dplyr::case_when(
         .data$price_kg > price_kg_max ~ "8",
+        .data$price_kg > 0 & .data$price_kg < price_kg_min ~ "14",
         TRUE ~ NA_character_
       ),
       alert_cpue = dplyr::case_when(
