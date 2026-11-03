@@ -7,8 +7,8 @@
 assert_taxa_coverage(
   taxa_list,
   lw,
-  exempt = c("MZZ", "UNK", "UNKN", "MAE", "TAG", "GQT", "CRA", "KAK", "LHV", "RMB",
-    "RTY", "SSP")
+  exempt = c("MZZ", "UNK", "UNKN", "MAE", "GQT", "CRA", "KAK", "LHV", "RMB", "RTY",
+    "SSP")
 )
 }
 \arguments{
@@ -32,10 +32,10 @@ rewritten to the fish group's most frequent taxon later in
 \code{preprocess_wf_surveys()}.}
 \item{Wrong reference name}{The ASFIS name does not describe the animal
 landed in Zanzibar, so the area 51 filter correctly removes it.
-\code{MAE} and \code{TAG} name species absent from FAO 51. \code{AHI}, \code{BFL} and
-\code{MAC} were the same kind of error and are now remapped on read in
-\code{reshape_catch_data()} -- to \code{BAF}, \code{TEI} and (for the sharks-and-rays
-group) \code{AQX} -- so they no longer reach this check.}
+\code{MAE} names a species absent from FAO 51. \code{AHI}, \code{BFL}, \code{MAC} and
+\code{TAG} were the same kind of error and are now remapped on read in
+\code{reshape_catch_data()} -- to \code{BAF}, \code{TEI}, (for the sharks-and-rays
+group) \code{AQX} and \code{COI} -- so they no longer reach this check.}
 \item{No published coefficients}{\code{GQT} (\emph{Plectorhinchus gaterinus})
 resolves to a species that does occur in FAO 51, but FishBase carries
 no length-weight pair for it in any length type. There is nothing to
