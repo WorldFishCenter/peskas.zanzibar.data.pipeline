@@ -20,8 +20,8 @@ job.
 assert_taxa_coverage(
   taxa_list,
   lw,
-  exempt = c("MZZ", "UNK", "UNKN", "MAE", "TAG", "GQT", "CRA", "KAK", "LHV", "RMB",
-    "RTY", "SSP")
+  exempt = c("MZZ", "UNK", "UNKN", "MAE", "GQT", "CRA", "KAK", "LHV", "RMB", "RTY",
+    "SSP")
 )
 ```
 
@@ -59,12 +59,12 @@ assert_taxa_coverage(
   Wrong reference name
 
   :   The ASFIS name does not describe the animal landed in Zanzibar, so
-      the area 51 filter correctly removes it. `MAE` and `TAG` name
-      species absent from FAO 51. `AHI`, `BFL` and `MAC` were the same
+      the area 51 filter correctly removes it. `MAE` names a species
+      absent from FAO 51. `AHI`, `BFL`, `MAC` and `TAG` were the same
       kind of error and are now remapped on read in
       [`reshape_catch_data()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/reshape_catch_data.md)
-      – to `BAF`, `TEI` and (for the sharks-and-rays group) `AQX` – so
-      they no longer reach this check.
+      – to `BAF`, `TEI`, (for the sharks-and-rays group) `AQX` and `COI`
+      – so they no longer reach this check.
 
   No published coefficients
 
