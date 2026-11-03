@@ -750,6 +750,7 @@ preprocess_catch <- function(data = NULL, version = NULL) {
           # are eagle rays. Must run before the taxa list is built, or the
           # weight is computed against MAC and lost.
           .data$fish_group == "SR" & .data$catch_taxon == "MAC" ~ "AQX",
+          .data$catch_taxon == "TAG" ~ "COI",
           is.na(.data$catch_taxon) & .data$fish_group == "MZZ" ~ "MZZ",
           # "Unknown" is a second unidentified bucket alongside "MZZ", and it
           # carried no code at all, so the catch fell through to a NULL taxon

@@ -339,10 +339,10 @@ getLWCoeffs <- function(
 #'       `preprocess_wf_surveys()`.}
 #'     \item{Wrong reference name}{The ASFIS name does not describe the animal
 #'       landed in Zanzibar, so the area 51 filter correctly removes it.
-#'       `MAE` and `TAG` name species absent from FAO 51. `AHI`, `BFL` and
-#'       `MAC` were the same kind of error and are now remapped on read in
-#'       `reshape_catch_data()` -- to `BAF`, `TEI` and (for the sharks-and-rays
-#'       group) `AQX` -- so they no longer reach this check.}
+#'       `MAE` names a species absent from FAO 51. `AHI`, `BFL`, `MAC` and
+#'       `TAG` were the same kind of error and are now remapped on read in
+#'       `reshape_catch_data()` -- to `BAF`, `TEI`, (for the sharks-and-rays
+#'       group) `AQX` and `COI` -- so they no longer reach this check.}
 #'     \item{No published coefficients}{`GQT` (*Plectorhinchus gaterinus*)
 #'       resolves to a species that does occur in FAO 51, but FishBase carries
 #'       no length-weight pair for it in any length type. There is nothing to
@@ -377,7 +377,6 @@ assert_taxa_coverage <- function(
     "UNKN",
     # wrong reference name for the animal landed here
     "MAE",
-    "TAG",
     # in FAO 51, but FishBase carries no published length-weight pair at all
     "GQT",
     # infraorder Brachyura, a rank the backbone omits

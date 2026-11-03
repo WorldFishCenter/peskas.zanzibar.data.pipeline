@@ -1,3 +1,9 @@
+# peskas.zanzibar.data.pipeline 4.17.1
+
+## "Mkunga mweupe" is the longfin African conger and gets a weight
+
+* **FIXED** The forms coded "Mkunga mweupe" as TAG, an eel goby not found in the Western Indian Ocean, so it had no length-weight data and every catch of it weighed zero. Specialists consulted in Zanzibar identified it as the longfin African conger (*Conger cinereus*, COI), and TAG is now read as COI.
+
 # peskas.zanzibar.data.pipeline 4.17.0
 
 ## A price too low to be real is flagged, and a missing weight no longer skips the price checks
