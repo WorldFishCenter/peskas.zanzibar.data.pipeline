@@ -60,6 +60,8 @@ NULL invisibly. Side effect: uploads merged parquet to cloud storage.
 
 - `length_cm`: Length in cm (NA for WCS surveys)
 
+- `n_fish`: Number of fish behind `length_cm` (NA without a length)
+
 - `catch_kg`: Catch weight in kg
 
 - `catch_price`: Individual-level price (NA — not resolved at this

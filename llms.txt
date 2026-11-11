@@ -278,14 +278,13 @@ reshaping, and trip processing.
 - [`form_id_pattern()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/form_id_pattern.md)
   : Build a Form-ID Match Pattern for Airtable Asset Tables
 - [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md)
-  : Get Length-Weight Coefficients and Morphological Data for Species
+  : Get Length-Weight Coefficients and Length Limits for Species
 - [`get_airtable_form_id()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_airtable_form_id.md)
   : Get Airtable Form ID from KoBoToolbox Asset ID
 - [`get_fao_groups()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_fao_groups.md)
   : Extract and Format FAO Taxonomic Groups
 - [`get_length_weight_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_weight_batch.md)
-  : Get Length-Weight and Morphological Parameters for Species (Batch
-  Version)
+  : Get Length-Weight Parameters for Species (Batch Version)
 - [`get_species_areas_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_species_areas_batch.md)
   : Get FAO Areas for Species (Batch Version)
 - [`load_taxa_databases()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/load_taxa_databases.md)
@@ -331,12 +330,11 @@ datasets for analysis.
 - [`expand_taxa()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/expand_taxa.md)
   : Expand Taxonomic Vectors into a Data Frame
 - [`getLWCoeffs()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/getLWCoeffs.md)
-  : Get Length-Weight Coefficients and Morphological Data for Species
+  : Get Length-Weight Coefficients and Length Limits for Species
 - [`get_fao_groups()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_fao_groups.md)
   : Extract and Format FAO Taxonomic Groups
 - [`get_length_weight_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_length_weight_batch.md)
-  : Get Length-Weight and Morphological Parameters for Species (Batch
-  Version)
+  : Get Length-Weight Parameters for Species (Batch Version)
 - [`get_species_areas_batch()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/get_species_areas_batch.md)
   : Get FAO Areas for Species (Batch Version)
 - [`load_taxa_databases()`](https://worldfishcenter.github.io/peskas.zanzibar.data.pipeline/reference/load_taxa_databases.md)
