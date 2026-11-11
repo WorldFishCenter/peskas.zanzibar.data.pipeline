@@ -38,6 +38,7 @@ It is currently \code{FALSE}: see \code{\link[=export_api_validated]{export_api_
 \item \code{catch_taxon}: Species alpha-3 code
 \item \code{scientific_name}: Scientific name
 \item \code{length_cm}: Length in cm (NA for WCS surveys)
+\item \code{n_fish}: Number of fish behind \code{length_cm} (NA without a length)
 \item \code{catch_kg}: Catch weight in kg
 \item \code{catch_price}: Individual-level price (NA — not resolved at this stage)
 \item \code{tot_catch_kg}: Total catch weight per trip

@@ -20,6 +20,11 @@ format_api_wf <- function(surveys_df, conf) {
     dplyr::ungroup() |>
     dplyr::mutate(
       n_catch = as.integer(.data$n_catch),
+      n_fish = dplyr::if_else(
+        is.na(.data$length),
+        NA_integer_,
+        as.integer(.data$individuals)
+      ),
       catch_outcome = as.integer(.data$catch_outcome),
       survey_organization = "ZAFIRI",
       n_fishers = .data$no_men_fishers +
@@ -46,6 +51,7 @@ format_api_wf <- function(surveys_df, conf) {
       catch_taxon = "alpha3_code",
       "scientific_name",
       length_cm = "length",
+      "n_fish",
       "catch_kg",
       tot_catch_price = "catch_price"
     ) |>
@@ -80,7 +86,8 @@ format_api_wcs <- function(surveys_df, conf) {
       trip_id = paste0("TRIP_", .data$submission_id),
       survey_id = conf$ingestion$wcs$asset_id,
       n_catch = as.integer(.data$n_catch),
-      length_cm = NA_real_
+      length_cm = NA_real_,
+      n_fish = NA_integer_
     ) |>
     dplyr::select(
       "survey_id",
@@ -101,6 +108,7 @@ format_api_wcs <- function(surveys_df, conf) {
       "catch_taxon",
       "scientific_name",
       "length_cm",
+      "n_fish",
       "catch_kg",
       "catch_price"
     ) |>
@@ -187,6 +195,7 @@ upload_api_parquet <- function(data, file_prefix, cloud_path, conf) {
 #' - `catch_taxon`: Species alpha-3 code
 #' - `scientific_name`: Scientific name
 #' - `length_cm`: Length in cm (NA for WCS surveys)
+#' - `n_fish`: Number of fish behind `length_cm` (NA without a length)
 #' - `catch_kg`: Catch weight in kg
 #' - `catch_price`: Individual-level price (NA — not resolved at this stage)
 #' - `tot_catch_kg`: Total catch weight per trip

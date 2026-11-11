@@ -432,7 +432,12 @@ preprocess_wf_surveys <- function(
     asfis_list = asfis,
     fb_version = conf$metadata$fishbase$fishbase_version %||% "latest",
     slb_version = conf$metadata$fishbase$sealifebase_version %||% "latest",
-    fao_areas = conf$metadata$fishbase$fao_areas %||% 51
+    fao_areas = conf$metadata$fishbase$fao_areas %||% 51,
+    taxa_lengths = coasts::download_parquet_from_cloud(
+      prefix = conf$metadata$fishbase$taxa_enriched$file_prefix,
+      provider = conf$storage$google$key,
+      options = conf$storage$google$options_coasts
+    )
   )
 
   # FLY now also resolves from FishBase, so replace rather than append -- two
@@ -569,8 +574,7 @@ preprocess_wf_surveys <- function(
 process_version_data <- function(catch_info, general_info, lwcoeffs) {
   catch_df <-
     calculate_catch(catch_data = catch_info, lwcoeffs = lwcoeffs$lw) |>
-    dplyr::left_join(lwcoeffs$ml, by = "catch_taxon") |>
-    dplyr::select(-"max_weightkg_75")
+    dplyr::left_join(lwcoeffs$ml, by = "catch_taxon")
 
   preprocessed_data <-
     dplyr::left_join(general_info, catch_df, by = "submission_id") |>
